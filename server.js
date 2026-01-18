@@ -85,6 +85,34 @@ app.get('*', (req, res) => {
             console.log("Migration: Added 'cuit' column to branches");
         } catch (e) { }
 
+        // --- Ensure Clients Table Exists (Safety Check) ---
+        try {
+            await db.execute(`
+                CREATE TABLE IF NOT EXISTS clients (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    phone TEXT,
+                    email TEXT,
+                    address TEXT
+                )
+            `);
+            await db.execute(`
+                CREATE TABLE IF NOT EXISTS vehicles (
+                    id TEXT PRIMARY KEY,
+                    client_id TEXT NOT NULL,
+                    brand TEXT,
+                    model TEXT,
+                    year INTEGER, 
+                    plate TEXT,
+                    vin TEXT,
+                    insurance TEXT,
+                    FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
+                )
+            `);
+            console.log("Migration: Verified Clients/Vehicles tables");
+        } catch (e) { console.error("Migration Clients Error:", e); }
+
+
         // --- Seed Admin User if missing ---
         const userCountInitial = await db.execute("SELECT COUNT(*) as count FROM users");
         if (userCountInitial.rows[0].count === 0) {

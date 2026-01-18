@@ -1227,11 +1227,19 @@ export default {
 
     function loadVehiclesIntoSelect(client, keepVehicleId = null) {
       // API returns 'vehicles' as array attached to client
-      if (!client || !client.vehicles?.length) {
+      if (!client) {
         vehiclesBlock.classList.add("hidden");
+        return;
+      }
+
+      vehiclesBlock.classList.remove("hidden");
+
+      if (!client.vehicles?.length) {
         vehicleSel.innerHTML = `<option value="">(Nuevo vehículo)</option>`;
+        vehicleSel.value = "";
         selectedVehicleId = null;
         deleteVehicleBtn.disabled = true;
+        fillVehicleForm(null); // Clear form for new entry
         return;
       }
       vehiclesBlock.classList.remove("hidden");
