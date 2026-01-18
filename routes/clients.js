@@ -70,7 +70,7 @@ router.post('/', async (req, res) => {
                 const vid = rid();
                 await db.execute({
                     sql: "INSERT INTO vehicles (id, client_id, brand, model, year, plate, vin, insurance) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                    args: [vid, id, v.brand || v.vehiculo, v.model, v.year || v.modelo, v.plate || v.patente, v.vin || v.chasis, v.insurance || v.compania]
+                    args: [vid, id, v.brand || v.vehiculo, v.model || "", v.year || v.modelo, v.plate || v.patente, v.vin || v.chasis, v.insurance || v.compania]
                 });
             }
         }
@@ -122,14 +122,14 @@ router.put('/:id', async (req, res) => {
                     // Update
                     await db.execute({
                         sql: "UPDATE vehicles SET brand = ?, model = ?, year = ?, plate = ?, vin = ?, insurance = ? WHERE id = ?",
-                        args: [v.brand || v.vehiculo, v.model, v.year || v.modelo, v.plate || v.patente, v.vin || v.chasis, v.insurance || v.compania, v.id]
+                        args: [v.brand || v.vehiculo, v.model || "", v.year || v.modelo, v.plate || v.patente, v.vin || v.chasis, v.insurance || v.compania, v.id]
                     });
                 } else {
                     // Create
                     const vid = v.id || rid();
                     await db.execute({
                         sql: "INSERT INTO vehicles (id, client_id, brand, model, year, plate, vin, insurance) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                        args: [vid, clientId, v.brand || v.vehiculo, v.model, v.year || v.modelo, v.plate || v.patente, v.vin || v.chasis, v.insurance || v.compania]
+                        args: [vid, clientId, v.brand || v.vehiculo, v.model || "", v.year || v.modelo, v.plate || v.patente, v.vin || v.chasis, v.insurance || v.compania]
                     });
                 }
             }
