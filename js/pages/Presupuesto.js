@@ -513,19 +513,25 @@ function maxSeqForBranch(sucursal) {
 }
 function labelForBranch(id) {
   const b = (CFG_BRANCHES || []).find(x => x.id === id);
-  // If branch found and has code, use code.
-  if (b && b.code) return b.code;
+  // If branch found and has code, try to use it as POS
+  if (b && b.code) {
+    // Try to sanitize check if it's numeric-ish
+    const clean = b.code.replace(/\D/g, '');
+    if (clean.length > 0) return clean.padStart(4, "0").slice(-4);
+    // If it was text like "MAIN", we can't use it as POS number easily, 
+    // but user requested "0001". Let's try to map index.
+  }
 
   // If no code, try to find index to use sequential number
   const idx = (CFG_BRANCHES || []).findIndex(x => x.id === id);
   if (idx >= 0) return String(idx + 1).padStart(4, "0");
 
   // Fallback if not found (shouldn't happen if loaded, but never return UUID strings)
-  return "0000";
+  return "0001";
 }
 function formatBudgetNumber(sucursalId, seq) {
   const label = labelForBranch(sucursalId);
-  return `N° ${label || "----"} - ${String(seq).padStart(8, "0")}`;
+  return `${label}-${String(seq).padStart(8, "0")}`;
 }
 function previewNextNumber(sucursal) {
   const next = maxSeqForBranch(sucursal) + 1;
