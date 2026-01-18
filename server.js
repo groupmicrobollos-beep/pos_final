@@ -59,6 +59,32 @@ app.get('*', (req, res) => {
             // Ignore error if column exists (SQLite throws if column exists)
         }
 
+
+
+        // --- Safe Migration for "branch_id" in users ---
+        try {
+            await db.execute("ALTER TABLE users ADD COLUMN branch_id TEXT");
+            console.log("Migration: Added 'branch_id' column to users");
+        } catch (e) { }
+
+        // --- Safe Migration for "reset_token" in users ---
+        try {
+            await db.execute("ALTER TABLE users ADD COLUMN reset_token TEXT");
+            console.log("Migration: Added 'reset_token' column to users");
+        } catch (e) { }
+
+        // --- Safe Migration for "reset_token_expires" in users ---
+        try {
+            await db.execute("ALTER TABLE users ADD COLUMN reset_token_expires INTEGER");
+            console.log("Migration: Added 'reset_token_expires' column to users");
+        } catch (e) { }
+
+        // --- Safe Migration for "cuit" in branches ---
+        try {
+            await db.execute("ALTER TABLE branches ADD COLUMN cuit TEXT");
+            console.log("Migration: Added 'cuit' column to branches");
+        } catch (e) { }
+
         // --- Seed Admin User if missing ---
         const userCountInitial = await db.execute("SELECT COUNT(*) as count FROM users");
         if (userCountInitial.rows[0].count === 0) {
