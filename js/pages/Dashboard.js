@@ -8,8 +8,8 @@
 
 // ====== Integración con Configuración ======
 const CFG_BRANCHES_KEY = "cfg_branches";
-function _lsBranches(){ try{ return JSON.parse(localStorage.getItem(CFG_BRANCHES_KEY) || "[]"); } catch { return []; } }
-function getBranches(){ return (window.CFG && typeof window.CFG.getBranches === "function") ? window.CFG.getBranches() : _lsBranches(); }
+function _lsBranches() { try { return JSON.parse(localStorage.getItem(CFG_BRANCHES_KEY) || "[]"); } catch { return []; } }
+function getBranches() { return (window.CFG && typeof window.CFG.getBranches === "function") ? window.CFG.getBranches() : _lsBranches(); }
 
 import budgetsService from "../services/budgets.js";
 
@@ -38,7 +38,7 @@ function toast(msg, type = "info") {
   el.className = `fixed top-4 right-4 z-[4000] px-3 py-2 rounded-lg text-white shadow-2xl text-xs ${bg}`;
   el.textContent = msg;
   document.body.appendChild(el);
-  setTimeout(() => { el.style.opacity = "0"; el.style.transform = "translateX(10px)"; setTimeout(()=>el.remove(),160); }, 2000);
+  setTimeout(() => { el.style.opacity = "0"; el.style.transform = "translateX(10px)"; setTimeout(() => el.remove(), 160); }, 2000);
 }
 
 export default {
@@ -90,10 +90,10 @@ export default {
         <option value="">Todas las sucursales</option>
       </select>
       <select id="filter-period" class="ctrl px-2.5 rounded bg-white/10 border border-white/10 text-slate-100">
-        <option value="month" selected>Este mes</option>
+        <option value="" selected>Todo</option>
+        <option value="month">Este mes</option>
         <option value="today">Hoy</option>
         <option value="week">Esta semana</option>
-        <option value="">Todo</option>
       </select>
   <a href="#/presupuesto" class="btn btn-primary"><i class="fas fa-plus" aria-hidden="true"></i> Nuevo</a>
   <a href="#/presupuestos" class="btn btn-info"><i class="fas fa-file-alt" aria-hidden="true"></i> Ver todos</a>
@@ -102,12 +102,12 @@ export default {
 
   <!-- KPIs (separación orgánica, cards del mismo alto) -->
   <div class="grid sm:grid-cols-3 xl:grid-cols-6 gap-3">
-  ${statCard('<i class="fas fa-file-alt" aria-hidden="true"></i>','Presupuestos','kpi-total','g-indigo')}
-  ${statCard('<i class="fas fa-calendar-day" aria-hidden="true"></i>','Hoy','kpi-today','g-emerald')}
-  ${statCard('<i class="fas fa-dollar-sign" aria-hidden="true"></i>','Monto MTD','kpi-mtd','g-pink')}
-  ${statCard('<i class="fas fa-receipt" aria-hidden="true"></i>','Ticket Prom.','kpi-avg','g-cyan')}
-  ${statCard('<i class="fas fa-check" aria-hidden="true"></i>','Hechos','kpi-done','g-amber')}
-  ${statCard('<i class="fas fa-exclamation-triangle" aria-hidden="true"></i>','Monto no ejecutado','kpi-unexecuted','g-slate')}
+  ${statCard('<i class="fas fa-file-alt" aria-hidden="true"></i>', 'Presupuestos', 'kpi-total', 'g-indigo')}
+  ${statCard('<i class="fas fa-calendar-day" aria-hidden="true"></i>', 'Hoy', 'kpi-today', 'g-emerald')}
+  ${statCard('<i class="fas fa-dollar-sign" aria-hidden="true"></i>', 'Monto MTD', 'kpi-mtd', 'g-pink')}
+  ${statCard('<i class="fas fa-receipt" aria-hidden="true"></i>', 'Ticket Prom.', 'kpi-avg', 'g-cyan')}
+  ${statCard('<i class="fas fa-check" aria-hidden="true"></i>', 'Hechos', 'kpi-done', 'g-amber')}
+  ${statCard('<i class="fas fa-exclamation-triangle" aria-hidden="true"></i>', 'Monto no ejecutado', 'kpi-unexecuted', 'g-slate')}
   </div>
 
   <!-- Charts con más aire y leyenda separada -->
@@ -185,10 +185,10 @@ export default {
     // KPIs
     const kpiTotal = root.querySelector("#kpi-total");
     const kpiToday = root.querySelector("#kpi-today");
-    const kpiMtd   = root.querySelector("#kpi-mtd");
-    const kpiAvg   = root.querySelector("#kpi-avg");
-  const kpiDone = root.querySelector("#kpi-done");
-  const kpiPending = root.querySelector("#kpi-pending");
+    const kpiMtd = root.querySelector("#kpi-mtd");
+    const kpiAvg = root.querySelector("#kpi-avg");
+    const kpiDone = root.querySelector("#kpi-done");
+    const kpiPending = root.querySelector("#kpi-pending");
 
     // Charts
     const spark = root.querySelector("#chart-spark");
@@ -204,21 +204,21 @@ export default {
     const activityEmpty = root.querySelector("#activity-empty");
 
     // ===== Sucursales dinámicas (desde Configuración) =====
-    function paintBranchFilter(){
+    function paintBranchFilter() {
       const list = getBranches();
       const current = fBranch.value;
       fBranch.innerHTML = `<option value="">Todas las sucursales</option>` +
-        list.map(b=>`<option value="${b.id}">${b.name}</option>`).join("");
+        list.map(b => `<option value="${b.id}">${b.name}</option>`).join("");
       // Restaurar selección si existe; si no, limpiar
-      const ok = list.some(b=> String(b.id) === String(current));
+      const ok = list.some(b => String(b.id) === String(current));
       fBranch.value = ok ? current : "";
-  // KPI total de sucursales configuradas (si existe el elemento en el DOM)
-  const kpiBranchesEl = root.querySelector('#kpi-branches');
-  if (kpiBranchesEl) kpiBranchesEl.textContent = list.length;
+      // KPI total de sucursales configuradas (si existe el elemento en el DOM)
+      const kpiBranchesEl = root.querySelector('#kpi-branches');
+      if (kpiBranchesEl) kpiBranchesEl.textContent = list.length;
     }
     paintBranchFilter();
     // Reaccionar a cambios del panel de Configuración
-    window.addEventListener("cfg:branches-updated", ()=>{
+    window.addEventListener("cfg:branches-updated", () => {
       paintBranchFilter();
       applyFilters(); renderAll();
     });
@@ -227,12 +227,12 @@ export default {
     let budgets = [];
     let filtered = [];
 
-  // Cargar y renderizar
-  loadBudgets(); applyFilters(); renderAll();
+    // Cargar y renderizar
+    loadBudgets(); // handle promise internally
 
-  // Reaccionar a cambios de presupuestos desde otros módulos / pestañas
-  document.addEventListener("budgets:updated", () => { loadBudgets(); applyFilters(); renderAll(); });
-  window.addEventListener("storage", (e)=>{ if (!e.key) return; if (e.key === "budgets_list" || e.key.startsWith("budget_")) { loadBudgets(); applyFilters(); renderAll(); } });
+    // Reaccionar a cambios de presupuestos desde otros módulos / pestañas
+    document.addEventListener("budgets:updated", () => { loadBudgets(); applyFilters(); renderAll(); });
+    window.addEventListener("storage", (e) => { if (!e.key) return; if (e.key === "budgets_list" || e.key.startsWith("budget_")) { loadBudgets(); applyFilters(); renderAll(); } });
 
     // Eventos
     fBranch.addEventListener("change", () => { applyFilters(); renderAll(); });
@@ -251,14 +251,17 @@ export default {
     });
 
     // ===== Datos =====
-    function loadBudgets() {
+    async function loadBudgets() {
       try {
-        const list = budgetsService.list();
+        const list = await budgetsService.list();
         budgets = list.map(s => ({ ...s, details: s.details || null }));
       } catch (e) {
+        console.error("Dashboard load error", e);
         const list = JSON.parse(localStorage.getItem("budgets_list") || "[]");
         budgets = list.map(s => { const full = JSON.parse(localStorage.getItem(s.key) || "null"); return { ...s, details: full || null }; });
       }
+      applyFilters();
+      renderAll();
     }
     function applyFilters() {
       const br = fBranch.value;
@@ -267,11 +270,11 @@ export default {
         const matchesBranch = !br || b.sucursal === br;
         let matchesPeriod = true;
         if (per) {
-          const bd = new Date((b.fecha || "").slice(0,10) + "T00:00:00");
+          const bd = new Date((b.fecha || "").slice(0, 10) + "T00:00:00");
           const now = new Date();
           if (per === "today") matchesPeriod = bd.toDateString() === now.toDateString();
           else if (per === "week") {
-            const w = new Date(now.getTime() - 7*24*60*60*1000);
+            const w = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
             matchesPeriod = bd >= w;
           } else if (per === "month") {
             const first = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -291,11 +294,11 @@ export default {
       renderUnexecuted();
     }
     function renderKPIs() {
-      const todayISO = new Date().toISOString().slice(0,10);
+      const todayISO = new Date().toISOString().slice(0, 10);
       const todayCount = filtered.filter(b => b.fecha === todayISO).length;
-      const mtdAmount = filtered.reduce((s,b)=> s + parseMoney(b.total), 0);
-  const totalBranchesConfigured = getBranches().length; // reflejar Configuración
-  const clients = getClientsCount();
+      const mtdAmount = filtered.reduce((s, b) => s + parseMoney(b.total), 0);
+      const totalBranchesConfigured = getBranches().length; // reflejar Configuración
+      const clients = getClientsCount();
       const totalBudgets = filtered.length;
       const avgTicket = totalBudgets ? mtdAmount / totalBudgets : 0;
 
@@ -303,11 +306,11 @@ export default {
       kpiToday.textContent = todayCount;
       kpiMtd.textContent = money(mtdAmount);
       kpiAvg.textContent = money(avgTicket);
-  if (kpiDone) kpiDone.textContent = filtered.filter(b => b.details && b.details.done).length;
-  if (kpiPending) kpiPending.textContent = Math.max(0, filtered.length - (filtered.filter(b => b.details && b.details.done).length));
-  // Monto no ejecutado = suma de totales de presupuestos que NO fueron marcados como hechos
-  const unexecutedAmount = filtered.reduce((s,b)=> s + (b.details && b.details.done ? 0 : parseMoney(b.total)), 0);
-  const kUn = root.querySelector("#kpi-unexecuted"); if (kUn) kUn.textContent = money(unexecutedAmount);
+      if (kpiDone) kpiDone.textContent = filtered.filter(b => b.details && b.details.done).length;
+      if (kpiPending) kpiPending.textContent = Math.max(0, filtered.length - (filtered.filter(b => b.details && b.details.done).length));
+      // Monto no ejecutado = suma de totales de presupuestos que NO fueron marcados como hechos
+      const unexecutedAmount = filtered.reduce((s, b) => s + (b.details && b.details.done ? 0 : parseMoney(b.total)), 0);
+      const kUn = root.querySelector("#kpi-unexecuted"); if (kUn) kUn.textContent = money(unexecutedAmount);
     }
 
     function renderUnexecuted() {
@@ -322,13 +325,13 @@ export default {
         return;
       }
       emptyEl && emptyEl.classList.add("hidden");
-      container.innerHTML = list.slice(0,8).map(b => {
-        return `<div class="flex items-center justify-between"><div class="truncate"><strong>${b.numero}</strong> — ${String(b.cliente||'Sin nombre').slice(0,36)}</div><div class="text-right">${money(b.total)}</div></div>`;
+      container.innerHTML = list.slice(0, 8).map(b => {
+        return `<div class="flex items-center justify-between"><div class="truncate"><strong>${b.numero}</strong> — ${String(b.cliente || 'Sin nombre').slice(0, 36)}</div><div class="text-right">${money(b.total)}</div></div>`;
       }).join("");
-      if (totalEl) totalEl.textContent = money(list.reduce((s,b)=> s + parseMoney(b.total),0));
+      if (totalEl) totalEl.textContent = money(list.reduce((s, b) => s + parseMoney(b.total), 0));
     }
     function renderLastBudgets() {
-      const latest = [...filtered].sort((a,b)=> {
+      const latest = [...filtered].sort((a, b) => {
         const da = a.details?.fechaCreacion || a.fecha || "";
         const db = b.details?.fechaCreacion || b.fecha || "";
         return (db > da) ? 1 : (db < da ? -1 : 0);
@@ -348,7 +351,7 @@ export default {
             <td>${toDMY(b.fecha)}</td>
             <td class="max-w-[260px] truncate">${b.cliente || "Sin nombre"}</td>
             <td class="font-medium text-right">${money(b.total)}</td>
-            <td><span class="badge ${expired?"status-expired":"status-active"}">${expired? "Vencido":"Vigente"}</span></td>
+            <td><span class="badge ${expired ? "status-expired" : "status-active"}">${expired ? "Vencido" : "Vigente"}</span></td>
             <td class="text-right whitespace-nowrap">
               <button data-act="view" data-key="${b.key}" class="btn btn-icon" title="Ver"><i class="fas fa-eye" aria-hidden="true"></i></button>
               <button data-act="edit" data-key="${b.key}" class="btn btn-icon btn-primary" title="Editar"><i class="fas fa-edit" aria-hidden="true"></i></button>
@@ -360,7 +363,7 @@ export default {
     }
     function renderActivity() {
       const list = [...filtered]
-        .sort((a,b)=> {
+        .sort((a, b) => {
           const da = a.details?.fechaCreacion || a.fecha || "";
           const db = b.details?.fechaCreacion || b.fecha || "";
           return (db > da) ? 1 : (db < da ? -1 : 0);
@@ -374,51 +377,51 @@ export default {
       }
       activityEmpty.classList.add("hidden");
       activity.innerHTML = list.map(b => {
-        const time = (b.details?.fechaCreacion || b.fecha || "").replace("T"," ").slice(0,16).replace(/-/g,"/");
+        const time = (b.details?.fechaCreacion || b.fecha || "").replace("T", " ").slice(0, 16).replace(/-/g, "/");
         const sucName = branchName(b.sucursal);
-  return `<li>• ${time} — Presupuesto <strong>${b.numero}</strong> — ${sucName} — <span class="text-slate-600">${money(b.total)}</span></li>`;
+        return `<li>• ${time} — Presupuesto <strong>${b.numero}</strong> — ${sucName} — <span class="text-slate-600">${money(b.total)}</span></li>`;
       }).join("");
     }
     function renderCharts() {
       // Sparkline
       const last14 = getLastDays(14);
       const dailyTotals = last14.map(d => {
-        const iso = d.toISOString().slice(0,10);
-        const sum = filtered.filter(b => b.fecha === iso).reduce((s,b)=> s + parseMoney(b.total), 0);
+        const iso = d.toISOString().slice(0, 10);
+        const sum = filtered.filter(b => b.fecha === iso).reduce((s, b) => s + parseMoney(b.total), 0);
         return { date: iso, value: sum };
       });
-      sparkSub.textContent = `${toDMY(last14[0].toISOString().slice(0,10))} → ${toDMY(last14[last14.length-1].toISOString().slice(0,10))}`;
-      drawSparkline(spark, dailyTotals.map(x=>x.value));
+      sparkSub.textContent = `${toDMY(last14[0].toISOString().slice(0, 10))} → ${toDMY(last14[last14.length - 1].toISOString().slice(0, 10))}`;
+      drawSparkline(spark, dailyTotals.map(x => x.value));
 
       // Donut
       const byBranch = {};
       filtered.forEach(b => { byBranch[b.sucursal] = (byBranch[b.sucursal] || 0) + parseMoney(b.total); });
       const labels = Object.keys(byBranch);
       const values = labels.map(k => byBranch[k]);
-      const total = values.reduce((a,b)=>a+b,0);
+      const total = values.reduce((a, b) => a + b, 0);
       donutSub.textContent = total ? money(total) : "—";
       drawDonut(donut, values);
       donutLegend.innerHTML = labels.length
-        ? labels.map((id,i) => {
-            const name = branchName(id);
-            const pct = total ? Math.round(values[i]*100/total) : 0;
-            return `<div class="flex items-center gap-1.5">
+        ? labels.map((id, i) => {
+          const name = branchName(id);
+          const pct = total ? Math.round(values[i] * 100 / total) : 0;
+          return `<div class="flex items-center gap-1.5">
               <span class="inline-block w-2.5 h-2.5 rounded" style="background:${donutColor(i)}"></span>
               <span class="min-w-[32px] text-right text-[11px]">${pct}%</span>
               <span class="truncate text-[12px]">${name}</span>
             </div>`;
-          }).join("")
+        }).join("")
         : `<div class="text-slate-400 text-[12px]">Sin datos</div>`;
     }
 
     // ===== Utils =====
-    function branchName(id){
+    function branchName(id) {
       const list = getBranches();
-      return list.find(x=> String(x.id) === String(id))?.name || (id || "—");
+      return list.find(x => String(x.id) === String(id))?.name || (id || "—");
     }
     function isExpired(iso) {
-      const d = new Date((iso || "").slice(0,10) + "T00:00:00");
-      const delta = Math.floor((Date.now() - d.getTime()) / (1000*60*60*24));
+      const d = new Date((iso || "").slice(0, 10) + "T00:00:00");
+      const delta = Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24));
       return delta > 30;
     }
     function getClientsCount() {
@@ -426,8 +429,8 @@ export default {
       catch { return 0; }
     }
     function getLastDays(n) {
-      const arr = []; const base = new Date(); base.setHours(0,0,0,0);
-      for (let i=n-1; i>=0; i--) { const d = new Date(base); d.setDate(base.getDate()-i); arr.push(d); }
+      const arr = []; const base = new Date(); base.setHours(0, 0, 0, 0);
+      for (let i = n - 1; i >= 0; i--) { const d = new Date(base); d.setDate(base.getDate() - i); arr.push(d); }
       return arr;
     }
 
@@ -438,8 +441,8 @@ export default {
       const H = canvas.clientHeight || 160;
       canvas.width = W * dpr; canvas.height = H * dpr;
       const ctx = canvas.getContext("2d");
-      ctx.setTransform(dpr,0,0,dpr,0,0);
-      ctx.clearRect(0,0,W,H);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, W, H);
 
       const padX = 12, padY = 10;
       // fondo
@@ -449,14 +452,14 @@ export default {
       if (!data.length) return;
       const max = Math.max(...data, 1);
       const min = Math.min(...data, 0);
-      const step = (W - padX*2) / Math.max(1, data.length - 1);
+      const step = (W - padX * 2) / Math.max(1, data.length - 1);
 
       // grid
       ctx.strokeStyle = "rgba(255,255,255,0.06)";
       ctx.lineWidth = 1;
-      for (let i=1;i<=3;i++){
-        const y = padY + (H - padY*2) * (i/4);
-        ctx.beginPath(); ctx.moveTo(padX, y); ctx.lineTo(W-padX, y); ctx.stroke();
+      for (let i = 1; i <= 3; i++) {
+        const y = padY + (H - padY * 2) * (i / 4);
+        ctx.beginPath(); ctx.moveTo(padX, y); ctx.lineTo(W - padX, y); ctx.stroke();
       }
 
       // línea
@@ -464,27 +467,27 @@ export default {
       ctx.lineWidth = 1.7;
       ctx.beginPath();
       data.forEach((v, i) => {
-        const x = padX + i*step;
-        const y = mapRange(v, min, max, H-padY, padY);
-        if (i===0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        const x = padX + i * step;
+        const y = mapRange(v, min, max, H - padY, padY);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
       });
       ctx.stroke();
 
       // relleno
-      const grad = ctx.createLinearGradient(0, padY, 0, H-padY);
+      const grad = ctx.createLinearGradient(0, padY, 0, H - padY);
       grad.addColorStop(0, "rgba(99,102,241,0.22)");
       grad.addColorStop(1, "rgba(99,102,241,0.03)");
       ctx.fillStyle = grad;
-      ctx.lineTo(W-padX, H-padY);
-      ctx.lineTo(padX, H-padY);
+      ctx.lineTo(W - padX, H - padY);
+      ctx.lineTo(padX, H - padY);
       ctx.closePath();
       ctx.fill();
 
       // punto final
-      const lastX = padX + (data.length - 1)*step;
-      const lastY = mapRange(data[data.length - 1], min, max, H-padY, padY);
+      const lastX = padX + (data.length - 1) * step;
+      const lastY = mapRange(data[data.length - 1], min, max, H - padY, padY);
       ctx.fillStyle = "rgba(99,102,241,1)";
-      ctx.beginPath(); ctx.arc(lastX, lastY, 2.6, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(lastX, lastY, 2.6, 0, Math.PI * 2); ctx.fill();
     }
 
     function drawDonut(canvas, values) {
@@ -493,27 +496,27 @@ export default {
       const H = canvas.clientHeight || 160;
       canvas.width = W * dpr; canvas.height = H * dpr;
       const ctx = canvas.getContext("2d");
-      ctx.setTransform(dpr,0,0,dpr,0,0);
-      ctx.clearRect(0,0,W,H);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, W, H);
 
       ctx.fillStyle = "rgba(255,255,255,0.025)";
       roundRect(ctx, 0, 0, W, H, 10, true, false);
 
-      const cx = W/2, cy = H/2;
-      const R = Math.min(W,H)/2 - 10;
+      const cx = W / 2, cy = H / 2;
+      const R = Math.min(W, H) / 2 - 10;
       const r = R * 0.6;
 
-      const total = values.reduce((a,b)=>a+b,0);
+      const total = values.reduce((a, b) => a + b, 0);
       if (!total) {
         ctx.strokeStyle = "rgba(148,163,184,.35)";
         ctx.lineWidth = R - r;
-        ctx.beginPath(); ctx.arc(cx, cy, (R+r)/2, 0, Math.PI*2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(cx, cy, (R + r) / 2, 0, Math.PI * 2); ctx.stroke();
         return;
       }
 
-      let start = -Math.PI/2;
+      let start = -Math.PI / 2;
       values.forEach((v, i) => {
-        const ang = (v/total) * Math.PI * 2;
+        const ang = (v / total) * Math.PI * 2;
         const midR = (R + r) / 2;
         ctx.strokeStyle = donutColor(i);
         ctx.lineWidth = R - r;
@@ -522,7 +525,7 @@ export default {
       });
     }
 
-    function donutColor(i){
+    function donutColor(i) {
       const palette = [
         "rgba(99,102,241,0.95)",   // indigo
         "rgba(16,185,129,0.95)",   // emerald
@@ -534,12 +537,12 @@ export default {
       return palette[i % palette.length];
     }
     function mapRange(v, inMin, inMax, outMin, outMax) {
-      if (inMax - inMin === 0) return (outMin + outMax)/2;
+      if (inMax - inMin === 0) return (outMin + outMax) / 2;
       return outMin + (v - inMin) * (outMax - outMin) / (inMax - inMin);
     }
     function roundRect(ctx, x, y, w, h, r, fill, stroke) {
-      if (typeof r === "number") r = {tl:r, tr:r, br:r, bl:r};
-      else r = Object.assign({tl:0, tr:0, br:0, bl:0}, r);
+      if (typeof r === "number") r = { tl: r, tr: r, br: r, bl: r };
+      else r = Object.assign({ tl: 0, tr: 0, br: 0, bl: 0 }, r);
       ctx.beginPath();
       ctx.moveTo(x + r.tl, y);
       ctx.lineTo(x + w - r.tr, y);
@@ -556,11 +559,11 @@ export default {
 
     // ===== Navegación rápida =====
     function openDetail(key) {
-      try { sessionStorage.setItem("editBudgetKey", key); } catch {}
+      try { sessionStorage.setItem("editBudgetKey", key); } catch { }
       location.hash = "#/presupuestos";
     }
     function editBudget(key) {
-      try { sessionStorage.setItem("editBudgetKey", key); } catch {}
+      try { sessionStorage.setItem("editBudgetKey", key); } catch { }
       location.hash = "#/presupuesto";
     }
     function deleteBudget(key, numero) {
@@ -574,7 +577,7 @@ export default {
   }
 };
 
-function statCard(icon, label, id, g="g-indigo"){
+function statCard(icon, label, id, g = "g-indigo") {
   return /*html*/`
   <div class="glass card ${g} p-3.5 flex items-center gap-3 min-h-[64px]">
     <div class="icon">${icon}</div>

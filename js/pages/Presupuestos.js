@@ -143,10 +143,10 @@ export default {
     </label>
     <label class="relative z-50">
       <select id="period" class="h-10 px-3 rounded bg-white/10 border border-white/10 text-slate-100">
-        <option value="">Todas las fechas</option>
+        <option value="" selected>Todas las fechas</option>
         <option value="today">Hoy</option>
         <option value="week">Esta semana</option>
-        <option value="month" selected>Este mes</option>
+        <option value="month">Este mes</option>
       </select>
     </label>
   <button id="export-xlsx" class="h-10 px-3 rounded bg-emerald-600/80 hover:bg-emerald-600 hidden"><i class="fas fa-file-excel" aria-hidden="true"></i> Exportar Excel</button>
