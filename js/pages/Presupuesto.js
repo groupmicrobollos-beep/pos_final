@@ -753,8 +753,12 @@ export default {
             <button id="signature-btn" class="px-3 py-2 rounded bg-sky-700/80 hover:bg-sky-700"><i class="fas fa-pen" aria-hidden="true"></i> Firma</button>
             <button id="save-budget" class="px-3 py-2 rounded bg-green-600/80 hover:bg-green-600"><i class="fas fa-save" aria-hidden="true"></i> Guardar</button>
             <button id="download-pdf-direct" class="px-3 py-2 rounded bg-rose-600/80 hover:bg-rose-600"><i class="fas fa-file-pdf" aria-hidden="true"></i> PDF</button>
-            <button id="share-wa" class="px-3 py-2 rounded bg-emerald-500/80 hover:bg-emerald-500" title="Compartir WhatsApp"><i class="fab fa-whatsapp" aria-hidden="true"></i></button>
-            <button id="share-mail" class="px-3 py-2 rounded bg-blue-500/80 hover:bg-blue-500" title="Compartir Mail"><i class="fas fa-envelope" aria-hidden="true"></i></button>
+            <button id="share-wa" class="px-3 py-2 rounded bg-emerald-500/80 hover:bg-emerald-500 flex items-center gap-2" title="Compartir WhatsApp">
+              <i class="fab fa-whatsapp" aria-hidden="true"></i> <span>WhatsApp</span>
+            </button>
+            <button id="share-mail" class="px-3 py-2 rounded bg-blue-500/80 hover:bg-blue-500 flex items-center gap-2" title="Compartir Mail">
+              <i class="fas fa-envelope" aria-hidden="true"></i> <span>Email</span>
+            </button>
           </div>
         </div>
 
