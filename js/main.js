@@ -90,20 +90,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     router.init(root);
-    // setup del menú (se volverá a ejecutar en hashchange tras render)
-    setupMobileMenu();
+    router.init(root);
 });
 
-// Re-aplicar y cerrar menú en cambios de ruta
-window.addEventListener("hashchange", () => {
-    const menuPane =
-        document.querySelector("[data-menu-panel]") || document.getElementById("mobileMenu");
-    const menuBtn =
-        document.querySelector("[data-menu-btn]") || document.getElementById("menuBtn");
-    if (menuPane && menuBtn) {
+// Re-aplicar lógica de menú cada vez que el router termina de renderizar
+window.addEventListener("router:content-loaded", () => {
+    // Pequeño timeout para asegurar que el DOM se pintó (aunque el evento se dispara linea siguiente)
+    setTimeout(setupMobileMenu, 0);
+
+    // También cerrar el menú si estaba abierto (navegación exitosa)
+    const menuPane = document.querySelector("[data-menu-panel]") || document.getElementById("mobileMenu");
+    const menuBtn = document.querySelector("[data-menu-btn]") || document.getElementById("menuBtn");
+
+    if (menuPane && menuBtn && menuPane.dataset.open === "true") {
         menuPane.dataset.open = "false";
         menuPane.hidden = true;
         menuBtn.setAttribute("aria-expanded", "false");
     }
-    setTimeout(setupMobileMenu, 0); // re-bind tras re-render
 });

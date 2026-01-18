@@ -43,7 +43,7 @@ window.generateBudgetPDF = async function (data) {
         data.company?.address,
         data.company?.phone,
         data.company?.email,
-        data.company?.cuit ? `CUIT: ${data.company.cuit}` : null
+        data.company?.cuit || data.sucursalCuit ? `CUIT: ${data.company?.cuit || data.sucursalCuit}` : null
     ].filter(Boolean);
 
     let yInfo = y + 14;

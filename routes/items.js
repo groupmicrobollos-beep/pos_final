@@ -13,11 +13,11 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
     try {
-        const { id, description, price, type, category } = req.body;
+        const { id, description, price, type, category, stock } = req.body;
         const newId = id || `prod_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
         await db.execute({
-            sql: "INSERT INTO products (id, description, price, type, category) VALUES (?, ?, ?, ?, ?)",
-            args: [newId, description, price || 0, type || 'product', category || null]
+            sql: "INSERT INTO products (id, description, price, type, category, stock) VALUES (?, ?, ?, ?, ?, ?)",
+            args: [newId, description, price || 0, type || 'product', category || null, stock || 0]
         });
         res.json({ id: newId, description, price, type, category });
     } catch (err) {
@@ -27,10 +27,10 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
     try {
-        const { description, price, type, category } = req.body;
+        const { description, price, type, category, stock } = req.body;
         await db.execute({
-            sql: "UPDATE products SET description = ?, price = ?, type = ?, category = ? WHERE id = ?",
-            args: [description, price, type, category, req.params.id]
+            sql: "UPDATE products SET description = ?, price = ?, type = ?, category = ?, stock = ? WHERE id = ?",
+            args: [description, price, type, category, stock, req.params.id]
         });
         res.json({ success: true });
     } catch (err) {

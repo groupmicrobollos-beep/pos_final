@@ -120,6 +120,7 @@ async function renderRoute(root) {
     page.mount?.(root.querySelector("#view"));
 
     window.scrollTo({ top: 0, behavior: "instant" });
+    window.dispatchEvent(new Event("router:content-loaded"));
 }
 
 export const router = {

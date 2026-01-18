@@ -13,11 +13,11 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
     try {
-        const { id, name, address, phone } = req.body;
+        const { id, name, address, phone, cuit } = req.body;
         const newId = id || `branch_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
         await db.execute({
-            sql: "INSERT INTO branches (id, name, address, phone) VALUES (?, ?, ?, ?)",
-            args: [newId, name, address, phone]
+            sql: "INSERT INTO branches (id, name, address, phone, cuit) VALUES (?, ?, ?, ?, ?)",
+            args: [newId, name, address, phone, cuit]
         });
         res.json({ id: newId, name, address, phone });
     } catch (err) {
@@ -27,10 +27,10 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
     try {
-        const { name, address, phone } = req.body;
+        const { name, address, phone, cuit } = req.body;
         await db.execute({
-            sql: "UPDATE branches SET name=?, address=?, phone=? WHERE id=?",
-            args: [name, address, phone, req.params.id]
+            sql: "UPDATE branches SET name=?, address=?, phone=?, cuit=? WHERE id=?",
+            args: [name, address, phone, cuit, req.params.id]
         });
         res.json({ success: true });
     } catch (err) {

@@ -9,7 +9,7 @@ function hashPassword(plain) {
 
 router.get('/', async (req, res) => {
     try {
-        const result = await db.execute("SELECT id, username, full_name, role, email, active, perms, created_at FROM users ORDER BY username");
+        const result = await db.execute("SELECT id, username, full_name, role, email, active, perms, branch_id, created_at FROM users ORDER BY username");
         const users = result.rows.map(u => {
             let perms = u.perms;
             if (typeof perms === 'string') {
@@ -25,15 +25,15 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
     try {
-        const { id, username, password, full_name, role, email, active, perms } = req.body;
+        const { id, username, password, full_name, role, email, active, perms, branch_id } = req.body;
         const newId = id || `usr_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
         const password_hash = password ? hashPassword(password) : "";
         const permsStr = typeof perms === 'object' ? JSON.stringify(perms) : perms;
 
         await db.execute({
-            sql: `INSERT INTO users (id, username, password_hash, full_name, role, email, active, perms) 
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            args: [newId, username, password_hash, full_name, role, email, active ? 1 : 0, permsStr]
+            sql: `INSERT INTO users (id, username, password_hash, full_name, role, email, active, perms, branch_id) 
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            args: [newId, username, password_hash, full_name, role, email, active ? 1 : 0, permsStr, branch_id || null]
         });
 
         res.json({ id: newId, username });
@@ -46,7 +46,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { username, password, full_name, role, email, active, perms } = req.body;
+        const { username, password, full_name, role, email, active, perms, branch_id } = req.body;
         const updates = [];
         const args = [];
 
@@ -55,6 +55,7 @@ router.put('/:id', async (req, res) => {
         if (role !== undefined) { updates.push("role = ?"); args.push(role); }
         if (email !== undefined) { updates.push("email = ?"); args.push(email); }
         if (active !== undefined) { updates.push("active = ?"); args.push(active ? 1 : 0); }
+        if (branch_id !== undefined) { updates.push("branch_id = ?"); args.push(branch_id || null); }
         if (perms !== undefined) {
             updates.push("perms = ?");
             args.push(typeof perms === 'object' ? JSON.stringify(perms) : perms);

@@ -3,14 +3,14 @@
 // Gestión de Usuarios, Sucursales, Ajustes del sistema, Seguridad/Backups, Auditoría.
 // 100% vanilla JS, UI consistente (glass/cards/tablas/modales).
 //
-// Integra con el resto del sistema mediante window.CFG (si existe):
-// - window.CFG.setBranches(list)   -> emite "cfg:branches-updated"
-import store from "../store.js";
-//
-// - window.CFG.setUsers(list)      -> emite "cfg:users-updated"
-// - window.CFG.setSettings(obj)    -> emite "cfg:settings-updated"
+// CAMBIOS RECIENTES:
+// - Reemplazo de Emojis por FontAwesome Icons (<i class="fas ...">)
+// - Campo "Sucursal" en Usuarios (asignación)
+// - Campo "CUIT" en Sucursales
+// - Corrección de listados
 
-// ===== Claves de almacenamiento =====
+import store, { users, branches } from "../store.js";
+
 const CFG_USERS_KEY = "cfg_users";
 const CFG_BRANCHES_KEY = "cfg_branches";
 const CFG_SETTINGS_KEY = "cfg_settings";
@@ -22,18 +22,33 @@ const INV_SUPPLIERS_KEY = "inv_suppliers";
 const INV_LIST_KEY = "inv_buy_list";
 
 // ===== Utilidades comunes =====
-const rid = (p = "id") => `${p}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+function rid(p = "id") { return p + "_" + Math.random().toString(36).slice(2, 7); }
 function load(key, def) { try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(def)); } catch { return def; } }
 function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
 function toast(msg, type = "info") {
-  const bg = type === "error" ? "bg-rose-600" : type === "success" ? "bg-emerald-600" : "bg-sky-700";
-  const el = document.createElement("div");
-  el.className = `fixed top-4 right-4 z-[4000] px-3 py-2 rounded-lg text-white shadow-2xl text-xs ${bg}`;
-  el.textContent = msg; document.body.appendChild(el);
-  setTimeout(() => { el.style.opacity = "0"; el.style.transform = "translateX(10px)"; setTimeout(() => el.remove(), 150); }, 1900);
+  const c = document.createElement("div");
+  // Colores mejorados para toast
+  const colors = {
+    info: "bg-blue-600",
+    success: "bg-green-600",
+    error: "bg-red-600",
+    warn: "bg-amber-600"
+  };
+  const color = colors[type] || colors.info;
+  c.className = `fixed bottom-4 right-4 ${color} text-white px-6 py-3 rounded-lg shadow-xl z-[9999] animate-bounce-in font-medium flex items-center gap-2`;
+
+  // Icono según tipo
+  let icon = "fa-info-circle";
+  if (type === 'success') icon = "fa-check-circle";
+  if (type === 'error') icon = "fa-exclamation-triangle";
+  if (type === 'warn') icon = "fa-exclamation-circle";
+
+  c.innerHTML = `<i class="fas ${icon}"></i> <span>${msg}</span>`;
+  document.body.appendChild(c);
+  setTimeout(() => c.remove(), 3000);
 }
-function todayISO() { return new Date().toISOString().slice(0, 10); }
-function fmtDateTime(d) { try { const x = new Date(d); return `${x.toLocaleDateString()} ${x.toLocaleTimeString()}`; } catch { return d; } }
+function todayISO() { return new Date().toISOString().split("T")[0]; }
+function fmtDateTime(d) { if (!d) return "-"; return new Date(d).toLocaleString(); }
 
 // Rol y permisos por defecto
 const ROLES = [
@@ -45,34 +60,30 @@ const ROLES = [
 
 // ====== Hash de contraseña (mejor esfuerzo en cliente) ======
 async function hashPassword(plain) {
-  if (!plain) return "";
-  try {
-    const enc = new TextEncoder().encode(plain);
-    const buf = await crypto.subtle.digest("SHA-256", enc);
-    const bytes = Array.from(new Uint8Array(buf));
-    const hex = bytes.map(b => b.toString(16).padStart(2, "0")).join("");
-    return `sha256:${hex}`;
-  } catch {
-    // Fallback MUY básico si no hay WebCrypto (mejor que plano)
-    return "weak:" + btoa(unescape(encodeURIComponent(plain)));
-  }
+  const enc = new TextEncoder().encode(plain);
+  const buf = await crypto.subtle.digest("SHA-256", enc);
+  return "sha256:" + Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
 // ====== Auditoría ======
 function logAudit(action, details = {}) {
-  const audit = load(CFG_AUDIT_KEY, []);
-  audit.unshift({ id: rid("evt"), ts: new Date().toISOString(), action, details });
-  save(CFG_AUDIT_KEY, audit.slice(0, 500)); // guardamos últimos 500 eventos
+  const logs = load(CFG_AUDIT_KEY, []);
+  logs.unshift({ id: rid("aud"), date: new Date().toISOString(), user: "admin", action, details });
+  if (logs.length > 500) logs.pop();
+  save(CFG_AUDIT_KEY, logs);
 }
 
 // ====== Ajustes por defecto ======
 function defaultSettings() {
   return {
-    companyName: "", brandName: "", cuit: "", iibb: "", address: "", email: "", phone: "",
-    currency: "ARS", locale: "es-AR", decimals: 2, iva: 21,
-    invoicePrefix: "MB-", invoiceNext: 1, theme: "auto", printTickets: false, enableWA: true,
-    msgSign: "¡Gracias! — Microbollos Group",
-    updatedAt: new Date().toISOString()
+    brandName: "Microbollos Group",
+    companyName: "José Heredia",
+    address: "Av. Ejemplo 123",
+    phone: "351-1234567",
+    email: "contacto@microbollos.com",
+    taxRate: 21,
+    invoiceType: "B",
+    logoData: null, // base64
   };
 }
 
@@ -81,12 +92,16 @@ const Theme = (() => {
   const media = window.matchMedia?.("(prefers-color-scheme: dark)");
   let mode = "auto";
 
-  function compute(theme) { return theme === "auto" ? (media && media.matches ? "dark" : "light") : theme; }
-
+  function compute(theme) {
+    if (theme === "auto") return media?.matches ? "dark" : "light";
+    return theme;
+  }
   function apply(theme = "auto") {
     mode = theme;
-    const finalMode = compute(theme);
-    document.documentElement.setAttribute("data-theme", finalMode);
+    const real = compute(theme);
+    if (real === "dark") document.documentElement.classList.add("dark", "sl-theme-dark");
+    else document.documentElement.classList.remove("dark", "sl-theme-dark");
+    document.documentElement.setAttribute("data-theme", real);
   }
 
   media?.addEventListener?.("change", () => { if (mode === "auto") apply("auto"); });
@@ -98,973 +113,671 @@ const Theme = (() => {
 export default {
   render() {
     return /*html*/`
-<section data-page="config" class="space-y-6 text-[13px]">
-  <style>
-    /* Forzar texto oscuro sólo en TEMA CLARO: aplicar sólo cuando <html data-theme="light"> */
-    /* Usa !important para sobreescribir estilos previos y garantizar texto negro fuerte en este modo */
-    html[data-theme="light"] [data-page="config"], html[data-theme="light"] [data-page="config"] * { color: #000000 !important; }
-    [data-page="config"] .hidden{display:none!important} [data-page="config"] .flex{display:flex!important}
-  [data-page="config"] .glass{background:var(--bg-glass);backdrop-filter:var(--glass-blur)}
-  [data-page="config"] .card{border:1px solid var(--border-main);border-radius:.6rem}
-  [data-page="config"] .btn{display:inline-flex;align-items:center;gap:.4rem;padding:0 .7rem;height:36px;line-height:34px;font-size:12.5px;border-radius:.45rem;border:1px solid var(--border-main);background:rgba(255,255,255,.08);cursor:pointer}
-  [data-page="config"] .btn:hover{background:rgba(255,255,255,.14)}
-  [data-page="config"] .btn-primary{background:rgba(16,185,129,.86);border-color:transparent} .btn-primary:hover{background:rgba(16,185,129,1)}
-  [data-page="config"] .btn-indigo{background:rgba(99,102,241,.86);border-color:transparent} .btn-indigo:hover{background:rgba(99,102,241,1)}
-  [data-page="config"] .btn-rose{background:rgba(244,63,94,.86);border-color:transparent} .btn-rose:hover{background:rgba(244,63,94,1)}
-    [data-page="config"] .mini{height:26px;line-height:24px;padding:0 .45rem;border-radius:.35rem}
-    [data-page="config"] .tab{padding:.45rem .7rem;border-radius:.5rem;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);cursor:pointer}
-    [data-page="config"] .tab.active{background:rgba(99,102,241,.9);border-color:transparent}
-    [data-page="config"] .table-wrap{border:1px solid rgba(255,255,255,.08);border-radius:.5rem;overflow:hidden}
-    [data-page="config"] .table td,.table th{padding:.45rem .6rem;border-bottom:1px solid rgba(255,255,255,.06)} th{font-weight:600;color:#cbd5e1;white-space:nowrap}
-    [data-page="config"] .pill{font-size:.7rem;padding:.12rem .45rem;border-radius:.45rem;background:#0b1220;border:1px solid rgba(255,255,255,.08)}
-
-    [data-page="config"] input, [data-page="config"] select, [data-page="config"] textarea{
-      background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);
-      border-radius:.45rem;color:#e2e8f0;padding:.5rem;width:100%;
-    }
-    [data-page="config"] textarea{min-height:90px}
-    [data-page="config"] .switch{appearance:none;width:40px;height:22px;border-radius:999px;background:#374151;position:relative;outline:0;cursor:pointer;border:1px solid rgba(255,255,255,.12)}
-    [data-page="config"] .switch:checked{background:#10b981}
-    [data-page="config"] .switch:before{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:999px;background:#fff;transition:all .15s}
-    [data-page="config"] .switch:checked:before{left:20px}
-
-    /* ===== SELECT: forzar modo oscuro + flecha visible ===== */
-    [data-page="config"] select{
-      background: var(--ctrl-bg, rgba(255,255,255,.08))
-                  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23cbd5e1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")
-                  no-repeat right .65rem center / 12px;
-      border: 1px solid var(--ctrl-bd, rgba(255,255,255,.10));
-      color: var(--text, #e2e8f0);
-      padding-right: 2rem;
-      appearance: none; -webkit-appearance:none; -moz-appearance:none;
-      color-scheme: dark;
-    }
-    [data-page="config"] select:focus{
-      outline: 2px solid rgba(99,102,241,.55);
-      outline-offset: 1px;
-    }
-    [data-page="config"] select option{
-      background-color: var(--bg, #0b1220);
-      color: var(--text, #e2e8f0);
-    }
-    html[data-theme="light"] [data-page="config"] select{
-      color-scheme: light;
-      background: #fff
-                  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23111827' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")
-                  no-repeat right .65rem center / 12px;
-      color:#111827; border-color: rgba(0,0,0,.1);
-    }
-    html[data-theme="light"] [data-page="config"] select option{
-      background-color:#fff; color:#111827;
-    }
-    [data-page="config"] select::-ms-expand{ display:none; }
-
-    /* ===== Search input con icono (mejora lupa) ===== */
-    [data-page="config"] .search{position:relative}
-    [data-page="config"] .search input{height:36px;padding-left:34px}
-    [data-page="config"] .search .icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);opacity:.7;pointer-events:none}
-    [data-page="config"] .search .icon svg{width:16px;height:16px;display:block}
-
-    /* ===== Etiquetas finas en forms ===== */
-    [data-page="config"] .field span{display:block;margin:0 0 .35rem .15rem;color:#cbd5e1;font-size:.75rem}
-
-    /* ===== Diálogos (modales unificados, sin scroll horizontal) ===== */
-    [data-page="config"] .overlay{background:rgba(0,0,0,.6)}
-    [data-page="config"] .dialog{
-      background:#0c1220;border-radius:1rem;border:1px solid rgba(255,255,255,.12);
-      width:min(92vw,860px);max-height:90vh;display:flex;flex-direction:column;
-      box-shadow:0 30px 80px rgba(0,0,0,.55)
-    }
-    [data-page="config"] .dialog-head{
-      padding:.8rem 1rem;border-bottom:1px solid rgba(255,255,255,.1);
-      background:linear-gradient(180deg, rgba(99,102,241,.18), rgba(99,102,241,.06))
-    }
-    [data-page="config"] .dialog-body{padding:1rem;overflow-y:auto;overflow-x:hidden}
-    [data-page="config"] .dialog-foot{
-      padding:.8rem 1rem;border-top:1px solid rgba(255,255,255,.1);
-      background:rgba(255,255,255,.03);display:flex;justify-content:flex-end;gap:.5rem
-    }
-
-    /* ===== Grilla utilitaria 12 columnas (para modales) ===== */
-    [data-page="config"] .row{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:.75rem}
-    [data-page="config"] .col-12{grid-column:span 12}
-    [data-page="config"] .col-7{grid-column:span 7}
-    [data-page="config"] .col-6{grid-column:span 6}
-    [data-page="config"] .col-5{grid-column:span 5}
-    [data-page="config"] .col-4{grid-column:span 4}
-    [data-page="config"] .col-3{grid-column:span 3}
-    [data-page="config"] .col-2{grid-column:span 2}
-    @media (max-width: 900px){
-      [data-page="config"] .col-7,
-      [data-page="config"] .col-6,
-      [data-page="config"] .col-5,
-      [data-page="config"] .col-4,
-      [data-page="config"] .col-3,
-      [data-page="config"] .col-2{grid-column:span 12}
-    }
-  </style>
-
-  <div class="flex items-center justify-between">
-    <h1 class="text-[18px] font-semibold leading-none">Configuración</h1>
-    <div class="flex gap-2">
-      <button id="tab-users" class="tab"><i class="fas fa-user" aria-hidden="true"></i> Usuarios</button>
-      <button id="tab-branches" class="tab"><i class="fas fa-building" aria-hidden="true"></i> Sucursales</button>
-      <button id="tab-settings" class="tab"><i class="fas fa-cog" aria-hidden="true"></i> Sistema</button>
-      <button id="tab-security" class="tab"><i class="fas fa-shield-alt" aria-hidden="true"></i> Seguridad & Backups</button>
-    </div>
-  </div>
-
-
-  <!-- PANEL: USUARIOS -->
-  <div id="panel-users" class="glass card p-4">
-    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
-      <div class="flex gap-2">
-        <label class="search" title="Buscar usuario, nombre, email...">
-          <span class="icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="11" cy="11" r="7"></circle><line x1="20" y1="20" x2="16.65" y2="16.65"></line>
-            </svg>
-          </span>
-          <input id="qUsers" placeholder="Buscar usuario, nombre, email...">
-        </label>
-        <select id="filterRole" class="h-9">
-          <option value="">Todos los roles</option>
-        </select>
-        <select id="filterBranch" class="h-9">
-          <option value="">Todas las sucursales</option>
-        </select>
-      </div>
-        <div class="flex gap-2">
-        <button id="btnAddUser" class="btn btn-primary"><i class="fas fa-plus" aria-hidden="true"></i> Usuario</button>
-        <button id="btnExportUsers" class="btn"><i class="fas fa-file-export" aria-hidden="true"></i> Exportar</button>
-        <label class="btn"><i class="fas fa-file-import" aria-hidden="true"></i> Importar<input id="importUsers" type="file" accept=".json" class="hidden"></label>
-      </div>
-    </div>
-    <div class="table-wrap">
-      <table class="table w-full text-[12.5px]">
-        <thead class="bg-white/5">
-          <tr>
-            <th>Usuario</th><th>Nombre</th><th>Rol</th><th>Email</th><th>Sucursal</th><th>Activo</th><th class="text-right">Acciones</th>
-          </tr>
-        </thead>
-        <tbody id="rows-users"></tbody>
-      </table>
-    </div>
-    <div id="empty-users" class="text-slate-400 text-xs py-2 text-center hidden">No hay usuarios cargados.</div>
-  </div>
-
-  <!-- PANEL: SUCURSALES -->
-  <div id="panel-branches" class="glass card p-4 hidden">
-    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
-      <div class="flex gap-2">
-        <label class="search" title="Buscar sucursal, dirección...">
-          <span class="icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="11" cy="11" r="7"></circle><line x1="20" y1="20" x2="16.65" y2="16.65"></line>
-            </svg>
-          </span>
-          <input id="qBranches" placeholder="Buscar sucursal, dirección...">
-        </label>
-      </div>
-      <div class="flex gap-2">
-        <button id="btnAddBranch" class="btn btn-primary"><i class="fas fa-plus" aria-hidden="true"></i> Sucursal</button>
-        <button id="btnExportBranches" class="btn"><i class="fas fa-file-export" aria-hidden="true"></i> Exportar</button>
-        <label class="btn"><i class="fas fa-file-import" aria-hidden="true"></i> Importar<input id="importBranches" type="file" accept=".json" class="hidden"></label>
-      </div>
-    </div>
-    <div class="table-wrap">
-      <table class="table w-full text-[12.5px]">
-        <thead class="bg-white/5">
-          <tr>
-            <th>Nombre</th><th>Responsable</th><th>Tel</th><th>Email</th><th>Dirección</th><th>CUIT</th><th class="text-right">Acciones</th>
-          </tr>
-        </thead>
-        <tbody id="rows-branches"></tbody>
-      </table>
-    </div>
-    <div id="empty-branches" class="text-slate-400 text-xs py-2 text-center hidden">No hay sucursales cargadas.</div>
-  </div>
-
-  <!-- PANEL: AJUSTES DEL SISTEMA -->
-  <div id="panel-settings" class="glass card p-4 hidden">
-    <form id="form-settings" onsubmit="return false;" class="space-y-4">
-      <div class="grid md:grid-cols-2 gap-4">
-        <div class="glass rounded-lg p-3">
-          <div class="font-medium mb-2"><i class="fas fa-id-badge" aria-hidden="true"></i> Datos de la empresa</div>
-          <div class="grid sm:grid-cols-2 gap-3">
-            <label class="text-sm block field"><span>Razón social</span><input name="companyName"></label>
-            <label class="text-sm block field"><span>Nombre de fantasía</span><input name="brandName"></label>
-            <label class="text-sm block field"><span>CUIT</span><input name="cuit"></label>
-            <label class="text-sm block field"><span>Ing. Brutos</span><input name="iibb"></label>
-            <label class="text-sm block field sm:col-span-2"><span>Domicilio</span><input name="address"></label>
-            <label class="text-sm block field"><span>Email</span><input name="email" type="email"></label>
-            <label class="text-sm block field"><span>Teléfono</span><input name="phone"></label>
+      <div class="h-full flex flex-col bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
+        <!-- Header -->
+        <header class="flex-none bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4 flex justify-between items-center shadow-sm z-10">
+          <div>
+            <h2 class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent flex items-center gap-2">
+              <i class="fas fa-cogs text-blue-600"></i> Configuración
+            </h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Sistema y Usuarios</p>
           </div>
-        </div>
-        <div class="glass rounded-lg p-3">
-          <div class="font-medium mb-2"><i class="fas fa-receipt" aria-hidden="true"></i> POS / Facturación</div>
-          <div class="grid sm:grid-cols-2 gap-3">
-            <label class="text-sm block field"><span>Moneda</span>
-              <select name="currency"><option>ARS</option><option>USD</option><option>EUR</option></select></label>
-            <label class="text-sm block field"><span>Locale</span>
-              <select name="locale"><option>es-AR</option><option>es-ES</option><option>en-US</option></select></label>
-            <label class="text-sm block field"><span>Decimales</span><input name="decimals" type="number" min="0" max="4" value="2"></label>
-            <label class="text-sm block field"><span>IVA (%)</span><input name="iva" type="number" min="0" step="0.01" value="21"></label>
-            <label class="text-sm block field"><span>Prefijo comprobante</span><input name="invoicePrefix" placeholder="MB-"></label>
-            <label class="text-sm block field"><span>Próximo número</span><input name="invoiceNext" type="number" min="1" value="1"></label>
-            <label class="text-sm block field"><span>Tema</span>
-              <select name="theme">
-                <option value="auto">Auto</option>
-                <option value="dark">Oscuro</option>
-                <option value="light">Claro</option>
-              </select>
-            </label>
-            <label class="text-sm block field"><span>Impresión tickets</span><input name="printTickets" type="checkbox" class="switch"></label>
-            <label class="text-sm block field"><span>Mensajería WhatsApp</span><input name="enableWA" type="checkbox" class="switch"></label>
-            <label class="text-sm block field sm:col-span-2"><span>Despedida en mensajes</span><input name="msgSign" placeholder="¡Gracias! — Microbollos Group"></label>
-          </div>
-        </div>
-      </div>
-      <div class="flex justify-end gap-2">
-        <button id="btnSaveSettings" class="btn btn-primary"><i class="fas fa-save" aria-hidden="true"></i> Guardar ajustes</button>
-      </div>
-    </form>
-  </div>
+          <!-- Tabs Navigation -->
+          <nav class="flex gap-2">
+            ${[
+        { id: "tab-gral", label: "General", icon: "fa-sliders-h" },
+        { id: "tab-suc", label: "Sucursales", icon: "fa-store-alt" },
+        { id: "tab-usr", label: "Usuarios", icon: "fa-users-cog" },
+        { id: "tab-sec", label: "Seguridad", icon: "fa-shield-alt" }
+      ].map(t => `
+              <button id="${t.id}" onclick="mount.setTab('${t.id}')"
+                class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2
+                       hover:bg-blue-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300">
+                 <i class="fas ${t.icon}"></i> ${t.label}
+              </button>
+            `).join("")}
+          </nav>
+        </header>
 
-  <!-- PANEL: SEGURIDAD / BACKUPS -->
-  <div id="panel-security" class="hidden grid md:grid-cols-2 gap-4">
-    <div class="glass card p-4">
-  <div class="font-medium mb-2"><i class="fas fa-archive" aria-hidden="true"></i> Respaldos locales</div>
-      <div class="flex flex-wrap gap-2">
-        <button id="btnExportAll" class="btn"><i class="fas fa-file-export" aria-hidden="true"></i> Exportar TODO</button>
-        <label class="btn"><i class="fas fa-file-import" aria-hidden="true"></i> Importar TODO<input id="importAll" type="file" accept=".json" class="hidden"></label>
-        <button id="btnClearAll" class="btn btn-rose"><i class="fas fa-bomb" aria-hidden="true"></i> Borrar datos (local)</button>
-      </div>
-      <p class="text-xs text-slate-400 mt-2">La exportación incluye claves: cfg_*, inv_* y otros módulos compatibles.</p>
-    </div>
-    <div class="glass card p-4">
-  <div class="font-medium mb-2"><i class="fas fa-scroll" aria-hidden="true"></i> Auditoría</div>
-      <div id="audit-list" class="space-y-2 max-h-[380px] overflow-auto"></div>
-      <div class="flex justify-end mt-2">
-        <button id="btnClearAudit" class="btn"><i class="fas fa-broom" aria-hidden="true"></i> Limpiar auditoría</button>
-      </div>
-    </div>
-  </div>
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto p-6 relative">
+          
+          <!-- TAB: General -->
+          <section id="panel-tab-gral" class="config-panel space-y-6 max-w-4xl mx-auto hidden animate-fade-in">
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <div class="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex items-center gap-2">
+                 <i class="fas fa-building text-blue-500"></i> <h3 class="font-bold text-lg">Datos de la Empresa</h3>
+              </div>
+              <div class="p-6 grid gap-6 md:grid-cols-2">
+                <div class="md:col-span-2 flex justify-center mb-4">
+                   <div class="relative group cursor-pointer" onclick="document.getElementById('logoInput').click()">
+                     <img id="previewLogo" src="" alt="Logo" class="h-32 w-auto object-contain rounded border border-slate-200 dark:border-slate-600 bg-slate-100 dark:bg-slate-900" />
+                     <div class="absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded text-white text-xs">
+                        <i class="fas fa-camera text-2xl mb-1"></i>
+                        <span>Cambiar Logo</span>
+                     </div>
+                     <input type="file" id="logoInput" accept="image/*" class="hidden">
+                   </div>
+                </div>
 
-  <!-- Modales -->
-  ${modalUser()}
-  ${modalBranch()}
-</section>
+                <label class="block">
+                  <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Nombre de Fantasía</span>
+                  <input id="cfg-brand" type="text" class="ui-input w-full mt-1" placeholder="Ej: Microbollos">
+                </label>
+                <label class="block">
+                   <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Razón Social</span>
+                   <input id="cfg-company" type="text" class="ui-input w-full mt-1" placeholder="Ej: José Heredia">
+                </label>
+                <label class="block md:col-span-2">
+                   <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Dirección</span>
+                   <input id="cfg-addr" type="text" class="ui-input w-full mt-1">
+                </label>
+                <label class="block">
+                   <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Teléfono</span>
+                   <input id="cfg-phone" type="text" class="ui-input w-full mt-1">
+                </label>
+                <label class="block">
+                   <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Email</span>
+                   <input id="cfg-email" type="email" class="ui-input w-full mt-1">
+                </label>
+                <label class="block">
+                    <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Impuestos default (%)</span>
+                    <input id="cfg-tax" type="number" step="0.5" class="ui-input w-full mt-1">
+                </label>
+                <label class="block">
+                    <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Tipo Factura</span>
+                    <select id="cfg-inv" class="ui-input w-full mt-1">
+                       <option value="A">Factura A</option>
+                       <option value="B">Factura B</option>
+                       <option value="C">Factura C</option>
+                       <option value="X">Presupuesto X</option>
+                    </select>
+                </label>
+              </div>
+              <div class="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex justify-end">
+                <button onclick="mount.saveSettings()" class="btn-primary flex items-center gap-2">
+                    <i class="fas fa-save"></i> Guardar Cambios
+                </button>
+              </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+               <div class="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex items-center gap-2">
+                  <i class="fas fa-paint-brush text-purple-500"></i> <h3 class="font-bold text-lg">Apariencia</h3>
+               </div>
+               <div class="p-6 flex items-center gap-4">
+                  <span class="text-sm font-medium">Tema:</span>
+                  <button onclick="mount.setTheme('light')" class="px-3 py-1 border rounded hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2"><i class="fas fa-sun text-amber-500"></i> Claro</button>
+                  <button onclick="mount.setTheme('dark')" class="px-3 py-1 border rounded hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2"><i class="fas fa-moon text-indigo-400"></i> Oscuro</button>
+                  <button onclick="mount.setTheme('auto')" class="px-3 py-1 border rounded hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2"><i class="fas fa-adjust"></i> Auto</button>
+               </div>
+            </div>
+          </section>
+
+          <!-- TAB: Sucursales -->
+          <section id="panel-tab-suc" class="config-panel space-y-6 max-w-6xl mx-auto hidden animate-fade-in">
+             <div class="flex justify-between items-center mb-4">
+                <div class="relative">
+                   <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                   <input type="text" id="branchSearch" onkeyup="mount.filterBranches()" placeholder="Buscar sucursal..." class="pl-10 pr-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 outline-none w-64">
+                </div>
+                <button onclick="mount.openBranch()" class="btn-primary flex items-center gap-2">
+                   <i class="fas fa-plus"></i> Nueva Sucursal
+                </button>
+             </div>
+             <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <table class="w-full text-left border-collapse">
+                   <thead class="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 text-xs uppercase font-bold tracking-wider">
+                      <tr>
+                         <th class="p-4">Nombre</th>
+                         <th class="p-4">Dirección</th>
+                         <th class="p-4">Teléfono</th>
+                         <th class="p-4">CUIT</th>
+                         <th class="p-4 text-right">Acciones</th>
+                      </tr>
+                   </thead>
+                   <tbody id="branchTableBody" class="divide-y divide-slate-200 dark:divide-slate-700 text-sm">
+                      <!-- dynamics -->
+                   </tbody>
+                </table>
+             </div>
+          </section>
+
+          <!-- TAB: Usuarios -->
+          <section id="panel-tab-usr" class="config-panel space-y-6 max-w-6xl mx-auto hidden animate-fade-in">
+             <div class="flex justify-between items-center mb-4">
+                <div class="relative">
+                   <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                   <input type="text" id="userSearch" onkeyup="mount.filterUsers()" placeholder="Buscar usuarios..." class="pl-10 pr-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 outline-none w-64">
+                </div>
+                <button onclick="mount.openUser()" class="btn-primary flex items-center gap-2">
+                   <i class="fas fa-user-plus"></i> Nuevo Usuario
+                </button>
+             </div>
+             <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <table class="w-full text-left border-collapse">
+                   <thead class="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 text-xs uppercase font-bold tracking-wider">
+                      <tr>
+                         <th class="p-4">Usuario</th>
+                         <th class="p-4">Nombre</th>
+                         <th class="p-4">Rol</th>
+                         <th class="p-4">Sucursal</th>
+                         <th class="p-4 text-center">Estado</th>
+                         <th class="p-4 text-right">Acciones</th>
+                      </tr>
+                   </thead>
+                   <tbody id="userTableBody" class="divide-y divide-slate-200 dark:divide-slate-700 text-sm">
+                      <!-- dynamics -->
+                   </tbody>
+                </table>
+             </div>
+          </section>
+
+          <!-- TAB: Seguridad & Backup (Simplificado) -->
+          <section id="panel-tab-sec" class="config-panel space-y-6 max-w-4xl mx-auto hidden animate-fade-in">
+             <div class="grid md:grid-cols-2 gap-6">
+                <!-- Backup -->
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                   <div class="flex items-center gap-3 mb-4 text-blue-600">
+                      <i class="fas fa-database text-2xl"></i> <h3 class="font-bold text-lg">Copia de Seguridad</h3>
+                   </div>
+                   <p class="text-sm text-slate-500 mb-6">Descarga toda la base de datos local en formato JSON.</p>
+                   <button onclick="mount.downloadBackup()" class="w-full btn-outline flex justify-center items-center gap-2">
+                       <i class="fas fa-download"></i> Descargar Backup
+                   </button>
+                   <div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                      <label class="block text-sm mb-2 font-medium">Restaurar copia</label>
+                      <input type="file" id="restoreFile" class="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 text-slate-500">
+                      <button onclick="mount.restoreBackup()" class="mt-2 w-full btn-secondary text-xs">
+                          <i class="fas fa-upload"></i> Restaurar
+                      </button>
+                   </div>
+                </div>
+                
+                <!-- Auditoría -->
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 flex flex-col">
+                   <div class="flex items-center gap-3 mb-4 text-amber-600">
+                      <i class="fas fa-list-alt text-2xl"></i> <h3 class="font-bold text-lg">Log de Auditoría</h3>
+                   </div>
+                   <div class="flex-1 overflow-auto max-h-60 bg-slate-50 dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700 p-2 text-xs font-mono space-y-1" id="auditLogContainer">
+                      <!-- logs -->
+                      <div class="text-slate-400 italic text-center py-4">Sin registros recientes</div>
+                   </div>
+                   <button onclick="mount.clearAudit()" class="mt-4 text-xs text-red-500 hover:underline text-right">
+                       <i class="fas fa-trash-alt"></i> Limpiar historial
+                   </button>
+                </div>
+             </div>
+          </section>
+
+        </main>
+
+        <!-- MODAL USUARIO -->
+        ${this.modalUser()}
+        <!-- MODAL SUCURSAL -->
+        ${this.modalBranch()}
+      </div>
     `;
   },
 
   mount(root) {
-    // Helpers modales
-    const show = (el) => { el?.classList.remove("hidden"); el?.classList.add("flex"); el && (el.style.display = "flex"); };
-    const hide = (el) => { el?.classList.add("hidden"); el?.classList.remove("flex"); el && (el.style.display = "none"); };
+    const $ = (s) => root.querySelector(s);
+    const $$ = (s) => root.querySelectorAll(s);
 
-    // Estado
-    let users = [];
-    let branches = [];
-    let settings = load(CFG_SETTINGS_KEY, defaultSettings());
+    // Estado local de data
+    let localUsers = [];
+    let localBranches = [];
+    let activeTab = "tab-gral";
 
-    // Config persists in localStorage for now (hybrid)
-    save(CFG_SETTINGS_KEY, settings);
-
-    // Aplicar tema inicial siempre que se monta la página
-    Theme.apply(settings.theme || "auto");
-
-    // Refs pestañas
-    const tabUsers = root.querySelector("#tab-users");
-    const tabBranches = root.querySelector("#tab-branches");
-    const tabSettings = root.querySelector("#tab-settings");
-    const tabSecurity = root.querySelector("#tab-security");
-    const panelUsers = root.querySelector("#panel-users");
-    const panelBranches = root.querySelector("#panel-branches");
-    const panelSettings = root.querySelector("#panel-settings");
-    const panelSecurity = root.querySelector("#panel-security");
-
-    // Navegación tabs
-    function setTab(which) {
-      const map = { users: [tabUsers, panelUsers], branches: [tabBranches, panelBranches], settings: [tabSettings, panelSettings], security: [tabSecurity, panelSecurity] };
-      Object.values(map).forEach(([t, p]) => {
-        if (t) t.classList.remove("active");
-        if (p) p.classList.add("hidden");
-      });
-      if (map[which] && map[which][0]) map[which][0].classList.add("active");
-      if (map[which] && map[which][1]) map[which][1].classList.remove("hidden");
-      localStorage.setItem("cfg_active_tab", which);
-    }
-    tabUsers.addEventListener("click", () => setTab("users"));
-    tabBranches.addEventListener("click", () => setTab("branches"));
-    tabSettings.addEventListener("click", () => setTab("settings"));
-    tabSecurity.addEventListener("click", () => setTab("security"));
-    setTab(localStorage.getItem("cfg_active_tab") || "users");
-
-    // ====== USERS ======
-    const qUsers = root.querySelector("#qUsers");
-    const filterRole = root.querySelector("#filterRole");
-    const filterBranch = root.querySelector("#filterBranch");
-    const rowsUsers = root.querySelector("#rows-users");
-    const emptyUsers = root.querySelector("#empty-users");
-    const btnAddUser = root.querySelector("#btnAddUser");
-    const btnExportUsers = root.querySelector("#btnExportUsers");
-    const importUsers = root.querySelector("#importUsers");
-
-    // Relleno combos
-    paintRoles(filterRole, true);
-    paintBranchesSelect(filterBranch, branches, "", true);
-
-    // Modal usuario
-    const userModal = root.querySelector("#user-modal");
-    const userForm = root.querySelector("#user-form");
-    const userClose = root.querySelector("#user-close");
-    const userCancel = root.querySelector("#user-cancel");
-    const userSave = root.querySelector("#user-save");
-    const userSaveNew = root.querySelector("#user-save-new");
-    const togglePass = root.querySelector("#user-pass-toggle");
-
-    function openUser(data = null) {
-      const F = userForm.elements;
-      userForm.reset();
-      F.uid.value = data?.id || rid("usr");
-      F.username.value = data?.username || "";
-      F.name.value = data?.full_name || "";
-      F.role.value = data?.role || "admin";
-      F.email.value = data?.email || "";
-      F.phone.value = data?.phone || "";
-      paintBranchesSelect(F.branchId, branches, data?.branch_id || "", false);
-      F.active.checked = data?.active ?? true;
-
-      // Permisos avanzados
-      const p = data?.perms || {};
-      F.perm_inventory.checked = !!(p.all || p.inventory);
-      F.perm_suppliers.checked = !!(p.all || p.suppliers);
-      F.perm_pos.checked = !!(p.all || p.pos);
-      F.perm_quotes.checked = !!(p.all || p.quotes);
-      F.perm_reports.checked = !!(p.all || p.reports);
-      F.perm_settings.checked = !!(p.all || p.settings);
-      F.perm_users.checked = !!(p.all || p.users);
-      F.perm_readonly.checked = !!p.readonly;
-
-      // Passwords vacíos -> no cambiar
-      F.pass.value = "";
-      F.pass2.value = "";
-      show(userModal);
-      setTimeout(() => F.username?.focus(), 0);
-    }
-    function readUserForm() {
-      const F = userForm.elements;
-      const perms = {
-        inventory: F.perm_inventory.checked,
-        suppliers: F.perm_suppliers.checked,
-        pos: F.perm_pos.checked,
-        quotes: F.perm_quotes.checked,
-        reports: F.perm_reports.checked,
-        settings: F.perm_settings.checked,
-        users: F.perm_users.checked,
-        readonly: F.perm_readonly.checked
-      };
-      const onCount = Object.values(perms).filter(Boolean).length;
-      const pFinal = onCount >= 7 ? { all: true } : perms;
-      return {
-        id: F.uid.value,
-        username: F.username.value.trim(),
-        full_name: F.name.value.trim(),
-        role: F.role.value,
-        email: F.email.value.trim(),
-        branch_id: F.branchId.value || "",
-        active: !!F.active.checked,
-        perms: pFinal
-      };
-    }
-    async function saveUser(mode = "close") {
-      const F = userForm.elements;
-      const data = readUserForm();
-      if (!data.username) return toast("Usuario obligatorio", "error");
-      if (!data.full_name) return toast("Nombre obligatorio", "error");
-
-      const pass = F.pass.value || "";
-      const pass2 = F.pass2.value || "";
-      if (pass || pass2) {
-        if (pass.length < 4) return toast("Contraseña muy corta (mín. 4)", "error");
-        if (pass !== pass2) return toast("Las contraseñas no coinciden", "error");
+    // --- Tab Navigation ---
+    const setTab = (id) => {
+      activeTab = id;
+      $$(".config-panel").forEach(p => p.classList.add("hidden"));
+      const target = root.querySelector("#panel-" + id);
+      if (target) {
+        target.classList.remove("hidden");
+        // Trigger animations
+        target.classList.remove("animate-fade-in");
+        void target.offsetWidth;
+        target.classList.add("animate-fade-in");
       }
-      if (pass) data.password = pass;
+
+      // Update nav styles
+      $$("nav button").forEach(b => {
+        if (b.id === id) {
+          b.classList.add("bg-blue-100", "dark:bg-slate-700", "text-blue-700", "dark:text-blue-300");
+          b.classList.remove("text-slate-600", "dark:text-slate-300");
+        } else {
+          b.classList.remove("bg-blue-100", "dark:bg-slate-700", "text-blue-700", "dark:text-blue-300");
+          b.classList.add("text-slate-600", "dark:text-slate-300");
+        }
+      });
+
+      // Reload data if needed
+      if (id === "tab-usr") loadUsers();
+      if (id === "tab-suc") loadBranches();
+      if (id === "tab-gral") fillSettingsForm();
+      if (id === "tab-sec") renderAudit();
+    };
+    mount.setTab = setTab;
+
+    // --- SETTINGS LOGIC ---
+    const logoInput = $("#logoInput");
+    const previewLogo = $("#previewLogo");
+
+    logoInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (ev) => { previewLogo.src = ev.target.result; };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    const fillSettingsForm = () => {
+      const cfg = load(CFG_SETTINGS_KEY, defaultSettings());
+      $("#cfg-brand").value = cfg.brandName || "";
+      $("#cfg-company").value = cfg.companyName || "";
+      $("#cfg-addr").value = cfg.address || "";
+      $("#cfg-phone").value = cfg.phone || "";
+      $("#cfg-email").value = cfg.email || "";
+      $("#cfg-tax").value = cfg.taxRate || 21;
+      $("#cfg-inv").value = cfg.invoiceType || "B";
+      previewLogo.src = cfg.logoData || "assets/logo-placeholder.png";
+    };
+
+    mount.saveSettings = () => {
+      const cfg = load(CFG_SETTINGS_KEY, defaultSettings());
+      cfg.brandName = $("#cfg-brand").value;
+      cfg.companyName = $("#cfg-company").value;
+      cfg.address = $("#cfg-addr").value;
+      cfg.phone = $("#cfg-phone").value;
+      cfg.email = $("#cfg-email").value;
+      cfg.taxRate = parseFloat($("#cfg-tax").value) || 0;
+      cfg.invoiceType = $("#cfg-inv").value;
+
+      // Logo?
+      if (previewLogo.src && previewLogo.src.startsWith("data:image")) {
+        cfg.logoData = previewLogo.src;
+      }
+
+      save(CFG_SETTINGS_KEY, cfg);
+      toast("Configuración guardada", "success");
+      logAudit("SAVE_SETTINGS");
+    };
+
+    mount.setTheme = (t) => {
+      Theme.apply(t);
+      toast("Tema actualizado: " + t);
+    };
+
+    // --- USERS LOGIC ---
+    const loadUsers = async () => {
+      try {
+        localUsers = await store.users.list();
+        repaintUsers();
+      } catch (e) {
+        toast("Error cargando usuarios", "error");
+        console.error(e);
+      }
+    };
+    mount.loadUsers = loadUsers;
+
+    const repaintUsers = () => {
+      const term = ($("#userSearch").value || "").toLowerCase();
+      const tbody = $("#userTableBody");
+      tbody.innerHTML = "";
+
+      const filtered = localUsers.filter(u => u.username.toLowerCase().includes(term) || (u.full_name || "").toLowerCase().includes(term));
+
+      filtered.forEach(u => {
+        // Find branch name
+        const bName = localBranches.find(b => b.id == u.branch_id)?.name || "-";
+
+        const tr = document.createElement("tr");
+        tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors";
+        tr.innerHTML = `
+              <td class="p-4 font-medium">${u.username}</td>
+              <td class="p-4 text-slate-500 dark:text-slate-400">${u.full_name || ""}</td>
+              <td class="p-4"><span class="px-2 py-1 rounded text-xs bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-600">${ROLES.find(r => r.id === u.role)?.name || u.role}</span></td>
+              <td class="p-4">${bName}</td>
+              <td class="p-4 text-center">
+                 ${u.active ? '<span class="text-green-500"><i class="fas fa-check"></i></span>' : '<span class="text-slate-300"><i class="fas fa-times"></i></span>'}
+              </td>
+              <td class="p-4 text-right space-x-2">
+                 <button onclick="mount.openUser('${u.id}')" class="text-blue-500 hover:text-blue-700 p-1" title="Editar"><i class="fas fa-edit"></i></button>
+                 ${u.username !== 'admin' ? `<button onclick="mount.delUser('${u.id}')" class="text-red-500 hover:text-red-700 p-1" title="Eliminar"><i class="fas fa-trash-alt"></i></button>` : ''}
+              </td>
+           `;
+        tbody.appendChild(tr);
+      });
+    };
+    mount.filterUsers = repaintUsers;
+
+    // Modal Users
+    const uModal = $("#user-modal");
+    let editingUserId = null;
+
+    mount.openUser = (uid = null) => {
+      editingUserId = uid;
+      uModal.classList.remove("hidden");
+      // Paint roles & branches
+      const rSel = $("#u-role");
+      rSel.innerHTML = ROLES.map(r => `<option value="${r.id}">${r.name}</option>`).join("");
+
+      const bSel = $("#u-branch");
+      // Ensure branches loaded
+      if (localBranches.length === 0) store.branches.list().then(l => { localBranches = l; paintBranchOptions(bSel); });
+      else paintBranchOptions(bSel);
+
+      if (uid) {
+        const u = localUsers.find(x => x.id === uid);
+        if (!u) return;
+        $("#u-user").value = u.username;
+        $("#u-fullname").value = u.full_name || "";
+        $("#u-email").value = u.email || "";
+        $("#u-pass").value = ""; // blank logic
+        $("#u-pass").placeholder = "(Dejar vacío para no cambiar)";
+        $("#u-role").value = u.role;
+        $("#u-active").checked = !!u.active;
+        $("#u-branch").value = u.branch_id || "";
+        $("#u-title").innerText = "Editar Usuario";
+      } else {
+        $("#u-user").value = "";
+        $("#u-fullname").value = "";
+        $("#u-email").value = "";
+        $("#u-pass").value = "";
+        $("#u-pass").placeholder = "Contraseña";
+        $("#u-role").value = "user";
+        $("#u-active").checked = true;
+        $("#u-branch").value = "";
+        $("#u-title").innerText = "Nuevo Usuario";
+      }
+    };
+
+    const paintBranchOptions = (sel) => {
+      sel.innerHTML = `<option value="">-- Sin asignar --</option>` +
+        localBranches.map(b => `<option value="${b.id}">${b.name}</option>`).join("");
+    };
+
+    mount.closeUser = () => { uModal.classList.add("hidden"); };
+
+    mount.saveUser = async () => {
+      const username = $("#u-user").value.trim();
+      const full_name = $("#u-fullname").value.trim();
+      const email = $("#u-email").value.trim();
+      const role = $("#u-role").value;
+      const active = $("#u-active").checked;
+      const branch_id = $("#u-branch").value;
+      const pass = $("#u-pass").value;
+
+      if (!username) return toast("Falta usuario", "error");
+
+      const data = { username, full_name, email, role, active, branch_id };
+      // Validar unique username locally? Backend will fail anyway.
+
+      let ro = ROLES.find(r => r.id === role);
+      data.perms = ro ? ro.perms : {};
 
       try {
-        if (users.find(u => u.id === data.id)) {
-          await store.users.update(data.id, data);
-          toast("Usuario actualizado ✅", "success");
-          logAudit("user.update", { id: data.id, username: data.username });
+        if (editingUserId) {
+          if (pass) data.password = pass;
+          await store.users.update(editingUserId, data);
+          toast("Usuario actualizado", "success");
         } else {
+          if (!pass) return toast("Falta contraseña para nuevo usuario", "error");
+          data.password = pass;
           await store.users.create(data);
-          toast("Usuario creado ✅", "success");
-          logAudit("user.create", { username: data.username });
+          toast("Usuario creado", "success");
         }
-
-        await loadUsers();
-        if (mode === "new") openUser(null); else hide(userModal);
-      } catch (err) {
-        console.error(err);
-        toast(err.message || "Error al guardar usuario", "error");
+        mount.closeUser();
+        loadUsers();
+      } catch (e) {
+        toast(e.message || "Error al guardar usuario", "error");
       }
-    }
-    async function delUser(id) {
-      const u = users.find(x => x.id === id);
-      if (!u) return;
-      if (!confirm(`¿Eliminar usuario "${u.username}"?`)) return;
+    };
+
+    mount.delUser = async (uid) => {
+      if (!confirm("¿Seguro de eliminar este usuario?")) return;
       try {
-        await store.users.remove(id);
-        await loadUsers();
+        await store.users.remove(uid);
         toast("Usuario eliminado", "success");
-        logAudit("user.delete", { id: u.id, username: u.username });
+        loadUsers();
       } catch (e) { toast(e.message, "error"); }
-    }
-    function toggleActive(id) {
-      const u = users.find(x => x.id === id); if (!u) return;
-      u.active = !u.active; u.updatedAt = new Date().toISOString();
-      save(CFG_USERS_KEY, users);
-      window.CFG?.setUsers(users); // 🔔
-      repaintUsers();
-      logAudit("user.toggleActive", { id: u.id, active: u.active });
-    }
-    function paintRoles(select, includeAll = false) {
-      const opts = (includeAll ? [`<option value="">Todos los roles</option>`] : [])
-        .concat(ROLES.map(r => `<option value="${r.id}">${r.name}</option>`));
-      select.innerHTML = opts.join("");
-    }
-    function paintBranchesSelect(select, list, value = "", includeAll = false) {
-      const base = includeAll ? `<option value="">Todas las sucursales</option>` : `<option value="">(Ninguna)</option>`;
-      select.innerHTML = base + (list || []).map(b => `<option value="${b.id}">${b.name}</option>`).join("");
-      select.value = value || "";
-    }
-    async function loadUsers() {
+    };
+
+    // --- BRANCHES LOGIC ---
+    const loadBranches = async () => {
       try {
-        users = await store.users.list();
-        repaintUsers();
-        window.CFG?.setUsers(users);
-      } catch (err) {
-        console.error("[loadUsers] error:", err);
-        // Fallback or empty
-        users = [];
-        repaintUsers();
-      }
-    }
-
-
-    // Cargar usuarios al iniciar
-    loadUsers();
-
-    function repaintUsers() {
-      const term = (qUsers.value || "").toLowerCase().trim();
-      const fr = filterRole.value || "";
-      const fb = filterBranch.value || "";
-
-      const view = users.filter(u => {
-        const matchesTerm = !term || [u.username, u.full_name, u.email].join(" ").toLowerCase().includes(term);
-        const matchesRole = !fr || u.role === fr;
-        const matchesBranch = !fb || (u.branch_id || "") === fb;
-        return matchesTerm && matchesRole && matchesBranch;
-      });
-      const rows = view.map(u => {
-        const roleName = ROLES.find(r => r.id === u.role)?.name || u.role || "-";
-        const bName = (branches.find(b => b.id === u.branch_id)?.name) || "—";
-        const st = u.active ? `<span class="pill" style="color:#86efac;background:#16a34a33">Activo</span>` : `<span class="pill" style="color:#fca5a5;background:#dc262633">Inactivo</span>`;
-        return `
-        <tr class="hover:bg-white/5">
-          <td class="font-medium">${u.username}</td>
-          <td>${u.full_name || "-"}</td>
-          <td>${roleName}</td>
-          <td>${u.email || "-"}</td>
-          <td>-</td>
-          <td>${bName}</td>
-          <td>${st}</td>
-          <td class="text-right whitespace-nowrap">
-              <button class="btn mini" data-act="toggle" data-id="${u.id}" title="Activar/Desactivar"><i class="fas fa-toggle-on" aria-hidden="true"></i></button>
-              <button class="btn mini btn-indigo" data-act="edit" data-id="${u.id}" title="Editar"><i class="fas fa-edit" aria-hidden="true"></i></button>
-              <button class="btn mini btn-rose" data-act="del" data-id="${u.id}" title="Eliminar"><i class="fas fa-trash" aria-hidden="true"></i></button>
-          </td>
-        </tr>`;
-      }).join("");
-      rowsUsers.innerHTML = rows;
-      emptyUsers.classList.toggle("hidden", view.length > 0);
-    }
-
-    // Eventos user panel
-    btnAddUser.addEventListener("click", () => openUser(null));
-    userClose.addEventListener("click", () => hide(userModal));
-    userCancel.addEventListener("click", () => hide(userModal));
-    userModal.addEventListener("click", (e) => { if (e.target === userModal) hide(userModal); });
-    userSave.addEventListener("click", () => saveUser("close"));
-    userSaveNew.addEventListener("click", () => saveUser("new"));
-    togglePass.addEventListener("click", () => {
-      const F = userForm.elements;
-      const type = F.pass.type === "password" ? "text" : "password";
-      F.pass.type = type; F.pass2.type = type;
-    });
-
-    rowsUsers.addEventListener("click", (e) => {
-      const btn = e.target.closest("button[data-act]"); if (!btn) return;
-      const id = btn.dataset.id;
-      if (btn.dataset.act === "edit") openUser(users.find(u => u.id === id));
-      if (btn.dataset.act === "del") delUser(id);
-      if (btn.dataset.act === "toggle") toggleActive(id);
-    });
-    [qUsers, filterRole, filterBranch].forEach(el => el.addEventListener("input", repaintUsers));
-
-    btnExportUsers.addEventListener("click", () => {
-      const blob = new Blob([JSON.stringify(users, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob); const a = document.createElement("a");
-      a.href = url; a.download = `usuarios_${todayISO().replace(/-/g, "")}.json`; a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 300);
-    });
-    importUsers.addEventListener("change", (ev) => {
-      const f = ev.target.files?.[0]; if (!f) return;
-      const r = new FileReader();
-      r.onload = () => {
-        try {
-          const data = JSON.parse(r.result);
-          if (Array.isArray(data)) {
-            users = data; save(CFG_USERS_KEY, users);
-            window.CFG?.setUsers(users); // 🔔
-            repaintUsers(); toast("Usuarios importados ✅", "success"); logAudit("users.import", { count: users.length });
-          } else toast("Archivo inválido", "error");
-        } catch { toast("Archivo inválido", "error"); }
-        importUsers.value = "";
-      };
-      r.readAsText(f);
-    });
-
-    // ====== BRANCHES ======
-    const qBranches = root.querySelector("#qBranches");
-    const rowsBranches = root.querySelector("#rows-branches");
-    const emptyBranches = root.querySelector("#empty-branches");
-    const btnAddBranch = root.querySelector("#btnAddBranch");
-    const btnExportBranches = root.querySelector("#btnExportBranches");
-    const importBranches = root.querySelector("#importBranches");
-
-    const branchModal = root.querySelector("#branch-modal");
-    const branchForm = root.querySelector("#branch-form");
-    const branchClose = root.querySelector("#branch-close");
-    const branchCancel = root.querySelector("#branch-cancel");
-    const branchSave = root.querySelector("#branch-save");
-    const branchSaveNew = root.querySelector("#branch-save-new");
-
-    function openBranch(data = null) {
-      const F = branchForm.elements;
-      branchForm.reset();
-      F.bid.value = data?.id || rid("br");
-      F.name.value = data?.name || "";
-      F.manager.value = data?.manager || "";
-      F.phone.value = data?.phone || "";
-      F.email.value = data?.email || "";
-      F.address.value = data?.address || "";
-      F.city.value = data?.city || "";
-      F.state.value = data?.state || "";
-      F.zip.value = data?.zip || "";
-      F.hours.value = data?.hours || "";
-      F.cuit.value = data?.cuit || "";
-      F.notes.value = data?.notes || "";
-      show(branchModal);
-      setTimeout(() => F.name?.focus(), 0);
-    }
-    function readBranchForm() {
-      const F = branchForm.elements;
-      return {
-        id: F.bid.value,
-        name: F.name.value.trim(),
-        manager: F.manager.value.trim(),
-        phone: F.phone.value.trim(),
-        email: F.email.value.trim(),
-        address: F.address.value.trim(),
-        city: F.city.value.trim(),
-        state: F.state.value.trim(),
-        zip: F.zip.value.trim(),
-        hours: F.hours.value.trim(),
-        cuit: F.cuit.value.trim(),
-        notes: F.notes.value.trim(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-    async function saveBranch(mode = "close") {
-      const data = readBranchForm();
-      if (!data.name) return toast("Nombre de sucursal obligatorio", "error");
-
-      try {
-        let isNew = !branches.find(b => b.id === data.id);
-        if (isNew) {
-          await store.branches.create(data);
-          logAudit("branch.create", { name: data.name });
-        } else {
-          await store.branches.update(data.id, data);
-          logAudit("branch.update", { name: data.name });
-        }
-
-        await loadBranches();
-        toast("Sucursal guardada ✅", "success");
-        if (mode === "new") { openBranch(null); } else { hide(branchModal); }
-      } catch (e) { toast(e.message, "error"); }
-    }
-    async function delBranch(id) {
-      const b = branches.find(x => x.id === id); if (!b) return;
-      if (!confirm(`¿Eliminar sucursal "${b.name}"?`)) return;
-      try {
-        await store.branches.remove(id);
-        await loadBranches();
-        toast("Sucursal eliminada", "success");
-        logAudit("branch.delete", { id: b.id, name: b.name });
-      } catch (e) { toast(e.message, "error"); }
-    }
-
-    async function loadBranches() {
-      try {
-        branches = await store.branches.list();
+        localBranches = await store.branches.list();
         repaintBranches();
-        paintBranchesSelect(filterBranch, branches, filterBranch.value, true);
-        window.CFG?.setBranches(branches);
-      } catch (e) { console.error(e); }
-    }
-    loadBranches();
-    function repaintBranches() {
-      const term = (qBranches.value || "").toLowerCase().trim();
-      const view = branches.filter(b => {
-        const matchesTerm = !term || [b.name, b.manager, b.address, b.city, b.state, b.cuit].join(" ").toLowerCase().includes(term);
-        return matchesTerm;
+      } catch (e) { toast("Error cargando sucursales", "error"); }
+    };
+    mount.loadBranches = loadBranches;
+
+    const repaintBranches = () => {
+      const term = ($("#branchSearch").value || "").toLowerCase();
+      const tbody = $("#branchTableBody");
+      tbody.innerHTML = "";
+
+      const filtered = localBranches.filter(b => b.name.toLowerCase().includes(term));
+
+      filtered.forEach(b => {
+        const tr = document.createElement("tr");
+        tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors";
+        tr.innerHTML = `
+             <td class="p-4 font-bold text-slate-700 dark:text-slate-200">${b.name}</td>
+             <td class="p-4 text-slate-500">${b.address || "-"}</td>
+             <td class="p-4 text-slate-500">${b.phone || "-"}</td>
+             <td class="p-4 font-mono text-slate-600 dark:text-slate-400">${b.cuit || "-"}</td>
+             <td class="p-4 text-right space-x-2">
+                 <button onclick="mount.openBranch('${b.id}')" class="text-blue-500 hover:text-blue-700 p-1" title="Editar"><i class="fas fa-edit"></i></button>
+                 <button onclick="mount.delBranch('${b.id}')" class="text-red-500 hover:text-red-700 p-1" title="Eliminar"><i class="fas fa-trash-alt"></i></button>
+             </td>
+           `;
+        tbody.appendChild(tr);
       });
-      rowsBranches.innerHTML = view.map(b => `
-        <tr class="hover:bg-white/5">
-          <td class="font-medium">${b.name}</td>
-          <td>${b.manager || "-"}</td>
-          <td>${b.phone || "-"}</td>
-          <td>${b.email || "-"}</td>
-          <td>${[b.address, b.city, b.state].filter(Boolean).join(", ") || "-"}</td>
-          <td>${b.cuit || "-"}</td>
-          <td class="text-right whitespace-nowrap">
-            <button class="btn mini btn-indigo" data-act="edit" data-id="${b.id}" title="Editar"><i class="fas fa-edit" aria-hidden="true"></i></button>
-            <button class="btn mini btn-rose" data-act="del" data-id="${b.id}" title="Eliminar"><i class="fas fa-trash" aria-hidden="true"></i></button>
-          </td>
-        </tr>`).join("");
-      emptyBranches.classList.toggle("hidden", view.length > 0);
-    }
+    };
+    mount.filterBranches = repaintBranches;
 
-    // Eventos branches
-    btnAddBranch.addEventListener("click", () => openBranch(null));
-    branchClose.addEventListener("click", () => hide(branchModal));
-    branchCancel.addEventListener("click", () => hide(branchModal));
-    branchModal.addEventListener("click", (e) => { if (e.target === branchModal) hide(branchModal); });
-    branchSave.addEventListener("click", () => saveBranch("close"));
-    branchSaveNew.addEventListener("click", () => saveBranch("new"));
-    qBranches.addEventListener("input", repaintBranches);
-    rowsBranches.addEventListener("click", (e) => {
-      const btn = e.target.closest("button[data-act]"); if (!btn) return;
-      const id = btn.dataset.id;
-      if (btn.dataset.act === "edit") openBranch(branches.find(b => b.id === id));
-      if (btn.dataset.act === "del") delBranch(id);
-    });
-    btnExportBranches.addEventListener("click", () => {
-      const blob = new Blob([JSON.stringify(branches, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob); const a = document.createElement("a");
-      a.href = url; a.download = `sucursales_${todayISO().replace(/-/g, "")}.json`; a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 300);
-    });
-    importBranches.addEventListener("change", (ev) => {
-      const f = ev.target.files?.[0]; if (!f) return;
-      const r = new FileReader();
-      r.onload = () => {
-        try {
-          const data = JSON.parse(r.result);
-          if (Array.isArray(data)) {
-            branches = data; save(CFG_BRANCHES_KEY, branches);
-            window.CFG?.setBranches(branches); // 🔔
-            repaintBranches(); paintBranchesSelect(filterBranch, branches, "", true);
-            toast("Sucursales importadas ✅", "success"); logAudit("branches.import", { count: branches.length });
-          } else toast("Archivo inválido", "error");
-        } catch { toast("Archivo inválido", "error"); }
-        importBranches.value = "";
-      };
-      r.readAsText(f);
-    });
+    // Modal Branch
+    const bModal = $("#branch-modal");
+    let editingBranchId = null;
 
-    // ====== SETTINGS ======
-    const formSettings = root.querySelector("#form-settings");
-    const btnSaveSettings = root.querySelector("#btnSaveSettings");
+    mount.openBranch = (bid = null) => {
+      editingBranchId = bid;
+      bModal.classList.remove("hidden");
+      if (bid) {
+        const b = localBranches.find(x => x.id === bid);
+        $("#b-name").value = b.name;
+        $("#b-addr").value = b.address || "";
+        $("#b-phone").value = b.phone || "";
+        $("#b-cuit").value = b.cuit || "";
+        $("#b-title").innerText = "Editar Sucursal";
+      } else {
+        $("#b-name").value = "";
+        $("#b-addr").value = "";
+        $("#b-phone").value = "";
+        $("#b-cuit").value = "";
+        $("#b-title").innerText = "Nueva Sucursal";
+      }
+    };
+    mount.closeBranch = () => bModal.classList.add("hidden");
 
-    function fillSettingsForm() {
-      const S = formSettings.elements; const s = settings;
-      S.companyName.value = s.companyName || ""; S.brandName.value = s.brandName || "";
-      S.cuit.value = s.cuit || ""; S.iibb.value = s.iibb || ""; S.address.value = s.address || "";
-      S.email.value = s.email || ""; S.phone.value = s.phone || "";
-      S.currency.value = s.currency || "ARS"; S.locale.value = s.locale || "es-AR";
-      S.decimals.value = s.decimals ?? 2; S.iva.value = s.iva ?? 21;
-      S.invoicePrefix.value = s.invoicePrefix || "MB-"; S.invoiceNext.value = s.invoiceNext ?? 1;
-      S.theme.value = s.theme || "auto"; S.printTickets.checked = !!s.printTickets; S.enableWA.checked = !!s.enableWA;
-      S.msgSign.value = s.msgSign || "";
-    }
-    function readSettingsForm() {
-      const S = formSettings.elements;
-      return {
-        companyName: S.companyName.value.trim(),
-        brandName: S.brandName.value.trim(),
-        cuit: S.cuit.value.trim(),
-        iibb: S.iibb.value.trim(),
-        address: S.address.value.trim(),
-        email: S.email.value.trim(),
-        phone: S.phone.value.trim(),
-        currency: S.currency.value,
-        locale: S.locale.value,
-        decimals: Math.min(4, Math.max(0, parseInt(S.decimals.value || "2", 10))),
-        iva: parseFloat(S.iva.value || "21") || 0,
-        invoicePrefix: S.invoicePrefix.value.trim(),
-        invoiceNext: Math.max(1, parseInt(S.invoiceNext.value || "1", 10)),
-        theme: S.theme.value,
-        printTickets: !!S.printTickets.checked,
-        enableWA: !!S.enableWA.checked,
-        msgSign: S.msgSign.value.trim(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-    btnSaveSettings.addEventListener("click", () => {
-      const data = readSettingsForm();
-      settings = { ...settings, ...data };
-      save(CFG_SETTINGS_KEY, settings);
-      // 🔔 avisar al sistema
-      window.CFG?.setSettings(settings);
-      // Aplicar tema inmediatamente
-      Theme.apply(settings.theme);
+    mount.saveBranch = async () => {
+      const name = $("#b-name").value.trim();
+      const address = $("#b-addr").value.trim();
+      const phone = $("#b-phone").value.trim();
+      const cuit = $("#b-cuit").value.trim();
 
-      toast("Ajustes guardados ✅", "success");
-      logAudit("settings.update", { currency: settings.currency, locale: settings.locale, theme: settings.theme });
-    });
-    fillSettingsForm();
+      if (!name) return toast("Nombre requerido", "error");
 
-    // ====== SECURITY / BACKUPS / AUDIT ======
-    const btnExportAll = root.querySelector("#btnExportAll");
-    const importAll = root.querySelector("#importAll");
-    const btnClearAll = root.querySelector("#btnClearAll");
-    const auditList = root.querySelector("#audit-list");
-    const btnClearAudit = root.querySelector("#btnClearAudit");
+      const data = { name, address, phone, cuit };
 
-    function snapshotAll() {
-      // Sólo claves del sistema (cfg_* e inv_*) + futuras "pos_" etc.
-      const out = { exportedAt: new Date().toISOString(), version: 1, data: {} };
+      try {
+        if (editingBranchId) {
+          await store.branches.update(editingBranchId, data);
+          toast("Sucursal actualizada", "success");
+        } else {
+          await store.branches.create(data);
+          toast("Sucursal creada", "success");
+        }
+        mount.closeBranch();
+        loadBranches();
+      } catch (e) { toast(e.message, "error"); }
+    };
+
+    mount.delBranch = async (bid) => {
+      if (!confirm("¿Eliminar sucursal? Esto no borrará los datos asociados pero podría causar inconsistencias.")) return;
+      try {
+        await store.branches.remove(bid);
+        toast("Sucursal eliminada", "success");
+        loadBranches();
+      } catch (e) { toast(e.message, "error"); }
+    };
+
+    // --- SECURITY / AUDIT ---
+    mount.downloadBackup = () => {
+      const fullData = {};
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
-        if (/^(cfg_|inv_|pos_)/.test(k)) out.data[k] = localStorage.getItem(k);
+        fullData[k] = localStorage.getItem(k);
       }
-      return out;
-    }
-    function renderAudit() {
-      const a = load(CFG_AUDIT_KEY, []);
-      if (!a.length) { auditList.innerHTML = `<div class="text-slate-400 text-xs">Aún sin eventos.</div>`; return; }
-      auditList.innerHTML = a.map(e => `
-        <div class="glass rounded p-2 text-xs">
-          <div class="flex items-center justify-between">
-            <div class="font-medium">${e.action}</div>
-            <div class="text-slate-400">${fmtDateTime(e.ts)}</div>
-          </div>
-          <pre class="mt-1 whitespace-pre-wrap">${JSON.stringify(e.details || {}, null, 2)}</pre>
-        </div>`).join("");
-    }
-    btnExportAll.addEventListener("click", () => {
-      const snap = snapshotAll();
-      const blob = new Blob([JSON.stringify(snap, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob); const a = document.createElement("a");
-      a.href = url; a.download = `backup_total_${todayISO().replace(/-/g, "")}.json`; a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 300);
-      logAudit("backup.export", { keys: Object.keys(snap.data).length });
-      renderAudit();
-    });
-    importAll.addEventListener("change", (ev) => {
-      const f = ev.target.files?.[0]; if (!f) return;
-      const r = new FileReader();
-      r.onload = () => {
+      const blob = new Blob([JSON.stringify(fullData, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `backup_microbollos_${todayISO()}.json`;
+      a.click();
+      logAudit("DOWNLOAD_BACKUP");
+    };
+
+    const restoreFile = $("#restoreFile");
+    mount.restoreBackup = () => {
+      const file = restoreFile.files[0];
+      if (!file) return toast("Selecciona un archivo JSON", "warn");
+      const reader = new FileReader();
+      reader.onload = (e) => {
         try {
-          const parsed = JSON.parse(r.result);
-          if (!parsed || !parsed.data) throw new Error("formato");
-          const keys = Object.keys(parsed.data);
-          keys.forEach(k => {
-            localStorage.setItem(k, parsed.data[k]);
-          });
-          // Reload estado local
-          users = load(CFG_USERS_KEY, users);
-          branches = load(CFG_BRANCHES_KEY, branches);
-          settings = load(CFG_SETTINGS_KEY, settings);
-
-          // 🔔 avisos globales
-          window.CFG?.setUsers(users);
-          window.CFG?.setBranches(branches);
-          window.CFG?.setSettings(settings);
-
-          // Aplicar tema importado
-          Theme.apply(settings.theme);
-
-          repaintUsers(); repaintBranches(); paintBranchesSelect(filterBranch, branches, "", true); fillSettingsForm();
-          toast("Backup importado ✅", "success");
-          logAudit("backup.import", { keys: keys.length });
-          renderAudit();
-        } catch { toast("Archivo inválido", "error"); }
-        importAll.value = "";
+          const data = JSON.parse(e.target.result);
+          if (confirm("⚠ ESTO SOBREESCRIBIRÁ TODA LA DB LOCAL. ¿CONTINUAR?")) {
+            localStorage.clear();
+            Object.keys(data).forEach(k => localStorage.setItem(k, data[k]));
+            toast("Restauración completa. Recargando...");
+            setTimeout(() => location.reload(), 1500);
+          }
+        } catch (ex) { toast("JSON inválido", "error"); }
       };
-      r.readAsText(f);
-    });
-    btnClearAll.addEventListener("click", () => {
-      if (!confirm("Esto borrará TODOS los datos locales del sistema (cfg_*, inv_*, pos_*). ¿Continuar?")) return;
-      const toRemove = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (/^(cfg_|inv_|pos_)/.test(k)) toRemove.push(k);
+      reader.readAsText(file);
+    };
+
+    const renderAudit = () => {
+      const logs = load(CFG_AUDIT_KEY, []);
+      const cont = $("#auditLogContainer");
+      if (logs.length === 0) {
+        cont.innerHTML = `<div class="text-slate-400 italic text-center py-4">Sin registros</div>`;
+        return;
       }
-      toRemove.forEach(k => localStorage.removeItem(k));
-      users = []; branches = []; settings = defaultSettings();
-      save(CFG_SETTINGS_KEY, settings);
+      cont.innerHTML = logs.map(l => `
+            <div class="hover:bg-slate-100 dark:hover:bg-slate-800 p-1 rounded">
+               <span class="text-slate-400">[${fmtDateTime(l.date)}]</span>
+               <span class="font-bold text-blue-600">${l.action}</span>
+               <span class="text-slate-500 text-xs">${JSON.stringify(l.details || {})}</span>
+            </div>
+        `).join("");
+    };
+    mount.clearAudit = () => {
+      if (confirm("¿Borrar logs?")) { save(CFG_AUDIT_KEY, []); renderAudit(); }
+    };
 
-      // 🔔 avisos globales
-      window.CFG?.setUsers(users);
-      window.CFG?.setBranches(branches);
-      window.CFG?.setSettings(settings);
+    // Init
+    mount.setTab("tab-gral");
+    // Preload for lookups
+    store.branches.list().then(l => localBranches = l);
+  },
 
-      // Tema vuelve a default (auto)
-      Theme.apply(settings.theme);
+  modalUser() {
+    return /*html*/`
+      <div id="user-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm hidden animate-fade-in">
+         <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-700">
+             <div class="bg-slate-50 dark:bg-slate-900 p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+                 <h3 id="u-title" class="font-bold text-lg text-slate-800 dark:text-slate-200">Usuario</h3>
+                 <button onclick="mount.closeUser()" class="text-slate-400 hover:text-red-500 text-xl">&times;</button>
+             </div>
+             <div class="p-6 space-y-4">
+                 <label class="block">
+                    <span class="text-xs font-bold uppercase text-slate-500">Usuario</span>
+                    <input id="u-user" type="text" class="ui-input w-full mt-1">
+                 </label>
+                 <label class="block">
+                    <span class="text-xs font-bold uppercase text-slate-500">Nombre Completo</span>
+                    <input id="u-fullname" type="text" class="ui-input w-full mt-1">
+                 </label>
+                 <label class="block">
+                    <span class="text-xs font-bold uppercase text-slate-500">Email</span>
+                    <input id="u-email" type="email" class="ui-input w-full mt-1">
+                 </label>
+                 <label class="block">
+                    <span class="text-xs font-bold uppercase text-slate-500">Contraseña</span>
+                    <input id="u-pass" type="password" class="ui-input w-full mt-1">
+                 </label>
+                 <div class="grid grid-cols-2 gap-4">
+                     <label class="block">
+                        <span class="text-xs font-bold uppercase text-slate-500">Rol</span>
+                        <select id="u-role" class="ui-input w-full mt-1"></select>
+                     </label>
+                     <label class="block">
+                        <span class="text-xs font-bold uppercase text-slate-500">Sucursal</span>
+                        <select id="u-branch" class="ui-input w-full mt-1"></select>
+                     </label>
+                 </div>
+                 <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="u-active" class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500">
+                    <span class="text-sm font-medium">Activo (Permitir acceso)</span>
+                 </label>
+             </div>
+             <div class="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
+                 <button onclick="mount.closeUser()" class="btn-secondary">Cancelar</button>
+                 <button onclick="mount.saveUser()" class="btn-primary">Guardar</button>
+             </div>
+         </div>
+      </div>
+    `;
+  },
 
-      repaintUsers(); repaintBranches(); fillSettingsForm(); paintBranchesSelect(filterBranch, branches, "", true);
-      renderAudit();
-      toast("Datos locales borrados ✅", "success");
-      logAudit("backup.clearAll", { removed: toRemove.length });
-    });
-    btnClearAudit.addEventListener("click", () => {
-      if (!confirm("¿Limpiar la auditoría local?")) return;
-      save(CFG_AUDIT_KEY, []); renderAudit(); toast("Auditoría limpiada", "success");
-    });
-    renderAudit();
-
-    // ====== Pintado inicial ======
-    repaintUsers();
-    repaintBranches();
+  modalBranch() {
+    return /*html*/`
+      <div id="branch-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm hidden animate-fade-in">
+         <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-700">
+             <div class="bg-slate-50 dark:bg-slate-900 p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+                 <h3 id="b-title" class="font-bold text-lg text-slate-800 dark:text-slate-200">Sucursal</h3>
+                 <button onclick="mount.closeBranch()" class="text-slate-400 hover:text-red-500 text-xl">&times;</button>
+             </div>
+             <div class="p-6 space-y-4">
+                 <label class="block">
+                    <span class="text-xs font-bold uppercase text-slate-500">Nombre</span>
+                    <input id="b-name" type="text" class="ui-input w-full mt-1" placeholder="Ej: Centro">
+                 </label>
+                 <label class="block">
+                    <span class="text-xs font-bold uppercase text-slate-500">Dirección</span>
+                    <input id="b-addr" type="text" class="ui-input w-full mt-1">
+                 </label>
+                 <div class="grid grid-cols-2 gap-4">
+                     <label class="block">
+                        <span class="text-xs font-bold uppercase text-slate-500">Teléfono</span>
+                        <input id="b-phone" type="text" class="ui-input w-full mt-1">
+                     </label>
+                     <label class="block">
+                        <span class="text-xs font-bold uppercase text-slate-500">CUIT</span>
+                        <input id="b-cuit" type="text" class="ui-input w-full mt-1" placeholder="Ej: 30-12345678-9">
+                     </label>
+                 </div>
+             </div>
+             <div class="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
+                 <button onclick="mount.closeBranch()" class="btn-secondary">Cancelar</button>
+                 <button onclick="mount.saveBranch()" class="btn-primary">Guardar</button>
+             </div>
+         </div>
+      </div>
+     `;
   }
 };
-
-// ===== Modales =====
-function modalUser() {
-  return /*html*/`
-  <div id="user-modal" class="fixed inset-0 z-[1000] hidden items-center justify-center bg-black/60" style="display:none">
-    <div class="bg-slate-900 border border-white/10 rounded-xl w-[min(92vw,900px)] max-h-[90vh] overflow-auto">
-      <div class="flex items-center justify-between p-3 border-b border-white/10">
-  <h2 class="text-lg font-semibold"><i class="fas fa-user" aria-hidden="true"></i> Usuario</h2>
-  <button id="user-close" type="button" class="px-3 py-1.5 rounded bg-white/10 hover:bg-white/20"><i class="fas fa-times" aria-hidden="true"></i></button>
-      </div>
-      <form id="user-form" onsubmit="return false;" class="p-4 space-y-3">
-        <input type="hidden" name="uid">
-        <div class="grid sm:grid-cols-3 gap-3">
-          <label class="text-sm block field"><span>Usuario *</span>
-            <input name="username" required></label>
-          <label class="text-sm block field sm:col-span-2"><span>Nombre *</span>
-            <input name="name" required></label>
-        </div>
-        <div class="grid sm:grid-cols-3 gap-3">
-          <label class="text-sm block field"><span>Rol</span>
-            <select name="role">
-              <option value="admin">Administrador</option>
-              <option value="stock">Depósito</option>
-              <option value="ventas">Ventas/Caja</option>
-              <option value="consulta">Consulta</option>
-            </select></label>
-          <label class="text-sm block field"><span>Email</span>
-            <input type="email" name="email"></label>
-          <label class="text-sm block field"><span>Teléfono</span>
-            <input name="phone"></label>
-        </div>
-        <div class="grid sm:grid-cols-3 gap-3">
-          <label class="text-sm block field sm:col-span-2"><span>Sucursal</span>
-            <select name="branchId"></select></label>
-          <label class="text-sm block field"><span>Activo</span><br>
-            <input type="checkbox" name="active" class="switch"></label>
-        </div>
-        <div class="glass rounded-lg p-3">
-          <div class="flex items-center justify-between">
-            <div class="font-medium"><i class="fas fa-key" aria-hidden="true"></i> Contraseña</div>
-              <button id="user-pass-toggle" type="button" class="btn mini"><i class="fas fa-eye" aria-hidden="true"></i> Mostrar/Ocultar</button>
-          </div>
-          <div class="grid sm:grid-cols-2 gap-3 mt-2">
-            <label class="text-sm block field"><span>Nueva contraseña</span>
-              <input name="pass" type="password" placeholder="Dejar en blanco para no cambiar"></label>
-            <label class="text-sm block field"><span>Repetir</span>
-              <input name="pass2" type="password" placeholder="Repite la clave"></label>
-          </div>
-          <div class="text-xs text-slate-400 mt-1">Tip: mínimo 4 caracteres. La contraseña se guarda hasheada en local.</div>
-        </div>
-        <div class="glass rounded-lg p-3">
-          <div class="font-medium mb-2"><i class="fas fa-cogs" aria-hidden="true"></i> Permisos avanzados</div>
-          <div class="grid sm:grid-cols-3 gap-2 text-sm">
-            <label><input type="checkbox" name="perm_inventory"> Inventario</label>
-            <label><input type="checkbox" name="perm_suppliers"> Proveedores</label>
-            <label><input type="checkbox" name="perm_pos"> POS</label>
-            <label><input type="checkbox" name="perm_quotes"> Presupuestos</label>
-            <label><input type="checkbox" name="perm_reports"> Reportes</label>
-            <label><input type="checkbox" name="perm_settings"> Configuración</label>
-            <label><input type="checkbox" name="perm_users"> Usuarios</label>
-            <label><input type="checkbox" name="perm_readonly"> Sólo lectura</label>
-          </div>
-          <div class="text-xs text-slate-400 mt-1">Si activás casi todo, el sistema lo tratará como “Acceso total”.</div>
-        </div>
-          <div class="flex justify-end gap-2">
-          <button type="button" class="btn" id="user-cancel"><i class="fas fa-times" aria-hidden="true"></i> Cancelar</button>
-          <button type="button" class="btn" id="user-save-new"><i class="fas fa-save" aria-hidden="true"></i> Guardar y nuevo</button>
-          <button type="button" class="btn btn-primary" id="user-save"><i class="fas fa-save" aria-hidden="true"></i> Guardar</button>
-        </div>
-      </form>
-    </div>
-  </div>
-`;
-}
-
-// ===== Modal Sucursal (rehecho y sin scroll horizontal) =====
-function modalBranch() {
-  return /*html*/`
-  <div id="branch-modal" class="fixed inset-0 z-[1000] hidden items-center justify-center overlay" style="display:none">
-    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="branch-title">
-        <div class="dialog-head flex items-center justify-between">
-        <h2 id="branch-title" class="dialog-title"><i class="fas fa-building" aria-hidden="true"></i> Sucursal</h2>
-        <button id="branch-close" type="button" class="btn mini"><i class="fas fa-times" aria-hidden="true"></i></button>
-      </div>
-
-      <form id="branch-form" onsubmit="return false;" class="dialog-body">
-        <input type="hidden" name="bid">
-
-        <div class="row">
-          <label class="field col-6"><span>Nombre *</span><input name="name" required></label>
-          <label class="field col-6"><span>Responsable</span><input name="manager"></label>
-        </div>
-
-        <div class="row" style="margin-top:.75rem">
-          <label class="field col-4"><span>Teléfono</span><input name="phone"></label>
-          <label class="field col-5"><span>Email</span><input name="email" type="email"></label>
-          <label class="field col-3"><span>CUIT</span><input name="cuit"></label>
-        </div>
-
-        <div class="row" style="margin-top:.75rem">
-          <label class="field col-12"><span>Dirección</span><input name="address"></label>
-        </div>
-
-        <div class="row" style="margin-top:.75rem">
-          <label class="field col-5"><span>Ciudad</span><input name="city"></label>
-          <label class="field col-5"><span>Provincia</span><input name="state"></label>
-          <label class="field col-2"><span>CP</span><input name="zip"></label>
-        </div>
-
-        <div class="row" style="margin-top:.75rem">
-          <label class="field col-5"><span>Horario</span>
-            <input name="hours" placeholder="Lun a Vie 9–18h"></label>
-          <label class="field col-7"><span>Notas</span><textarea name="notes"></textarea></label>
-        </div>
-      </form>
-
-      <div class="dialog-foot">
-        <button type="button" class="btn" id="branch-cancel"><i class="fas fa-times" aria-hidden="true"></i> Cancelar</button>
-        <button type="button" class="btn" id="branch-save-new"><i class="fas fa-save" aria-hidden="true"></i> Guardar y nuevo</button>
-        <button type="button" class="btn btn-primary" id="branch-save"><i class="fas fa-save" aria-hidden="true"></i> Guardar</button>
-      </div>
-    </div>
-  </div>
-`;
-}

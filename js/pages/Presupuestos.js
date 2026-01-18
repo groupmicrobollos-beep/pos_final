@@ -648,8 +648,15 @@ export default {
         subtotal: subtotalNum,
         total: subtotalNum,
         firmaDataUrl: localStorage.getItem("digital_signature") || null,
-        company: getCompany()
+        company: { ...getCompany(), logoData: CFG_SETTINGS.logoData },
+        taxRate: CFG_SETTINGS.taxRate || 0,
+        taxAmount: (subtotalNum * (CFG_SETTINGS.taxRate || 0)) / 100, // naive tax calc for display if needed
+        total: subtotalNum * (1 + (CFG_SETTINGS.taxRate || 0) / 100), // simplistic logic, budget might save its own total though
+        sucursalCuit: (CFG_BRANCHES || []).find(b => b.id === b.sucursal)?.cuit || ""
       };
+      // Important: Use saved total if available to avoid recalc diffs
+      if (b.total) ret.total = parseMoney(b.total);
+      return ret;
     }
 
     // === Exportar Excel (si XLSX existe) ===

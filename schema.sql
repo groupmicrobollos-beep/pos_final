@@ -10,7 +10,9 @@ CREATE TABLE IF NOT EXISTS users (
   active BOOLEAN DEFAULT 1,
   reset_token TEXT,
   reset_token_expires DATETIME,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  branch_id TEXT, -- Relation to branches
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (branch_id) REFERENCES branches(id)
 );
 
 -- Products & Services
@@ -30,6 +32,7 @@ CREATE TABLE IF NOT EXISTS branches (
   name TEXT NOT NULL,
   address TEXT,
   phone TEXT,
+  cuit TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
