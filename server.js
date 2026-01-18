@@ -59,6 +59,20 @@ app.get('*', (req, res) => {
             // Ignore error if column exists (SQLite throws if column exists)
         }
 
+        // --- Seed Admin User if missing ---
+        const userCountInitial = await db.execute("SELECT COUNT(*) as count FROM users");
+        if (userCountInitial.rows[0].count === 0) {
+            const crypto = require('crypto');
+            const passHash = "sha256:" + crypto.createHash('sha256').update("admin123").digest('hex');
+            const adminId = `usr_${Date.now()}`;
+            await db.execute({
+                sql: `INSERT INTO users (id, username, password_hash, full_name, role, email, active, perms, branch_id) 
+                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                args: [adminId, 'admin', passHash, 'Administrador', 'admin', 'admin@sistema.com', 1, '{"all":true}', null]
+            });
+            console.log("Migration: Created default admin user (admin / admin123)");
+        }
+
         console.log('Database initialized');
         app.listen(PORT, () => { // Changed 'port' to 'PORT' for consistency
             console.log(`Server running on port ${PORT}`); // Changed 'port' to 'PORT' for consistency

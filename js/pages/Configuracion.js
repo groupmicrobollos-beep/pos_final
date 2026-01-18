@@ -247,8 +247,10 @@ export default {
           <section id="panel-tab-usr" class="config-panel space-y-6 max-w-6xl mx-auto hidden animate-fade-in">
              <div class="flex justify-between items-center mb-4">
                 <div class="relative">
-                   <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                   <input type="text" id="userSearch" onkeyup="window.mount.filterUsers()" placeholder="Buscar usuarios..." class="pl-10 pr-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 surface focus:ring-2 focus:ring-blue-500 outline-none w-64">
+                   <div class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                     <i class="fas fa-search"></i>
+                   </div>
+                   <input type="text" id="userSearch" onkeyup="window.mount.filterUsers()" placeholder="Buscar usuarios..." class="pl-10 pr-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 surface focus:ring-2 focus:ring-blue-500 outline-none w-64 bg-slate-50 dark:bg-slate-900 shadow-inner">
                 </div>
                 <button onclick="window.mount.openUser()" class="btn-primary flex items-center gap-2">
                    <i class="fas fa-user-plus"></i> Nuevo Usuario
@@ -419,12 +421,16 @@ export default {
 
     // --- USERS LOGIC ---
     const loadUsers = async () => {
+      const tbody = $("#userTableBody");
       try {
+        if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center"><i class="fas fa-spinner fa-spin"></i> Cargando usuarios...</td></tr>`;
         localUsers = await store.users.list();
+        if (!Array.isArray(localUsers)) localUsers = []; // safety
         repaintUsers();
       } catch (e) {
-        toast("Error cargando usuarios", "error");
+        toast("Error cargando usuarios: " + e.message, "error");
         console.error(e);
+        if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">Error cargando usuarios. Intenta recargar la página.</td></tr>`;
       }
     };
     window.mount.loadUsers = loadUsers;
@@ -435,9 +441,14 @@ export default {
       if (!tbody) return;
       tbody.innerHTML = "";
 
-      const filtered = localUsers.filter(u => u.username.toLowerCase().includes(term) || (u.full_name || "").toLowerCase().includes(term));
+      const filters = term ? localUsers.filter(u => u.username.toLowerCase().includes(term) || (u.full_name || "").toLowerCase().includes(term)) : localUsers;
 
-      filtered.forEach(u => {
+      if (filters.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-400 italic">No se encontraron usuarios. <button onclick="mount.loadUsers()" class="underline text-blue-500">Recargar</button></td></tr>`;
+        return;
+      }
+
+      filters.forEach(u => {
         // Find branch name
         const bName = localBranches.find(b => b.id == u.branch_id)?.name || "-";
 
