@@ -43,6 +43,7 @@ function toast(msg, type = "info") {
   }, 2400);
 }
 
+import store from "../store.js";
 import budgetsService from "../services/budgets.js";
 
 function setupCanvas(ctx) {
@@ -543,11 +544,43 @@ export default {
       <section data-page="budget" class="space-y-4">
         <!-- Estilado local de opciones del select para legibilidad -->
         <style>
-          [data-page="budget"] select option{
-            color:#e2e8f0;               /* slate-200 */
-            background-color:#0b1220;    /* deep slate bg */
+          [data-page="budget"] select option {
+             background-color: var(--color-bg-card, #0f172a);
+             color: var(--color-text, #f1f5f9);
           }
-          [data-page="budget"] .glass{ background:rgba(255,255,255,.04); backdrop-filter:blur(6px); }
+          [data-page="budget"] .glass { 
+             background: var(--color-bg-card, rgba(30, 41, 59, 0.7)); 
+             backdrop-filter: blur(10px);
+             border: 1px solid var(--color-border, rgba(255,255,255,0.1));
+          }
+          /* Ensure inputs and selects inside glass match theme */
+          [data-page="budget"] input, 
+          [data-page="budget"] select, 
+          [data-page="budget"] textarea {
+             background-color: transparent; 
+             color: var(--color-text, #f1f5f9);
+             border-color: var(--color-border, rgba(255,255,255,0.1));
+          }
+          /* If creating new inputs with white background, force them to theme */
+          [data-page="budget"] input:not([type="checkbox"]),
+          [data-page="budget"] select, 
+          [data-page="budget"] textarea {
+             background-color: var(--color-bg-input, rgba(255,255,255,0.05));
+          }
+
+          /* Labels and helper text */
+          [data-page="budget"] label span,
+          [data-page="budget"] .text-slate-300,
+          [data-page="budget"] .text-slate-400 {
+             color: var(--color-text-muted, #94a3b8) !important;
+          }
+
+          [data-page="budget"] h1,
+          [data-page="budget"] .font-medium,
+          [data-page="budget"] strong {
+             color: var(--color-text, #f8fafc) !important;
+          }
+
           @media print { .print-only{ display:block !important } }
         </style>
 
@@ -1116,12 +1149,27 @@ export default {
     }
     paintUsersIntoSelect();
 
-    function paintBranchesIntoSelect(keepValue = null) {
-      const current = keepValue ?? selSucursal.value;
-      selSucursal.innerHTML = `<option value="">Seleccionar sucursal...</option>` +
-        (CFG_BRANCHES || []).map(b => `<option value="${b.id}">${b.name || b.address || b.cuit || b.id}</option>`).join("");
-      // conservar selección si sigue existiendo
-      selSucursal.value = (CFG_BRANCHES || []).some(b => b.id === current) ? current : "";
+    async function paintBranchesIntoSelect(keepValue = null) {
+      try {
+        const branches = await store.branches.list();
+        CFG_BRANCHES = branches; // Update module-level var for helpers
+
+        const current = keepValue ?? selSucursal.value;
+        // Use class text-main and surface for options to fix visibility
+        selSucursal.innerHTML = `<option value="" class="bg-slate-900 text-slate-100">Seleccionar sucursal...</option>` +
+          (branches || []).map(b => `<option value="${b.id}" class="bg-slate-900 text-slate-100">${b.name || b.address || b.cuit || b.id}</option>`).join("");
+
+        // conservar selección si sigue existiendo
+        selSucursal.value = (branches || []).some(b => b.id === current) ? current : "";
+      } catch (e) {
+        console.error("Error fetching branches:", e);
+        // Fallback
+        const current = keepValue ?? selSucursal.value;
+        selSucursal.innerHTML = `<option value="" class="bg-slate-900 text-slate-100">Seleccionar sucursal...</option>` +
+          (CFG_BRANCHES || []).map(b => `<option value="${b.id}" class="bg-slate-900 text-slate-100">${b.name || b.address || b.cuit || b.id}</option>`).join("");
+        selSucursal.value = (CFG_BRANCHES || []).some(b => b.id === current) ? current : "";
+      }
+
       if (!selSucursal.value) {
         numInput.value = "";
         numInput.placeholder = "Selecciona una sucursal";
