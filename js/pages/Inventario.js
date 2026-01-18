@@ -1,5 +1,5 @@
 // Helper para cargar datos de localStorage
-function load(key, def){ try{ return JSON.parse(localStorage.getItem(key) || JSON.stringify(def)); } catch { return def; } }
+function load(key, def) { try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(def)); } catch { return def; } }
 // ./pages/Inventario.js
 // Inventario con solapas: Insumos + Proveedores (CRUD completo) + Lista de compra + Envíos + KPIs
 // ✅ Insumos independientes de Proveedores (supplierId opcional)
@@ -15,6 +15,7 @@ function load(key, def){ try{ return JSON.parse(localStorage.getItem(key) || JSO
 //    - Se actualizan KPIs al modificar lista de compra
 
 const INV_ACTIVE_TAB = "inv_active_tab";
+const INV_LIST_KEY = "inv_buy_list";
 const ARS = { style: "currency", currency: "ARS", minimumFractionDigits: 2, maximumFractionDigits: 2 };
 const money = (n) => (Number(n) || 0).toLocaleString("es-AR", ARS);
 const todayISO = () => new Date().toISOString().slice(0, 10);
@@ -181,8 +182,8 @@ export default {
 
   mount(root) {
     // Helpers modales
-    const show = (el)=>{el?.classList.remove("hidden");el?.classList.add("flex");el&&(el.style.display="flex");};
-    const hide = (el)=>{el?.classList.add("hidden");el?.classList.remove("flex");el&&(el.style.display="none");};
+    const show = (el) => { el?.classList.remove("hidden"); el?.classList.add("flex"); el && (el.style.display = "flex"); };
+    const hide = (el) => { el?.classList.add("hidden"); el?.classList.remove("flex"); el && (el.style.display = "none"); };
 
     // Estado
     let items = [];
@@ -197,14 +198,14 @@ export default {
           fetch('/api/products/list'),
           fetch('/api/suppliers/list')
         ]);
-        
+
         if (!itemsRes.ok || !suppliersRes.ok) {
           throw new Error('Error al cargar datos');
         }
-        
+
         items = await itemsRes.json();
         suppliers = await suppliersRes.json();
-        
+
         refreshItems();
         refreshSuppliers();
       } catch (err) {
@@ -251,26 +252,26 @@ export default {
 
     // Modales / formularios
     const itemModal = root.querySelector("#item-modal");
-    const itemForm  = root.querySelector("#item-form");
+    const itemForm = root.querySelector("#item-form");
     const itemClose = root.querySelector("#item-close");
-    const itemCancel= root.querySelector("#item-cancel");
-    const itemSave  = root.querySelector("#item-save");
+    const itemCancel = root.querySelector("#item-cancel");
+    const itemSave = root.querySelector("#item-save");
     const itemSaveNew = root.querySelector("#item-save-new");
 
     const suppModal = root.querySelector("#supp-modal");
-    const suppForm  = root.querySelector("#supp-form");
+    const suppForm = root.querySelector("#supp-form");
     const suppClose = root.querySelector("#supp-close");
-    const suppCancel= root.querySelector("#supp-cancel");
-    const suppSave  = root.querySelector("#supp-save");
+    const suppCancel = root.querySelector("#supp-cancel");
+    const suppSave = root.querySelector("#supp-save");
     const suppSaveNew = root.querySelector("#supp-save-new");
 
     const sendModal = root.querySelector("#send-modal");
     const sendClose = root.querySelector("#send-close");
-    const sendBody  = root.querySelector("#send-body");
+    const sendBody = root.querySelector("#send-body");
 
     // === Tabs ===
-    function setTab(which){
-      if (which === "items"){
+    function setTab(which) {
+      if (which === "items") {
         tabItems.classList.add("active"); tabSupps.classList.remove("active");
         panelItems.classList.remove("hidden"); panelSupps.classList.add("hidden"); kpis.classList.remove("hidden");
       } else {
@@ -279,15 +280,15 @@ export default {
       }
       save(INV_ACTIVE_TAB, which);
     }
-    tabItems.addEventListener("click", ()=> setTab("items"));
-    tabSupps.addEventListener("click", ()=> setTab("suppliers"));
+    tabItems.addEventListener("click", () => setTab("items"));
+    tabSupps.addEventListener("click", () => setTab("suppliers"));
 
     // Restaurar pestaña anterior (si existe)
     setTab(load(INV_ACTIVE_TAB, "items"));
 
     // === Acciones generales ===
-    btnAddItem.addEventListener("click", ()=> openItem());
-    btnAddSupp.addEventListener("click", ()=> openSupplier());
+    btnAddItem.addEventListener("click", () => openItem());
+    btnAddSupp.addEventListener("click", () => openSupplier());
     btnExport.addEventListener("click", exportData);
     importFile.addEventListener("change", importData);
     q.addEventListener("input", refreshItems);
@@ -299,15 +300,15 @@ export default {
     btnClearList.addEventListener("click", async () => {
       if (!buyList.length) return toast("La lista ya está vacía");
       if (!confirm("¿Vaciar la lista de compra?")) return;
-      
+
       try {
         // Eliminar cada item de la lista
         await Promise.all(
-          buyList.map(item => 
+          buyList.map(item =>
             fetch(`/api/shopping/${item.id}`, { method: 'DELETE' })
           )
         );
-        
+
         await loadData();
         toast("Lista de compra vaciada ✅", "success");
       } catch (err) {
@@ -318,9 +319,9 @@ export default {
 
     // Delegación lista de compra (eliminar línea + editar qty/nota)
     listWrap.addEventListener("click", async (e) => {
-      const btn = e.target.closest("button[data-blid]"); 
+      const btn = e.target.closest("button[data-blid]");
       if (!btn) return;
-      
+
       const id = btn.dataset.blid;
       try {
         await fetch(`/api/shopping/${id}`, { method: 'DELETE' });
@@ -330,38 +331,38 @@ export default {
         toast("Error al eliminar el item", "error");
       }
     });
-    
+
     let updateTimer = null;
     listWrap.addEventListener("input", (e) => {
-      const row = e.target.closest('[data-blid]'); 
+      const row = e.target.closest('[data-blid]');
       if (!row) return;
-      
+
       const id = row.getAttribute("data-blid");
-      const item = buyList.find(b => b.id === id); 
+      const item = buyList.find(b => b.id === id);
       if (!item) return;
-      
+
       // Usar debounce para no hacer muchas llamadas a la API
       clearTimeout(updateTimer);
       updateTimer = setTimeout(async () => {
         try {
           const updates = {};
-          
+
           if (e.target.classList.contains("bl-qty")) {
             const v = Math.max(1, parseInt(e.target.value || "1", 10));
             e.target.value = v;
             updates.quantity = v;
           }
-          
+
           if (e.target.classList.contains("bl-note")) {
             updates.notes = e.target.value || "";
           }
-          
+
           await fetch(`/api/shopping/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(updates)
           });
-          
+
           await loadData();
         } catch (err) {
           console.error(err);
@@ -371,66 +372,66 @@ export default {
     });
 
     // Cerrar modales
-    itemClose.addEventListener("click", ()=> hide(itemModal));
-    itemCancel.addEventListener("click", ()=> hide(itemModal));
-    itemModal.addEventListener("click", (e)=>{ if (e.target === itemModal) hide(itemModal); });
+    itemClose.addEventListener("click", () => hide(itemModal));
+    itemCancel.addEventListener("click", () => hide(itemModal));
+    itemModal.addEventListener("click", (e) => { if (e.target === itemModal) hide(itemModal); });
 
-    suppClose.addEventListener("click", ()=> hide(suppModal));
-    suppCancel.addEventListener("click", ()=> hide(suppModal));
-    suppModal.addEventListener("click", (e)=>{ if (e.target === suppModal) hide(suppModal); });
+    suppClose.addEventListener("click", () => hide(suppModal));
+    suppCancel.addEventListener("click", () => hide(suppModal));
+    suppModal.addEventListener("click", (e) => { if (e.target === suppModal) hide(suppModal); });
 
-    sendClose.addEventListener("click", ()=> hide(sendModal));
-    sendModal.addEventListener("click", (e)=>{ if (e.target === sendModal) hide(sendModal); });
+    sendClose.addEventListener("click", () => hide(sendModal));
+    sendModal.addEventListener("click", (e) => { if (e.target === sendModal) hide(sendModal); });
 
     // Guardado (sin submit nativo)
-    itemSave.addEventListener("click", ()=> saveItem("close"));
-    itemSaveNew.addEventListener("click", ()=> saveItem("new"));
-    suppSave.addEventListener("click", ()=> saveSupplier("close"));
-    suppSaveNew.addEventListener("click", ()=> saveSupplier("new"));
+    itemSave.addEventListener("click", () => saveItem("close"));
+    itemSaveNew.addEventListener("click", () => saveItem("new"));
+    suppSave.addEventListener("click", () => saveSupplier("close"));
+    suppSaveNew.addEventListener("click", () => saveSupplier("new"));
 
     // Delegados tabla Insumos
-    rowsItems.addEventListener("click", (e)=>{
+    rowsItems.addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-act]"); if (!btn) return;
       const id = btn.dataset.id;
       if (btn.dataset.act === "inc") changeStock(id, +1);
       if (btn.dataset.act === "dec") changeStock(id, -1);
       if (btn.dataset.act === "need") toggleNeed(id);
-      if (btn.dataset.act === "edit") openItem(items.find(x=>x.id===id)||null);
+      if (btn.dataset.act === "edit") openItem(items.find(x => x.id === id) || null);
       if (btn.dataset.act === "del") delItem(id);
     });
 
     // Delegados tabla Proveedores
-    rowsSuppliers.addEventListener("click", (e)=>{
+    rowsSuppliers.addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-act]"); if (!btn) return;
       const id = btn.dataset.id;
-      if (btn.dataset.act === "edit") openSupplier(suppliers.find(s=>s.id===id)||null);
+      if (btn.dataset.act === "edit") openSupplier(suppliers.find(s => s.id === id) || null);
       if (btn.dataset.act === "del") delSupplier(id);
     });
 
     // ====== INSUMOS ======
-    function applyFiltersItems(){
-      const term = (q.value||"").toLowerCase().trim();
+    function applyFiltersItems() {
+      const term = (q.value || "").toLowerCase().trim();
       const fs = String(fSupp.value || "");
       const st = fStatus.value;
 
-      viewItems = items.filter(it=>{
-        const matchesTerm = !term || [it.code,it.name,it.category].join(" ").toLowerCase().includes(term);
+      viewItems = items.filter(it => {
+        const matchesTerm = !term || [it.code, it.name, it.category].join(" ").toLowerCase().includes(term);
         const matchesSupp = !fs || String(it.supplierId || "") === fs; // opcional
-        const low = (it.stock||0) < (it.min||0);
-        const matchesStatus = !st || (st==="low"? low : !low);
+        const low = (it.stock || 0) < (it.min || 0);
+        const matchesStatus = !st || (st === "low" ? low : !low);
         return matchesTerm && matchesSupp && matchesStatus;
       });
     }
-    function paintItems(){
-      if (!viewItems.length){
+    function paintItems() {
+      if (!viewItems.length) {
         rowsItems.innerHTML = "";
         emptyItems.classList.remove("hidden");
         return;
       }
       emptyItems.classList.add("hidden");
-      rowsItems.innerHTML = viewItems.map(it=>{
+      rowsItems.innerHTML = viewItems.map(it => {
         const supp = it.supplierId ? (findSupplier(it.supplierId)?.name || "-") : "—";
-        const low = (it.stock||0) < (it.min||0);
+        const low = (it.stock || 0) < (it.min || 0);
         const badge = low ? `<span class="pill status-low">Falta</span>` : `<span class="pill status-ok">OK</span>`;
         return `
           <tr class="hover:bg-white/5">
@@ -442,7 +443,7 @@ export default {
             <td>${it.unit || "-"}</td>
             <td class="text-right">${money(it.cost)}</td>
             <td class="max-w-[180px] truncate">${supp}</td>
-            <td>${(it.updatedAt || "").slice(0,10) || "-"}</td>
+            <td>${(it.updatedAt || "").slice(0, 10) || "-"}</td>
             <td>${badge}</td>
             <td class="text-right whitespace-nowrap">
               <button class="mini-btn btn" data-act="dec" data-id="${it.id}" title="Quitar 1"><i class="fas fa-minus" aria-hidden="true"></i></button>
@@ -454,15 +455,15 @@ export default {
           </tr>`;
       }).join("");
     }
-    function refreshItems(){ applyFiltersItems(); paintItems(); paintBuyList(); refreshKPIs(); }
-    function refreshKPIs(){
+    function refreshItems() { applyFiltersItems(); paintItems(); paintBuyList(); refreshKPIs(); }
+    function refreshKPIs() {
       kCount.textContent = items.length;
-      kLow.textContent = items.filter(i => (i.stock||0) < (i.min||0)).length;
-      kValue.textContent = money(items.reduce((s,i)=> s + (Number(i.stock||0) * Number(i.cost||0)), 0));
+      kLow.textContent = items.filter(i => (i.stock || 0) < (i.min || 0)).length;
+      kValue.textContent = money(items.reduce((s, i) => s + (Number(i.stock || 0) * Number(i.cost || 0)), 0));
       kList.textContent = buyList.length;
     }
 
-    function openItem(data=null){
+    function openItem(data = null) {
       const E = itemForm.elements;
       itemForm.reset();
       E.iid.value = data?.id || rid("itm");
@@ -478,9 +479,9 @@ export default {
       E.nextDate.value = data?.alerts?.nextDate || "";
       E.threshold.value = data?.alerts?.threshold ?? "";
       show(itemModal);
-      setTimeout(()=> E.name?.focus(), 0);
+      setTimeout(() => E.name?.focus(), 0);
     }
-    function readItemForm(form){
+    function readItemForm(form) {
       const E = form.elements;
       return {
         id: E.iid.value,
@@ -494,32 +495,32 @@ export default {
         supplierId: E.supplierId.value || "", // opcional
         updatedAt: new Date().toISOString(),
         alerts: {
-          everyDays: E.everyDays.value ? Math.max(1, parseInt(E.everyDays.value,10)) : "",
+          everyDays: E.everyDays.value ? Math.max(1, parseInt(E.everyDays.value, 10)) : "",
           nextDate: E.nextDate.value || "",
-          threshold: E.threshold.value ? Math.max(0, parseInt(E.threshold.value,10)) : ""
+          threshold: E.threshold.value ? Math.max(0, parseInt(E.threshold.value, 10)) : ""
         }
       };
     }
-    
-    async function saveItem(mode="close") {
+
+    async function saveItem(mode = "close") {
       const data = readItemForm(itemForm);
-      if (!data.name) return toast("Nombre obligatorio","error");
-      if (!data.unit) return toast("Unidad obligatoria","error");
-      
+      if (!data.name) return toast("Nombre obligatorio", "error");
+      if (!data.unit) return toast("Unidad obligatoria", "error");
+
       try {
         if (data.id) {
           await apiPut(`/api/products/${data.id}`, data);
         } else {
           await apiPost('/api/products/save', data);
         }
-        
+
         items = await apiGet('/api/products/list');
         autoNeed(data);
 
         setTab("items");
         refreshItems();
         toast("Insumo guardado ✅", "success");
-        
+
         if (mode === "new") {
           openItem(null);
         } else {
@@ -532,12 +533,12 @@ export default {
     }
     async function delItem(id) {
       if (!confirm("¿Eliminar insumo?")) return;
-      
+
       try {
         await apiDelete(`/api/products/${id}`);
         buyList = buyList.filter(b => b.itemId !== id);
         save(INV_LIST_KEY, buyList);
-        
+
         items = await apiGet('/api/products/list');
         refreshItems();
         toast("Insumo eliminado", "success");
@@ -546,11 +547,11 @@ export default {
         toast("Error al eliminar el insumo", "error");
       }
     }
-    
+
     async function changeStock(id, delta) {
       const it = items.find(x => x.id === id);
       if (!it) return;
-      
+
       try {
         // Registrar el movimiento de stock
         await fetch('/api/stock/movement', {
@@ -563,7 +564,7 @@ export default {
             notes: delta > 0 ? 'Incremento manual' : 'Decremento manual'
           })
         });
-        
+
         await loadData();
         const updatedItem = items.find(x => x.id === id);
         if (updatedItem) autoNeed(updatedItem);
@@ -572,37 +573,37 @@ export default {
         toast("Error al actualizar el stock", "error");
       }
     }
-    function autoNeed(it){
-      const exists = buyList.find(b=>b.itemId===it.id);
-      const needs = (it.stock||0) < (it.min||0);
-      if (needs && !exists){
-        buyList.push({ id: rid("bl"), itemId: it.id, qty: Math.max(1, (it.min||1) - (it.stock||0)), note:"", supplierId: it.supplierId||"" });
+    function autoNeed(it) {
+      const exists = buyList.find(b => b.itemId === it.id);
+      const needs = (it.stock || 0) < (it.min || 0);
+      if (needs && !exists) {
+        buyList.push({ id: rid("bl"), itemId: it.id, qty: Math.max(1, (it.min || 1) - (it.stock || 0)), note: "", supplierId: it.supplierId || "" });
         save(INV_LIST_KEY, buyList);
       }
-      if (!needs && exists){
-        buyList = buyList.filter(b=>b.itemId!==it.id);
+      if (!needs && exists) {
+        buyList = buyList.filter(b => b.itemId !== it.id);
         save(INV_LIST_KEY, buyList);
       }
     }
-    async function toggleNeed(id){
-      const it = items.find(x=>x.id===id); 
-      if(!it) return;
-      
+    async function toggleNeed(id) {
+      const it = items.find(x => x.id === id);
+      if (!it) return;
+
       try {
-        const exists = buyList.find(b=>b.itemId===id);
+        const exists = buyList.find(b => b.itemId === id);
         if (exists) {
-          buyList = buyList.filter(b=>b.itemId!==id);
+          buyList = buyList.filter(b => b.itemId !== id);
         } else {
-          buyList.push({ 
-            id: rid("bl"), 
-            itemId: id, 
-            qty: Math.max(1, it.min_stock || 1), 
-            note: "", 
-            supplierId: it.supplier_id || "" 
+          buyList.push({
+            id: rid("bl"),
+            itemId: id,
+            qty: Math.max(1, it.min_stock || 1),
+            note: "",
+            supplierId: it.supplier_id || ""
           });
         }
         save(INV_LIST_KEY, buyList); // TODO: Mover a la DB
-        paintBuyList(); 
+        paintBuyList();
         refreshKPIs();
       } catch (err) {
         console.error(err);
@@ -611,10 +612,10 @@ export default {
     }
 
     // ====== LISTA DE COMPRA ======
-    function paintBuyList(){
-      if (!buyList.length){
-        listWrap.innerHTML = ""; 
-        listEmpty.classList.remove("hidden"); 
+    function paintBuyList() {
+      if (!buyList.length) {
+        listWrap.innerHTML = "";
+        listEmpty.classList.remove("hidden");
         return;
       }
       listEmpty.classList.add("hidden");
@@ -627,15 +628,15 @@ export default {
 
       listWrap.innerHTML = Object.entries(groups).map(([sid, arr]) => {
         const s = suppliers.find(s => s.id === sid);
-        const head = s ? `${s.name}${s.company ? " — "+s.company : ""}` : "Sin proveedor";
-  const contact = s ? `<div class="text-xs text-slate-400">${s.phone?`<i class=\"fas fa-phone\" aria-hidden=\"true\"></i> ${s.phone}`:""} ${s.email?` · <i class=\"fas fa-envelope\" aria-hidden=\"true\"></i> ${s.email}`:""}</div>` : "";
+        const head = s ? `${s.name}${s.company ? " — " + s.company : ""}` : "Sin proveedor";
+        const contact = s ? `<div class="text-xs text-slate-400">${s.phone ? `<i class=\"fas fa-phone\" aria-hidden=\"true\"></i> ${s.phone}` : ""} ${s.email ? ` · <i class=\"fas fa-envelope\" aria-hidden=\"true\"></i> ${s.email}` : ""}</div>` : "";
         return `
           <div class="glass rounded-lg p-2 mb-2">
             <div class="flex items-center justify-between">
               <div><div class="font-medium">${head}</div>${contact}</div>
               <div class="flex gap-2">
-                ${s?.phone?`<a class="btn mini" target="_blank" href="${waHref(arr, s)}"><i class=\"fab fa-whatsapp\" aria-hidden=\"true\"></i> WhatsApp</a>`:""}
-                ${s?.email?`<a class="btn mini" href="${mailtoHref(arr, s)}"><i class=\"fas fa-envelope\" aria-hidden=\"true\"></i> Email</a>`:""}
+                ${s?.phone ? `<a class="btn mini" target="_blank" href="${waHref(arr, s)}"><i class=\"fab fa-whatsapp\" aria-hidden=\"true\"></i> WhatsApp</a>` : ""}
+                ${s?.email ? `<a class="btn mini" href="${mailtoHref(arr, s)}"><i class=\"fas fa-envelope\" aria-hidden=\"true\"></i> Email</a>` : ""}
               </div>
             </div>
             <div class="mt-2 space-y-1">
@@ -650,43 +651,43 @@ export default {
           </div>`;
       }).join("");
     }
-    function buildMessage(block, supplier){
+    function buildMessage(block, supplier) {
       const lines = [];
       const saludo = supplier?.contact || supplier?.name || "";
       lines.push(`Hola${saludo ? " " + saludo : ""}, ¿cómo estás?`);
       lines.push(`Necesito cotizar / comprar:`); lines.push("");
-      block.forEach(b=>{ const n=b.item?.name || "(sin nombre)"; lines.push(`• ${n} — ${b.qty} ${b.item?.unit||""}${b.note?` (${b.note})`:""}`); });
+      block.forEach(b => { const n = b.item?.name || "(sin nombre)"; lines.push(`• ${n} — ${b.qty} ${b.item?.unit || ""}${b.note ? ` (${b.note})` : ""}`); });
       lines.push(""); lines.push("¡Gracias! — Microbollos Group");
       return lines.join("\n");
     }
-    function waHref(block,supplier){
-      const phone=(supplier?.phone||"").replace(/[^\d]/g,"");
-      const text=encodeURIComponent(buildMessage(block,supplier));
+    function waHref(block, supplier) {
+      const phone = (supplier?.phone || "").replace(/[^\d]/g, "");
+      const text = encodeURIComponent(buildMessage(block, supplier));
       return `https://wa.me/${phone}?text=${text}`;
     }
-    function mailtoHref(block,supplier){
-      const subj=encodeURIComponent("Pedido / Cotización – Microbollos Group");
-      const body=encodeURIComponent(buildMessage(block,supplier));
+    function mailtoHref(block, supplier) {
+      const subj = encodeURIComponent("Pedido / Cotización – Microbollos Group");
+      const body = encodeURIComponent(buildMessage(block, supplier));
       return `mailto:${supplier.email}?subject=${subj}&body=${body}`;
     }
-    function openSend(){
-      if (!buyList.length){ toast("La lista está vacía","error"); return; }
-      const groups={};
-      buyList.forEach(b=>{
-        const it=items.find(i=>i.id===b.itemId);
-        const sid=b.supplierId || it?.supplierId || "__sin__";
-        (groups[sid] ||= []).push({ ...b, item: it||{} });
+    function openSend() {
+      if (!buyList.length) { toast("La lista está vacía", "error"); return; }
+      const groups = {};
+      buyList.forEach(b => {
+        const it = items.find(i => i.id === b.itemId);
+        const sid = b.supplierId || it?.supplierId || "__sin__";
+        (groups[sid] ||= []).push({ ...b, item: it || {} });
       });
-      sendBody.innerHTML = Object.entries(groups).map(([sid,block])=>{
-        const s=findSupplier(sid);
-        const msg=buildMessage(block,s);
+      sendBody.innerHTML = Object.entries(groups).map(([sid, block]) => {
+        const s = findSupplier(sid);
+        const msg = buildMessage(block, s);
         return `
           <div class="glass rounded-lg p-2">
             <div class="flex items-center justify-between">
-              <div class="font-medium">${s ? (s.name + (s.company? " — "+s.company : "")) : "Sin proveedor"}</div>
+              <div class="font-medium">${s ? (s.name + (s.company ? " — " + s.company : "")) : "Sin proveedor"}</div>
               <div class="flex gap-2">
-                ${s?.phone?`<a class="btn mini-btn" target="_blank" href="${waHref(block,s)}"><i class=\"fab fa-whatsapp\" aria-hidden=\"true\"></i> WhatsApp</a>`:""}
-                ${s?.email?`<a class="btn mini-btn" href="${mailtoHref(block,s)}"><i class=\"fas fa-envelope\" aria-hidden=\"true\"></i> Email</a>`:""}
+                ${s?.phone ? `<a class="btn mini-btn" target="_blank" href="${waHref(block, s)}"><i class=\"fab fa-whatsapp\" aria-hidden=\"true\"></i> WhatsApp</a>` : ""}
+                ${s?.email ? `<a class="btn mini-btn" href="${mailtoHref(block, s)}"><i class=\"fas fa-envelope\" aria-hidden=\"true\"></i> Email</a>` : ""}
               </div>
             </div>
             <textarea rows="7">${msg}</textarea>
@@ -696,9 +697,9 @@ export default {
     }
 
     // ========== PROVEEDORES ==========
-    function paintSuppliers(){
-      if (!suppliers.length){
-        rowsSuppliers.innerHTML = ""; 
+    function paintSuppliers() {
+      if (!suppliers.length) {
+        rowsSuppliers.innerHTML = "";
         emptySuppliers.classList.remove("hidden");
       } else {
         emptySuppliers.classList.add("hidden");
@@ -721,13 +722,13 @@ export default {
         }).join("");
       }
     }
-    
-    async function refreshSuppliers(){ 
-      paintSuppliers(); 
-      repaintSupplierFilter(); 
+
+    async function refreshSuppliers() {
+      paintSuppliers();
+      repaintSupplierFilter();
     }
 
-    function openSupplier(data=null){
+    function openSupplier(data = null) {
       const S = suppForm.elements;
       suppForm.reset();
       S.sid.value = data?.id || rid("supp");
@@ -736,12 +737,12 @@ export default {
       S.contact.value = data?.contact || "";
       S.phone.value = data?.phone || "";
       S.email.value = data?.email || "";
-      S.tags.value = (data?.tags||[]).join(", ");
+      S.tags.value = (data?.tags || []).join(", ");
       S.notes.value = data?.notes || "";
       show(suppModal);
-      setTimeout(()=> S.name?.focus(), 0);
+      setTimeout(() => S.name?.focus(), 0);
     }
-    function readSupplierForm(form){
+    function readSupplierForm(form) {
       const S = form.elements;
       return {
         id: S.sid.value,
@@ -750,26 +751,26 @@ export default {
         contact: S.contact.value.trim(),
         phone: S.phone.value.trim(),
         email: S.email.value.trim(),
-        tags: (S.tags.value||"").split(",").map(s=>s.trim()).filter(Boolean),
+        tags: (S.tags.value || "").split(",").map(s => s.trim()).filter(Boolean),
         notes: S.notes.value.trim(),
         updatedAt: new Date().toISOString()
       };
     }
-    async function saveSupplier(mode="close") {
+    async function saveSupplier(mode = "close") {
       const data = readSupplierForm(suppForm);
-      if (!data.name) return toast("Nombre del proveedor obligatorio","error");
-      
+      if (!data.name) return toast("Nombre del proveedor obligatorio", "error");
+
       try {
         if (data.id) {
           await apiPut(`/api/suppliers/${data.id}`, data);
         } else {
           await apiPost('/api/suppliers/save', data);
         }
-        
+
         suppliers = await apiGet('/api/suppliers/list');
         refreshSuppliers();
-        toast("Proveedor guardado ✅","success");
-        
+        toast("Proveedor guardado ✅", "success");
+
         if (mode === "new") {
           openSupplier(null);
         } else {
@@ -780,16 +781,16 @@ export default {
         toast("Error al guardar el proveedor", "error");
       }
     }
-    
+
     async function delSupplier(id) {
       if (!confirm("¿Eliminar proveedor? (los insumos quedarán sin proveedor)")) return;
-      
+
       try {
         await apiDelete(`/api/suppliers/${id}`);
-        
+
         suppliers = await apiGet('/api/suppliers/list');
         items = await apiGet('/api/products/list');
-        
+
         refreshSuppliers();
         refreshItems();
         toast("Proveedor eliminado", "success");
@@ -800,14 +801,14 @@ export default {
     }
 
     // ====== Select de proveedor en formulario de insumo + filtro ======
-    function paintSupplierSelect(select, value=""){
+    function paintSupplierSelect(select, value = "") {
       const list = load(INV_SUPPLIERS_KEY, suppliers);
-      select.innerHTML = `<option value="">(Opcional)</option>` + list.map(s=>`<option value="${s.id}">${s.name}${s.company? " — "+s.company : ""}</option>`).join("");
+      select.innerHTML = `<option value="">(Opcional)</option>` + list.map(s => `<option value="${s.id}">${s.name}${s.company ? " — " + s.company : ""}</option>`).join("");
       select.value = value;
     }
-    function repaintSupplierFilter(){
+    function repaintSupplierFilter() {
       const list = load(INV_SUPPLIERS_KEY, suppliers);
-      fSupp.innerHTML = `<option value="">Todos los proveedores</option>` + list.map(s=>`<option value="${s.id}">${s.name}${s.company? " — "+s.company : ""}</option>`).join("");
+      fSupp.innerHTML = `<option value="">Todos los proveedores</option>` + list.map(s => `<option value="${s.id}">${s.name}${s.company ? " — " + s.company : ""}</option>`).join("");
       fSupp.value = ""; // reset para evitar filtros colgados
     }
 
@@ -827,19 +828,19 @@ export default {
     init();
 
     // ====== Export / Import ======
-    function exportData(){
+    function exportData() {
       const payload = { items, suppliers, buyList, exportedAt: new Date().toISOString(), version: 1 };
-      const blob = new Blob([JSON.stringify(payload,null,2)], { type: "application/json" });
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url; a.download = `inventario_${todayISO().replace(/-/g,"")}.json`; a.click();
-      setTimeout(()=> URL.revokeObjectURL(url), 300);
+      a.href = url; a.download = `inventario_${todayISO().replace(/-/g, "")}.json`; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 300);
     }
-    function importData(ev){
+    function importData(ev) {
       const f = ev.target.files?.[0]; if (!f) return;
       const reader = new FileReader();
-      reader.onload = ()=>{
-        try{
+      reader.onload = () => {
+        try {
           const data = JSON.parse(reader.result);
           if (Array.isArray(data.items)) items = data.items;
           if (Array.isArray(data.suppliers)) suppliers = data.suppliers;
@@ -847,8 +848,8 @@ export default {
           save(INV_ITEMS_KEY, items); save(INV_SUPPLIERS_KEY, suppliers); save(INV_LIST_KEY, buyList);
           setTab("items"); // forzar insumos tras importar
           refreshItems(); refreshSuppliers();
-          toast("Importado correctamente ✅","success");
-        } catch { toast("Archivo inválido","error"); }
+          toast("Importado correctamente ✅", "success");
+        } catch { toast("Archivo inválido", "error"); }
         importFile.value = "";
       };
       reader.readAsText(f);
@@ -857,13 +858,16 @@ export default {
 };
 
 // ======= helpers UI =======
-function kpi(icon,label,id){ return /*html*/`
+function kpi(icon, label, id) {
+  return /*html*/`
   <div class="glass card p-3.5 flex items-center gap-3 min-h-[64px]">
     <div>${icon}</div>
     <div><div class="k">${label}</div><div id="${id}" class="v">—</div></div>
-  </div>`; }
+  </div>`;
+}
 
-function modalItem(){ return /*html*/`
+function modalItem() {
+  return /*html*/`
   <div id="item-modal" class="fixed inset-0 z-[1000] hidden items-center justify-center bg-black/60" style="display:none">
     <div class="bg-slate-900 border border-white/10 rounded-xl w-[min(92vw,880px)]">
       <div class="flex items-center justify-between p-3 border-b border-white/10">
@@ -914,9 +918,11 @@ function modalItem(){ return /*html*/`
         </div>
       </form>
     </div>
-  </div>`; }
+  </div>`;
+}
 
-function modalSupplier(){ return /*html*/`
+function modalSupplier() {
+  return /*html*/`
   <div id="supp-modal" class="fixed inset-0 z-[1000] hidden items-center justify-center bg-black/60" style="display:none">
     <div class="bg-slate-900 border border-white/10 rounded-xl w-[min(92vw,760px)]">
       <div class="flex items-center justify-between p-3 border-b border-white/10">
@@ -950,9 +956,11 @@ function modalSupplier(){ return /*html*/`
         </div>
       </form>
     </div>
-  </div>`; }
+  </div>`;
+}
 
-function modalSend(){ return /*html*/`
+function modalSend() {
+  return /*html*/`
   <div id="send-modal" class="fixed inset-0 z-[1000] hidden items-center justify-center bg-black/60" style="display:none">
     <div class="bg-slate-900 border border-white/10 rounded-xl w-[min(92vw,900px)] max-h-[86vh] overflow-auto">
       <div class="flex items-center justify-between p-3 border-b border-white/10">
@@ -961,4 +969,5 @@ function modalSend(){ return /*html*/`
       </div>
       <div id="send-body" class="p-4 space-y-3"></div>
     </div>
-  </div>`; }
+  </div>`;
+}

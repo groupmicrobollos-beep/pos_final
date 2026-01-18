@@ -70,32 +70,59 @@ async function remove(key) {
 }
 
 // Helpers visuales (sin cambios de lógica, solo lectura de config)
+// Helpers visuales (sin cambios de lógica, solo lectura de config)
 function labelForBranch(id) {
   // Necesitamos leer de store.branches o localStorage config si está cacheado
-  // Por simplicidad, leemos del localStorage que mantiene la configuración
   const branches = JSON.parse(localStorage.getItem("cfg_branches") || "[]");
   const b = branches.find(x => x.id === id);
-  if (!b) return String(id || "");
-  if (b.code) return b.code;
+  // Prioridad: 
+  // 1. b.code (si es numérico, usarlo como POS de 4 dígitos)
+  // 2. Index+1 (si no hay code, usar índice como POS)
+  // 3. Fallback a '0001' (nunca ID)
+
+  if (b && b.code) {
+    const clean = b.code.replace(/\D/g, ''); // Solo números
+    if (clean.length > 0) return clean.padStart(4, "0").slice(-4);
+  }
+
   const idx = branches.findIndex(x => x.id === id);
-  return String(idx >= 0 ? idx + 1 : 0).padStart(4, "0");
+  if (idx >= 0) return String(idx + 1).padStart(4, "0");
+
+  return "0001";
 }
 
 function formatBudgetNumber(sucursalId, seq) {
   const label = labelForBranch(sucursalId);
-  return `N° ${label || "----"} - ${String(seq).padStart(8, "0")}`;
+  // Formato estricto: 0001-00000001
+  return `${label}-${String(seq).padStart(8, "0")}`;
 }
 
 async function previewNextNumber(sucursal) {
   // Backend should handle this preferably, but for now we fetch list and count
   const all = await list();
-  // Filter by branch? The current backend `list` returns all.
-  // Assuming backend returns an array.
+
   let max = 0;
+  // Extraer secuencia numérica de los presupuestos existentes
   all.filter(b => b.branch_id === sucursal || b.sucursal === sucursal).forEach(b => {
-    const m = String(b.numero || "").match(/(\d+)\s*$/);
-    if (m) max = Math.max(max, parseInt(m[1], 10));
+    // Intentar extraer la parte derecha del guión (xxxx-SSSSSS)
+    // O si es formato viejo "N° xxxx - SSSSSS"
+    const parsed = String(b.numero || "");
+    let seqPart = "0";
+
+    if (parsed.includes("-")) {
+      const parts = parsed.split("-");
+      seqPart = parts[parts.length - 1]; // Tomar el último segmento
+    } else {
+      // Fallback regex
+      const m = parsed.match(/(\d+)\s*$/);
+      if (m) seqPart = m[1];
+    }
+
+    // Limpiar y parsear
+    const seqNum = parseInt(seqPart.replace(/\D/g, ''), 10);
+    if (!isNaN(seqNum)) max = Math.max(max, seqNum);
   });
+
   return formatBudgetNumber(sucursal, max + 1);
 }
 

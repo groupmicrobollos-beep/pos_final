@@ -511,28 +511,7 @@ function maxSeqForBranch(sucursal) {
   });
   return max;
 }
-function labelForBranch(id) {
-  const b = (CFG_BRANCHES || []).find(x => x.id === id);
-  // If branch found and has code, try to use it as POS
-  if (b && b.code) {
-    // Try to sanitize check if it's numeric-ish
-    const clean = b.code.replace(/\D/g, '');
-    if (clean.length > 0) return clean.padStart(4, "0").slice(-4);
-    // If it was text like "MAIN", we can't use it as POS number easily, 
-    // but user requested "0001". Let's try to map index.
-  }
-
-  // If no code, try to find index to use sequential number
-  const idx = (CFG_BRANCHES || []).findIndex(x => x.id === id);
-  if (idx >= 0) return String(idx + 1).padStart(4, "0");
-
-  // Fallback if not found (shouldn't happen if loaded, but never return UUID strings)
-  return "0001";
-}
-function formatBudgetNumber(sucursalId, seq) {
-  const label = labelForBranch(sucursalId);
-  return `${label}-${String(seq).padStart(8, "0")}`;
-}
+// (Funciones de numeración movidas a services/budgets.js para consistencia)
 function previewNextNumber(sucursal) {
   const next = maxSeqForBranch(sucursal) + 1;
   return formatBudgetNumber(sucursal, next);
@@ -1269,6 +1248,65 @@ export default {
     }
 
     // ... helpers ...
+
+    function getClientFormData() {
+      return {
+        name: nombre.value.trim(),
+        phone: telefono.value.trim(),
+        email: email.value.trim()
+      };
+    }
+
+    function getVehicleFormData() {
+      return {
+        id: selectedVehicleId, // null si es nuevo
+        vehiculo: vehiculo.value.trim(),
+        patente: patente.value.trim(),
+        modelo: modelo.value.trim(),
+        compania: compania.value.trim(),
+        chasis: chasis.value.trim(),
+        siniestro: siniestroInput.value.trim()
+      };
+    }
+
+    function fillClientForm(c) {
+      if (!c) {
+        nombre.value = "";
+        telefono.value = "";
+        email.value = "";
+        return;
+      }
+      nombre.value = c.name || "";
+      telefono.value = c.phone || "";
+      email.value = c.email || "";
+    }
+
+    function clearClientForm() {
+      selectedClientId = null;
+      existingClientSel.value = "";
+      fillClientForm(null);
+      loadVehiclesIntoSelect(null); // Clear vehicle list
+      deleteClientBtn.disabled = true;
+    }
+
+    function fillVehicleForm(v) {
+      if (!v) {
+        vehiculo.value = "";
+        patente.value = "";
+        modelo.value = "";
+        compania.value = "";
+        chasis.value = "";
+        siniestroInput.value = "";
+        return;
+      }
+      vehiculo.value = v.brand || v.vehiculo || "";
+      patente.value = v.plate || v.patente || "";
+      modelo.value = v.year || v.modelo || "";
+      compania.value = v.insurance || v.compania || "";
+      chasis.value = v.vin || v.chasis || "";
+      siniestroInput.value = v.siniestro || "";
+    }
+
 
     // Selección de cliente existente
     existingClientSel.addEventListener("change", () => {
