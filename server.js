@@ -1,5 +1,6 @@
 const express = require('express');
-const cors = require('cors');
+const { db, initDB } = require('./db');
+
 const dotenv = require('dotenv');
 const path = require('path');
 
@@ -38,6 +39,9 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+// Initialize DB then start server
+initDB().then(() => {
+    app.listen(PORT, () => {
+        console.log(`Server running on http://localhost:${PORT}`);
+    });
 });

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
+const { db } = require('../db');
 const crypto = require('crypto');
 
 // Helper for SHA-256 (matches frontend logic)
