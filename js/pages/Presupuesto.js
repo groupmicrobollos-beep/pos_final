@@ -1957,8 +1957,8 @@ export default {
 
     // === PDF integrado
     function collectBudgetDataForPdf() {
-      const sucId = selSucursal.value;
-      const suc = (CFG_BRANCHES.find(b => b.id === sucId)?.name) || "";
+      const branch = CFG_BRANCHES.find(b => b.id === sucId);
+      const suc = branch?.name || "";
       const items = collectItemsForPdf();
       const subtotalNum = items.reduce((s, i) => s + (i.total || 0), 0);
       const rate = Number(localStorage.getItem('tax_rate')) || (taxRateEl ? Number(taxRateEl.value || 0) : 0);
@@ -1975,7 +1975,7 @@ export default {
         cuit: CFG_SETTINGS?.cuit || ""
       };
 
-      // incluir logoData si está configurado (por ejemplo, en CFG_SETTINGS.logoData)
+      // incluir logoData si está configurado
       if (CFG_SETTINGS?.logoData) company.logoData = CFG_SETTINGS.logoData;
 
       return {
@@ -1983,6 +1983,7 @@ export default {
         fecha: dateInput.value || todayISO(),
         sucursalId: sucId,
         sucursalNombre: suc,
+        sucursalCuit: branch?.cuit || "",
         cliente: {
           id: selectedClientId,
           nombre: nombre.value || "",
@@ -2014,14 +2015,18 @@ export default {
       try {
         // si no hay logoData en CFG_SETTINGS/company, intentar cargar desde assets según modo
         if (!data.company?.logoData) {
-          const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || document.documentElement.classList.contains('dark') || document.body.classList.contains('dark');
-          // Preferir nombre de archivo provisto por el usuario: 'Logo nuevo.png' (negro)
-          const candidates = isDark ? ['assets/LOGO NUEVO-BLANCO.png', 'assets/Logo nuevo.png', 'assets/LOGO NUEVO.png'] : ['assets/Logo nuevo.png', 'assets/LOGO NUEVO.png', 'assets/LOGO NUEVO-BLANCO.png'];
+          const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || document.documentElement.classList.contains('dark');
+          // Intenta cargar el logo desde assets usando URL encodeada correctamente
+          // Prioriza "LOGO NUEVO" que es el que vimos en assets
+          const candidates = isDark
+            ? ['assets/LOGO%20NUEVO-BLANCO.png', 'assets/LOGO%20NUEVO.png']
+            : ['assets/LOGO%20NUEVO.png', 'assets/LOGO%20NUEVO-BLANCO.png'];
+
           for (const c of candidates) {
             try {
               const urlData = await imageUrlToDataUrl(c);
               if (urlData) { data.company.logoData = urlData; break; }
-            } catch (e) { /* ignore */ }
+            } catch (e) { console.warn("Logo not found:", c); }
           }
         }
         await ensurePdfLoaded();
