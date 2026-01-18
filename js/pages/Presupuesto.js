@@ -513,10 +513,15 @@ function maxSeqForBranch(sucursal) {
 }
 function labelForBranch(id) {
   const b = (CFG_BRANCHES || []).find(x => x.id === id);
-  if (!b) return String(id || "");
-  if (b.code) return b.code; // Prioridad al código corto (PRO)
+  // If branch found and has code, use code.
+  if (b && b.code) return b.code;
+
+  // If no code, try to find index to use sequential number
   const idx = (CFG_BRANCHES || []).findIndex(x => x.id === id);
-  return String(idx >= 0 ? idx + 1 : 0).padStart(4, "0"); // 0001, 0002, ...
+  if (idx >= 0) return String(idx + 1).padStart(4, "0");
+
+  // Fallback if not found (shouldn't happen if loaded, but never return UUID strings)
+  return "0000";
 }
 function formatBudgetNumber(sucursalId, seq) {
   const label = labelForBranch(sucursalId);
