@@ -46,4 +46,6 @@ async function initDB() {
     }
 }
 
-module.exports = { db, initDB };
+const getDB = () => db;
+
+module.exports = { db, initDB, getDB };
