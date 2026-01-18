@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS users (
   role TEXT DEFAULT 'user',
   perms TEXT, -- JSON
   active BOOLEAN DEFAULT 1,
+  reset_token TEXT,
+  reset_token_expires DATETIME,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

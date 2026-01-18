@@ -124,7 +124,13 @@ export const auth = {
         setAuth(res);
         return res.user;
     },
-    async logout() { logout(); }
+    async logout() { logout(); },
+    async forgotPassword(email) {
+        return api('/auth/forgot-password', 'POST', { email });
+    },
+    async resetPassword(token, newPassword) {
+        return api('/auth/reset-password', 'POST', { token, newPassword });
+    }
 };
 
 export default { products, branches, quotes, suppliers, users, auth, getState, subscribe, setAuth, logout, isAuthenticated, currentUser, hasPerm, hasAnyPerm };
