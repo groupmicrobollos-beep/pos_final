@@ -3,7 +3,11 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+
+if (!process.env.RESEND_API_KEY) {
+    console.warn("WARNING: RESEND_API_KEY is not set. Email recovery will not work.");
+}
 
 async function sendPasswordResetEmail(email, token) {
     if (!process.env.RESEND_API_KEY) {
