@@ -324,6 +324,9 @@ export default {
     const $ = (s) => root.querySelector(s);
     const $$ = (s) => root.querySelectorAll(s);
 
+    // Initial global export to support inline onclick="mount.action()"
+    window.mount = {};
+
     // Estado local de data
     let localUsers = [];
     let localBranches = [];
@@ -359,23 +362,26 @@ export default {
       if (id === "tab-gral") fillSettingsForm();
       if (id === "tab-sec") renderAudit();
     };
-    mount.setTab = setTab;
+    window.mount.setTab = setTab;
 
     // --- SETTINGS LOGIC ---
     const logoInput = $("#logoInput");
     const previewLogo = $("#previewLogo");
 
-    logoInput.addEventListener("change", (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (ev) => { previewLogo.src = ev.target.result; };
-        reader.readAsDataURL(file);
-      }
-    });
+    if (logoInput) {
+      logoInput.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (ev) => { previewLogo.src = ev.target.result; };
+          reader.readAsDataURL(file);
+        }
+      });
+    }
 
     const fillSettingsForm = () => {
       const cfg = load(CFG_SETTINGS_KEY, defaultSettings());
+      if (!$("#cfg-brand")) return; // safety
       $("#cfg-brand").value = cfg.brandName || "";
       $("#cfg-company").value = cfg.companyName || "";
       $("#cfg-addr").value = cfg.address || "";
@@ -383,10 +389,10 @@ export default {
       $("#cfg-email").value = cfg.email || "";
       $("#cfg-tax").value = cfg.taxRate || 21;
       $("#cfg-inv").value = cfg.invoiceType || "B";
-      previewLogo.src = cfg.logoData || "assets/logo-placeholder.png";
+      if (previewLogo) previewLogo.src = cfg.logoData || "assets/logo-placeholder.png";
     };
 
-    mount.saveSettings = () => {
+    window.mount.saveSettings = () => {
       const cfg = load(CFG_SETTINGS_KEY, defaultSettings());
       cfg.brandName = $("#cfg-brand").value;
       cfg.companyName = $("#cfg-company").value;
@@ -397,7 +403,7 @@ export default {
       cfg.invoiceType = $("#cfg-inv").value;
 
       // Logo?
-      if (previewLogo.src && previewLogo.src.startsWith("data:image")) {
+      if (previewLogo && previewLogo.src && previewLogo.src.startsWith("data:image")) {
         cfg.logoData = previewLogo.src;
       }
 
@@ -406,7 +412,7 @@ export default {
       logAudit("SAVE_SETTINGS");
     };
 
-    mount.setTheme = (t) => {
+    window.mount.setTheme = (t) => {
       Theme.apply(t);
       toast("Tema actualizado: " + t);
     };
@@ -421,11 +427,12 @@ export default {
         console.error(e);
       }
     };
-    mount.loadUsers = loadUsers;
+    window.mount.loadUsers = loadUsers;
 
     const repaintUsers = () => {
       const term = ($("#userSearch").value || "").toLowerCase();
       const tbody = $("#userTableBody");
+      if (!tbody) return;
       tbody.innerHTML = "";
 
       const filtered = localUsers.filter(u => u.username.toLowerCase().includes(term) || (u.full_name || "").toLowerCase().includes(term));
@@ -452,13 +459,13 @@ export default {
         tbody.appendChild(tr);
       });
     };
-    mount.filterUsers = repaintUsers;
+    window.mount.filterUsers = repaintUsers;
 
     // Modal Users
     const uModal = $("#user-modal");
     let editingUserId = null;
 
-    mount.openUser = (uid = null) => {
+    window.mount.openUser = (uid = null) => {
       editingUserId = uid;
       uModal.classList.remove("hidden");
       // Paint roles & branches
@@ -500,9 +507,9 @@ export default {
         localBranches.map(b => `<option value="${b.id}">${b.name}</option>`).join("");
     };
 
-    mount.closeUser = () => { uModal.classList.add("hidden"); };
+    window.mount.closeUser = () => { uModal.classList.add("hidden"); };
 
-    mount.saveUser = async () => {
+    window.mount.saveUser = async () => {
       const username = $("#u-user").value.trim();
       const full_name = $("#u-fullname").value.trim();
       const email = $("#u-email").value.trim();
@@ -530,14 +537,14 @@ export default {
           await store.users.create(data);
           toast("Usuario creado", "success");
         }
-        mount.closeUser();
+        window.mount.closeUser();
         loadUsers();
       } catch (e) {
         toast(e.message || "Error al guardar usuario", "error");
       }
     };
 
-    mount.delUser = async (uid) => {
+    window.mount.delUser = async (uid) => {
       if (!confirm("¿Seguro de eliminar este usuario?")) return;
       try {
         await store.users.remove(uid);
@@ -553,11 +560,12 @@ export default {
         repaintBranches();
       } catch (e) { toast("Error cargando sucursales", "error"); }
     };
-    mount.loadBranches = loadBranches;
+    window.mount.loadBranches = loadBranches;
 
     const repaintBranches = () => {
       const term = ($("#branchSearch").value || "").toLowerCase();
       const tbody = $("#branchTableBody");
+      if (!tbody) return;
       tbody.innerHTML = "";
 
       const filtered = localBranches.filter(b => b.name.toLowerCase().includes(term));
@@ -578,13 +586,13 @@ export default {
         tbody.appendChild(tr);
       });
     };
-    mount.filterBranches = repaintBranches;
+    window.mount.filterBranches = repaintBranches;
 
     // Modal Branch
     const bModal = $("#branch-modal");
     let editingBranchId = null;
 
-    mount.openBranch = (bid = null) => {
+    window.mount.openBranch = (bid = null) => {
       editingBranchId = bid;
       bModal.classList.remove("hidden");
       if (bid) {
@@ -602,9 +610,9 @@ export default {
         $("#b-title").innerText = "Nueva Sucursal";
       }
     };
-    mount.closeBranch = () => bModal.classList.add("hidden");
+    window.mount.closeBranch = () => bModal.classList.add("hidden");
 
-    mount.saveBranch = async () => {
+    window.mount.saveBranch = async () => {
       const name = $("#b-name").value.trim();
       const address = $("#b-addr").value.trim();
       const phone = $("#b-phone").value.trim();
@@ -622,12 +630,12 @@ export default {
           await store.branches.create(data);
           toast("Sucursal creada", "success");
         }
-        mount.closeBranch();
+        window.mount.closeBranch();
         loadBranches();
       } catch (e) { toast(e.message, "error"); }
     };
 
-    mount.delBranch = async (bid) => {
+    window.mount.delBranch = async (bid) => {
       if (!confirm("¿Eliminar sucursal? Esto no borrará los datos asociados pero podría causar inconsistencias.")) return;
       try {
         await store.branches.remove(bid);
@@ -637,7 +645,7 @@ export default {
     };
 
     // --- SECURITY / AUDIT ---
-    mount.downloadBackup = () => {
+    window.mount.downloadBackup = () => {
       const fullData = {};
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
@@ -652,7 +660,7 @@ export default {
     };
 
     const restoreFile = $("#restoreFile");
-    mount.restoreBackup = () => {
+    window.mount.restoreBackup = () => {
       const file = restoreFile.files[0];
       if (!file) return toast("Selecciona un archivo JSON", "warn");
       const reader = new FileReader();
@@ -673,6 +681,7 @@ export default {
     const renderAudit = () => {
       const logs = load(CFG_AUDIT_KEY, []);
       const cont = $("#auditLogContainer");
+      if (!cont) return;
       if (logs.length === 0) {
         cont.innerHTML = `<div class="text-slate-400 italic text-center py-4">Sin registros</div>`;
         return;
@@ -685,12 +694,12 @@ export default {
             </div>
         `).join("");
     };
-    mount.clearAudit = () => {
+    window.mount.clearAudit = () => {
       if (confirm("¿Borrar logs?")) { save(CFG_AUDIT_KEY, []); renderAudit(); }
     };
 
     // Init
-    mount.setTab("tab-gral");
+    window.mount.setTab("tab-gral");
     // Preload for lookups
     store.branches.list().then(l => localBranches = l);
   },
