@@ -1,9 +1,13 @@
 const { createClient } = require('@libsql/client');
 const dotenv = require('dotenv');
+const fs = require('fs');
+const path = require('path');
 
 dotenv.config();
 
-const url = process.env.TURSO_DATABASE_URL;
+// Force HTTPS protocol for better compatibility in serverless envs
+const rawUrl = process.env.TURSO_DATABASE_URL;
+const url = rawUrl ? rawUrl.replace("libsql://", "https://") : undefined;
 const authToken = process.env.TURSO_AUTH_TOKEN;
 
 if (!url) {
@@ -15,16 +19,18 @@ const db = createClient({
     authToken: authToken,
 });
 
-const fs = require('fs');
-const path = require('path');
-
 async function initDB() {
     try {
         const schemaPath = path.join(__dirname, 'schema.sql');
         const schema = fs.readFileSync(schemaPath, 'utf8');
 
-        // Split by semicolon to handle multiple statements (basic support)
-        const statements = schema.split(';')
+        // Remove comments (single line and block) to avoid empty statement errors
+        const cleanSchema = schema
+            .replace(/--.*$/gm, '')
+            .replace(/\/\*[\s\S]*?\*\//g, '');
+
+        // Split by semicolon and filter empty lines
+        const statements = cleanSchema.split(';')
             .map(s => s.trim())
             .filter(s => s.length > 0);
 
@@ -35,8 +41,8 @@ async function initDB() {
         }
         console.log("Migration completed successfully.");
     } catch (err) {
-        console.error("Migration failed:", err);
-        // Don't crash process, allows server to start even if db has issues (though routes will fail)
+        console.error("Migration failed details:", err);
+        // Log but don't crash, let the app try to run
     }
 }
 
