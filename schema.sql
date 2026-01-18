@@ -33,7 +33,32 @@ CREATE TABLE IF NOT EXISTS branches (
   address TEXT,
   phone TEXT,
   cuit TEXT,
+  code TEXT, -- Short code like "001"
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Clients (Clientes)
+CREATE TABLE IF NOT EXISTS clients (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  phone TEXT,
+  email TEXT,
+  address TEXT, -- Optional
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Vehicles (Vehículos)
+CREATE TABLE IF NOT EXISTS vehicles (
+  id TEXT PRIMARY KEY,
+  client_id TEXT NOT NULL,
+  brand TEXT, -- Marca
+  model TEXT, -- Modelo
+  year INTEGER,
+  plate TEXT, -- Patente
+  vin TEXT, -- Chasis
+  insurance TEXT, -- Compañia
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
 );
 
 -- Suppliers (Proveedores)

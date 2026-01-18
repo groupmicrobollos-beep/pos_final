@@ -107,6 +107,15 @@ export const users = {
     remove: (id) => api(`/users/${id}`, 'DELETE'),
 };
 
+// Clients
+export const clients = {
+    list: () => api('/clients'),
+    get: (id) => api(`/clients/${id}`),
+    create: (c) => api('/clients', 'POST', c),
+    update: (id, c) => api(`/clients/${id}`, 'PUT', c),
+    remove: (id) => api(`/clients/${id}`, 'DELETE'),
+};
+
 // Presupuestos
 export const quotes = {
     list: () => api('/quotes'),
@@ -133,5 +142,5 @@ export const auth = {
     }
 };
 
-export default { products, branches, quotes, suppliers, users, auth, getState, subscribe, setAuth, logout, isAuthenticated, currentUser, hasPerm, hasAnyPerm };
+export default { products, branches, quotes, suppliers, users, clients, auth, getState, subscribe, setAuth, logout, isAuthenticated, currentUser, hasPerm, hasAnyPerm };
 

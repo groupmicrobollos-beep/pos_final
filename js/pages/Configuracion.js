@@ -601,12 +601,14 @@ export default {
         $("#b-addr").value = b.address || "";
         $("#b-phone").value = b.phone || "";
         $("#b-cuit").value = b.cuit || "";
+        $("#b-code").value = b.code || "";
         $("#b-title").innerText = "Editar Sucursal";
       } else {
         $("#b-name").value = "";
         $("#b-addr").value = "";
         $("#b-phone").value = "";
         $("#b-cuit").value = "";
+        $("#b-code").value = "";
         $("#b-title").innerText = "Nueva Sucursal";
       }
     };
@@ -617,10 +619,11 @@ export default {
       const address = $("#b-addr").value.trim();
       const phone = $("#b-phone").value.trim();
       const cuit = $("#b-cuit").value.trim();
+      const code = $("#b-code").value.trim();
 
       if (!name) return toast("Nombre requerido", "error");
 
-      const data = { name, address, phone, cuit };
+      const data = { name, address, phone, cuit, code };
 
       try {
         if (editingBranchId) {
@@ -770,16 +773,20 @@ export default {
                     <span class="text-xs font-bold uppercase text-slate-500">Dirección</span>
                     <input id="b-addr" type="text" class="ui-input w-full mt-1">
                  </label>
-                 <div class="grid grid-cols-2 gap-4">
-                     <label class="block">
-                        <span class="text-xs font-bold uppercase text-slate-500">Teléfono</span>
-                        <input id="b-phone" type="text" class="ui-input w-full mt-1">
-                     </label>
-                     <label class="block">
-                        <span class="text-xs font-bold uppercase text-slate-500">CUIT</span>
-                        <input id="b-cuit" type="text" class="ui-input w-full mt-1" placeholder="Ej: 30-12345678-9">
-                     </label>
-                 </div>
+                  <div class="grid grid-cols-2 gap-4">
+                      <label class="block">
+                         <span class="text-xs font-bold uppercase text-slate-500">Teléfono</span>
+                         <input id="b-phone" type="text" class="ui-input w-full mt-1">
+                      </label>
+                      <label class="block">
+                         <span class="text-xs font-bold uppercase text-slate-500">CUIT</span>
+                         <input id="b-cuit" type="text" class="ui-input w-full mt-1" placeholder="Ej: 30-12345678-9">
+                      </label>
+                  </div>
+                  <label class="block">
+                     <span class="text-xs font-bold uppercase text-slate-500">Código / Prefijo (para numeración)</span>
+                     <input id="b-code" type="text" class="ui-input w-full mt-1" placeholder="Ej: 0001, BAK, CABA...">
+                  </label>
              </div>
              <div class="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
                  <button onclick="mount.closeBranch()" class="btn-secondary">Cancelar</button>

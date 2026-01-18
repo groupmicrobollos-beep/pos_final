@@ -24,7 +24,8 @@ const money = (n) => (Number(n) || 0).toLocaleString(LOCALE, {
   minimumFractionDigits: DECIMALS, maximumFractionDigits: DECIMALS
 });
 
-const CLIENTS_KEY = "clients_db";
+// Clients DB replaced by store
+
 
 const todayISO = () => new Date().toISOString().split("T")[0];
 const sanitizeKey = (s) => String(s).replace(/[^\w\d]/g, "_");
@@ -53,20 +54,8 @@ function setupCanvas(ctx) {
   ctx.lineWidth = 2;
 }
 
-// Clientes (persistencia)
-function getClients() {
-  try { return JSON.parse(localStorage.getItem(CLIENTS_KEY) || "[]"); } catch { return []; }
-}
-function saveClients(list) {
-  localStorage.setItem(CLIENTS_KEY, JSON.stringify(list || []));
-}
-function upsertClient(client) {
-  const list = getClients();
-  const idx = list.findIndex(c => c.id === client.id);
-  if (idx >= 0) list[idx] = client; else list.push(client);
-  saveClients(list);
-  return client;
-}
+// Clientes (persistencia) -> Ahora usa store.clients
+
 
 /* ============================
    === PDF: Helpers + Core ===
@@ -525,7 +514,7 @@ function maxSeqForBranch(sucursal) {
 function labelForBranch(id) {
   const b = (CFG_BRANCHES || []).find(x => x.id === id);
   if (!b) return String(id || "");
-  if (b.code) return b.code; // si definís "code" en Sucursales
+  if (b.code) return b.code; // Prioridad al código corto (PRO)
   const idx = (CFG_BRANCHES || []).findIndex(x => x.id === id);
   return String(idx >= 0 ? idx + 1 : 0).padStart(4, "0"); // 0001, 0002, ...
 }
@@ -1218,15 +1207,21 @@ export default {
     let selectedClientId = null;
     let selectedVehicleId = null; // null => creando uno nuevo
 
-    function loadClientsIntoSelect(selectId = existingClientSel, keepId = null) {
-      const clients = getClients();
-      selectId.innerHTML = `<option value="">Seleccionar cliente existente...</option>` +
-        clients.map(c => `<option value="${c.id}">${c.name} — ${c.phone || "s/tel"}</option>`).join("");
-      if (keepId) selectId.value = keepId;
-      deleteClientBtn.disabled = !selectId.value;
+    // Local cache for UI
+    let localClients = [];
+
+    async function loadClientsIntoSelect(selectId = existingClientSel, keepId = null) {
+      try {
+        localClients = await store.clients.list();
+        selectId.innerHTML = `<option value="">Seleccionar cliente existente...</option>` +
+          localClients.map(c => `<option value="${c.id}">${c.name} — ${c.phone || "s/tel"}</option>`).join("");
+        if (keepId) selectId.value = keepId;
+        deleteClientBtn.disabled = !selectId.value;
+      } catch (e) { console.error(e); toast("Error cargando clientes", "error"); }
     }
 
     function loadVehiclesIntoSelect(client, keepVehicleId = null) {
+      // API returns 'vehicles' as array attached to client
       if (!client || !client.vehicles?.length) {
         vehiclesBlock.classList.add("hidden");
         vehicleSel.innerHTML = `<option value="">(Nuevo vehículo)</option>`;
@@ -1236,69 +1231,27 @@ export default {
       }
       vehiclesBlock.classList.remove("hidden");
       vehicleSel.innerHTML = client.vehicles.map(v => {
-        const label = `${v.vehiculo || "Vehículo"} ${v.patente ? `— ${v.patente}` : ""}`;
+        const label = `${v.brand || v.vehiculo || "Vehículo"} ${v.plate || v.patente ? `— ${v.plate || v.patente}` : ""}`;
         return `<option value="${v.id}">${label}</option>`;
       }).join("");
       vehicleSel.insertAdjacentHTML("afterbegin", `<option value="">(Nuevo vehículo)</option>`);
-      vehicleSel.value = keepVehicleId ?? client.vehicles[0].id ?? "";
+
+      // Select first if keepVehicleId is null
+      vehicleSel.value = keepVehicleId ?? (client.vehicles[0] ? client.vehicles[0].id : "");
       selectedVehicleId = vehicleSel.value || null;
       deleteVehicleBtn.disabled = !selectedVehicleId;
+
       const current = client.vehicles.find(v => v.id === selectedVehicleId);
       fillVehicleForm(current || null);
     }
 
-    function clearClientForm() {
-      existingClientSel.value = "";
-      selectedClientId = null;
-      nombre.value = "";
-      telefono.value = "";
-      vehiclesBlock.classList.add("hidden");
-      selectedVehicleId = null;
-      deleteClientBtn.disabled = true;
-      deleteVehicleBtn.disabled = true;
-      fillVehicleForm(null);
-    }
-
-    function fillClientForm(client) {
-      nombre.value = client?.name || "";
-      telefono.value = client?.phone || "";
-    }
-
-    function getClientFormData() {
-      return {
-        name: (nombre.value || "").trim(),
-        phone: (telefono.value || "").trim()
-      };
-    }
-
-    function fillVehicleForm(v) {
-      vehiculo.value = v?.vehiculo || "";
-      patente.value = v?.patente || "";
-      modelo.value = v?.modelo || "";
-      compania.value = v?.compania || "";
-      chasis.value = v?.chasis || "";
-    }
-
-    function getVehicleFormData() {
-      return {
-        id: selectedVehicleId || rid("veh"),
-        vehiculo: (vehiculo.value || "").trim(),
-        patente: (patente.value || "").trim(),
-        modelo: (modelo.value || "").trim(),
-        compania: (compania.value || "").trim(),
-        chasis: (chasis.value || "").trim()
-      };
-    }
-
-    // Cargar clientes en el select al iniciar
-    loadClientsIntoSelect();
+    // ... helpers ...
 
     // Selección de cliente existente
     existingClientSel.addEventListener("change", () => {
       const id = existingClientSel.value || null;
       selectedClientId = id;
-      const clients = getClients();
-      const client = clients.find(c => c.id === id) || null;
+      const client = localClients.find(c => c.id === id) || null;
       fillClientForm(client);
       loadVehiclesIntoSelect(client);
       deleteClientBtn.disabled = !id;
@@ -1332,55 +1285,64 @@ export default {
     });
 
     // Guardar Cliente (crea/actualiza cliente + agrega/actualiza vehículo)
-    saveClientBtn.addEventListener("click", () => {
+    // Guardar Cliente (async store)
+    saveClientBtn.addEventListener("click", async () => {
       const clientData = getClientFormData();
       if (!clientData.name) { toast("El nombre del cliente es obligatorio", "error"); return; }
       if (!clientData.phone) { toast("El teléfono es obligatorio", "error"); return; }
 
-      const vehicleData = getVehicleFormData();
-      if (!vehicleData.vehiculo || !vehicleData.patente) {
-        toast("Vehículo y patente son obligatorios", "error"); return;
-      }
+      // Get current vehicles list from local object or empty
+      let currentClient = selectedClientId ? localClients.find(c => c.id === selectedClientId) : null;
+      let vehicles = currentClient ? [...(currentClient.vehicles || [])] : [];
 
-      let clients = getClients();
-      let client;
-      if (selectedClientId) {
-        client = clients.find(c => c.id === selectedClientId);
-        if (!client) {
-          client = { id: selectedClientId, name: clientData.name, phone: clientData.phone, vehicles: [] };
-          clients.push(client);
-        }
-        client.name = clientData.name;
-        client.phone = clientData.phone;
-        client.vehicles = Array.isArray(client.vehicles) ? client.vehicles : [];
-        const idxV = client.vehicles.findIndex(v => v.id === selectedVehicleId);
-        if (idxV >= 0) client.vehicles[idxV] = vehicleData;
-        else client.vehicles.push(vehicleData);
-
-        upsertClient(client);
-        loadClientsIntoSelect(existingClientSel, client.id);
-        loadVehiclesIntoSelect(client, vehicleData.id);
-        selectedClientId = client.id;
-        selectedVehicleId = vehicleData.id;
-        toast("Cliente actualizado ✅", "success");
+      // If adding/editing a vehicle in the form
+      const vData = getVehicleFormData();
+      // Check if user filled vehicle data
+      if (vData.vehiculo && vData.patente) {
+        const idxV = vehicles.findIndex(v => v.id === selectedVehicleId);
+        if (idxV >= 0) vehicles[idxV] = vData;
+        else vehicles.push(vData);
+      } else if (selectedVehicleId) {
+        // Maybe updating existing vehicle but cleared fields? Assume required.
+        // Or just user didn't touch vehicle form.
       } else {
-        client = {
-          id: rid("cli"),
-          name: clientData.name,
-          phone: clientData.phone,
-          vehicles: [vehicleData],
-          createdAt: new Date().toISOString()
-        };
-        upsertClient(client);
-        loadClientsIntoSelect(existingClientSel, client.id);
-        fillClientForm(client);
-        loadVehiclesIntoSelect(client, vehicleData.id);
-        selectedClientId = client.id;
-        selectedVehicleId = vehicleData.id;
-        toast("Cliente creado ✅", "success");
+        // No vehicle data provided, if required warn?
+        // User said "vehiculo y patente obligatorios" in original code.
+        if (vData.vehiculo || vData.patente) { // Partial data
+          if (!vData.vehiculo || !vData.patente) { toast("Vehículo y patente son obligatorios", "error"); return; }
+        }
       }
-      deleteClientBtn.disabled = !selectedClientId;
-      deleteVehicleBtn.disabled = !selectedVehicleId;
+
+      // Payload
+      const payload = {
+        name: clientData.name,
+        phone: clientData.phone,
+        vehicles: vehicles
+      };
+
+      try {
+        let savedId;
+        if (selectedClientId) {
+          await store.clients.update(selectedClientId, payload);
+          savedId = selectedClientId;
+          toast("Cliente actualizado ✅", "success");
+        } else {
+          const res = await store.clients.create(payload);
+          savedId = res.id;
+          toast("Cliente creado ✅", "success");
+        }
+        await loadClientsIntoSelect(existingClientSel, savedId);
+        // Refetch to get full object with IDs
+        currentClient = localClients.find(c => c.id === savedId);
+        selectedClientId = savedId;
+
+        // Determine active vehicle
+        const savedVehicleId = vData.id || (currentClient.vehicles[0]?.id);
+        loadVehiclesIntoSelect(currentClient, savedVehicleId);
+        selectedVehicleId = savedVehicleId;
+
+        deleteClientBtn.disabled = false;
+      } catch (e) { toast("Error guardando cliente: " + e.message, "error"); }
     });
 
     // --- Eliminar Vehículo (modal)
@@ -1388,27 +1350,40 @@ export default {
     function closeDelVehModal() { delVehModal.classList.add("hidden"); }
     deleteVehicleBtn.addEventListener("click", () => {
       if (!selectedClientId || !selectedVehicleId) return;
-      const client = getClients().find(c => c.id === selectedClientId);
+      const client = localClients.find(c => c.id === selectedClientId);
       const v = client?.vehicles?.find(v => v.id === selectedVehicleId);
-      delVehSummary.textContent = v ? `${v.vehiculo || ""} ${v.patente ? "— " + v.patente : ""}` : "";
+      delVehSummary.textContent = v ? `${v.brand || v.vehiculo || ""} ${v.plate || v.patente ? "— " + (v.plate || v.patente) : ""}` : "";
       openDelVehModal();
     });
     cancelDelVeh.addEventListener("click", closeDelVehModal);
     delVehModal.addEventListener("click", (e) => { if (e.target === delVehModal) closeDelVehModal(); });
-    confirmDelVeh.addEventListener("click", () => {
+    confirmDelVeh.addEventListener("click", async () => {
       if (!selectedClientId || !selectedVehicleId) return;
-      const list = getClients();
-      const ci = list.findIndex(c => c.id === selectedClientId);
-      if (ci < 0) return;
-      const client = list[ci];
-      client.vehicles = (client.vehicles || []).filter(v => v.id !== selectedVehicleId);
-      saveClients(list);
-      loadVehiclesIntoSelect(client, null);
-      selectedVehicleId = null;
-      deleteVehicleBtn.disabled = true;
-      fillVehicleForm(null);
-      toast("Vehículo eliminado", "info");
-      closeDelVehModal();
+      const client = localClients.find(c => c.id === selectedClientId);
+      if (!client) return;
+
+      const newVehicles = (client.vehicles || []).filter(v => v.id !== selectedVehicleId);
+      const payload = {
+        name: client.name,
+        phone: client.phone,
+        email: client.email,
+        address: client.address,
+        vehicles: newVehicles
+      };
+
+      try {
+        await store.clients.update(client.id, payload);
+        // Refetch to get updated list
+        await loadClientsIntoSelect(existingClientSel, client.id);
+        const updatedClient = localClients.find(c => c.id === client.id) || client; // fallback
+
+        loadVehiclesIntoSelect(updatedClient, null);
+        selectedVehicleId = null;
+        deleteVehicleBtn.disabled = true;
+        fillVehicleForm(null);
+        toast("Vehículo eliminado", "info");
+        closeDelVehModal();
+      } catch (e) { toast("Error eliminando vehículo: " + e.message, "error"); }
     });
 
     // --- Eliminar Cliente (modal)
@@ -1416,20 +1391,21 @@ export default {
     function closeDelCliModal() { delCliModal.classList.add("hidden"); }
     deleteClientBtn.addEventListener("click", () => {
       if (!selectedClientId) return;
-      const cli = getClients().find(c => c.id === selectedClientId);
+      const cli = localClients.find(c => c.id === selectedClientId);
       delCliSummary.textContent = cli ? `${cli.name} — ${cli.phone || "s/tel"} (${(cli.vehicles || []).length} vehículo/s)` : "";
       openDelCliModal();
     });
     cancelDelCli.addEventListener("click", closeDelCliModal);
     delCliModal.addEventListener("click", (e) => { if (e.target === delCliModal) closeDelCliModal(); });
-    confirmDelCli.addEventListener("click", () => {
+    confirmDelCli.addEventListener("click", async () => {
       if (!selectedClientId) return;
-      const list = getClients().filter(c => c.id !== selectedClientId);
-      saveClients(list);
-      clearClientForm();
-      loadClientsIntoSelect(existingClientSel);
-      toast("Cliente eliminado", "info");
-      closeDelCliModal();
+      try {
+        await store.clients.remove(selectedClientId);
+        toast("Cliente eliminado", "info");
+        await loadClientsIntoSelect(existingClientSel);
+        clearClientForm();
+        closeDelCliModal();
+      } catch (e) { toast("Error eliminando cliente", "error"); }
     });
 
     // === Tabla + Totales

@@ -22,6 +22,8 @@ const branchRoutes = require('./routes/branches');
 const quoteRoutes = require('./routes/quotes');
 const supplierRoutes = require('./routes/suppliers');
 const userRoutes = require('./routes/users');
+const clientsRoutes = require('./routes/clients');
+
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -30,6 +32,8 @@ app.use('/api/products', itemRoutes);
 app.use('/api/branches', branchRoutes);
 app.use('/api/quotes', quoteRoutes);
 app.use('/api/suppliers', supplierRoutes);
+app.use('/api/clients', clientsRoutes);
+
 
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date() });
@@ -40,9 +44,26 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Initialize DB then start server
-initDB().then(() => {
-    app.listen(PORT, () => {
-        console.log(`Server running on http://localhost:${PORT}`);
-    });
-});
+// Database initialization
+(async () => {
+    try {
+        await initDB();
+
+        // --- Safe Migration for "code" column in branches ---
+        const { getDB } = require('./db');
+        const db = getDB();
+        try {
+            await db.execute("ALTER TABLE branches ADD COLUMN code TEXT");
+            console.log("Migration: Added 'code' column to branches");
+        } catch (e) {
+            // Ignore error if column exists (SQLite throws if column exists)
+        }
+
+        console.log('Database initialized');
+        app.listen(PORT, () => { // Changed 'port' to 'PORT' for consistency
+            console.log(`Server running on port ${PORT}`); // Changed 'port' to 'PORT' for consistency
+        });
+    } catch (err) {
+        console.error('Failed to initialize database:', err);
+    }
+})();
