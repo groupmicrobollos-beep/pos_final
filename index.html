@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="es" class="dark">
 
-    <head>
-        <style>
+<head>
+    <style>
         /* ============================== */
         /* Forzar texto MUY OSCURO en TEMA CLARO
            - Aplica sólo cuando <html data-theme="light"> está activo
@@ -11,9 +11,11 @@
         */
         html[data-theme="light"] {
             --color-text: #000000 !important;
-            --color-text-muted: #334155 !important; /* gris oscuro para secundarios */
+            --color-text-muted: #334155 !important;
+            /* gris oscuro para secundarios */
             color: var(--color-text) !important;
         }
+
         /* Asegurar que los elementos dentro usen texto negro cuando el tema es claro */
         html[data-theme="light"] body,
         html[data-theme="light"] body * {
@@ -22,12 +24,19 @@
 
         /* ============================== */
         /* Títulos de recuadros y leyendas bien oscuros en claro y blancos en oscuro */
-        .form-section legend, .panel legend, .card legend, .config-panel legend, .box-title, .panel-title, .card-title {
+        .form-section legend,
+        .panel legend,
+        .card legend,
+        .config-panel legend,
+        .box-title,
+        .panel-title,
+        .card-title {
             color: #000 !important;
             font-weight: 800;
             font-size: 1.13em;
             letter-spacing: 0.01em;
         }
+
         html[data-theme="dark"] .form-section legend,
         html[data-theme="dark"] .panel legend,
         html[data-theme="dark"] .card legend,
@@ -38,17 +47,32 @@
             color: #fff !important;
             font-weight: 800;
         }
+
         /* Tipografía más legible y fuerte */
-        body, input, select, textarea, button {
+        body,
+        input,
+        select,
+        textarea,
+        button {
             font-family: 'Segoe UI', 'Arial', sans-serif;
             font-weight: 500;
             letter-spacing: 0.01em;
         }
-        h1, h2, h3, h4, h5, h6, .section-title, .form-label, label {
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6,
+        .section-title,
+        .form-label,
+        label {
             font-weight: 700;
             letter-spacing: 0.02em;
             color: #111 !important;
         }
+
         html[data-theme="dark"] h1,
         html[data-theme="dark"] h2,
         html[data-theme="dark"] h3,
@@ -60,252 +84,358 @@
         html[data-theme="dark"] label {
             color: #fff !important;
         }
+
         /* Botones con contraste fuerte */
-        .btn, button, input[type="submit"] {
+        .btn,
+        button,
+        input[type="submit"] {
             border-radius: 6px;
             font-weight: 700;
             font-size: 1rem;
             padding: 0.6em 1.2em;
             border: none;
-            box-shadow: 0 2px 8px 0 rgba(0,0,0,0.04);
+            box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.04);
             transition: background 0.2s, color 0.2s, box-shadow 0.2s;
         }
-        .btn-primary, button.btn-primary, input[type="submit"].btn-primary {
+
+        .btn-primary,
+        button.btn-primary,
+        input[type="submit"].btn-primary {
             background: var(--color-primary) !important;
             color: var(--color-primary-contrast) !important;
             border: 2px solid var(--color-primary) !important;
         }
-        .btn-primary:hover, button.btn-primary:hover, input[type="submit"].btn-primary:hover {
+
+        .btn-primary:hover,
+        button.btn-primary:hover,
+        input[type="submit"].btn-primary:hover {
             background: #00306b !important;
             color: #fff !important;
-            box-shadow: 0 4px 16px 0 rgba(13,71,161,0.12);
+            box-shadow: 0 4px 16px 0 rgba(13, 71, 161, 0.12);
         }
+
         .btn-danger {
             background: var(--color-danger) !important;
             color: var(--color-primary-contrast) !important;
             border: 2px solid var(--color-danger) !important;
         }
+
         .btn-danger:hover {
             background: #7f0000 !important;
             color: #fff !important;
         }
+
         .btn-success {
             background: var(--color-success) !important;
             color: var(--color-primary-contrast) !important;
             border: 2px solid var(--color-success) !important;
         }
+
         .btn-success:hover {
             background: #003d1b !important;
             color: #fff !important;
         }
+
         .btn-warning {
             background: var(--color-warning) !important;
             color: #111 !important;
             border: 2px solid var(--color-warning) !important;
         }
+
         .btn-warning:hover {
             background: #b26a00 !important;
             color: #fff !important;
         }
+
         /* Botón secundario y outline */
-        .btn-outline, .btn-secondary {
+        .btn-outline,
+        .btn-secondary {
             background: transparent !important;
             color: var(--color-primary) !important;
             border: 2px solid var(--color-primary) !important;
         }
-        .btn-outline:hover, .btn-secondary:hover {
+
+        .btn-outline:hover,
+        .btn-secondary:hover {
             background: var(--color-primary) !important;
             color: #fff !important;
         }
+
         /* Mejorar contraste de los íconos y links */
-        a, .sidebar a {
+        a,
+        .sidebar a {
             color: var(--color-primary) !important;
             font-weight: 600;
         }
-        a:hover, .sidebar a:hover {
+
+        a:hover,
+        .sidebar a:hover {
             color: #00306b !important;
             text-decoration: underline;
         }
+
         /* Mejorar contraste de los textos secundarios */
-        .text-muted, .form-text, .help-block {
+        .text-muted,
+        .form-text,
+        .help-block {
             color: var(--color-text-muted) !important;
             font-weight: 500;
         }
+
         :root {
-            --color-bg: #f3f6f9; /* fondo general más claro y neutro */
-            --color-bg-card: #ffffff; /* tarjetas blancas */
-            --color-bg-card-alt: #f1f5f9; /* alternativo suave para filas */
-            --color-border: rgba(15,23,42,0.06); /* borde sutil */
-            --color-text: #0f1724; /* texto principal oscuro */
-            --color-text-muted: #475569; /* texto secundario gris oscuro */
-            --color-primary: #0b5ed7; /* azul primario brillante */
+            --color-bg: #f3f6f9;
+            /* fondo general más claro y neutro */
+            --color-bg-card: #ffffff;
+            /* tarjetas blancas */
+            --color-bg-card-alt: #f1f5f9;
+            /* alternativo suave para filas */
+            --color-border: rgba(15, 23, 42, 0.06);
+            /* borde sutil */
+            --color-text: #0f1724;
+            /* texto principal oscuro */
+            --color-text-muted: #475569;
+            /* texto secundario gris oscuro */
+            --color-primary: #0b5ed7;
+            /* azul primario brillante */
             --color-primary-contrast: #fff;
-            --color-danger: #b71c1c; /* rojo fuerte */
-            --color-success: #1b5e20; /* verde fuerte */
-            --color-warning: #ff8f00; /* amarillo fuerte */
+            --color-danger: #b71c1c;
+            /* rojo fuerte */
+            --color-success: #1b5e20;
+            /* verde fuerte */
+            --color-warning: #ff8f00;
+            /* amarillo fuerte */
         }
+
         html[data-theme="dark"] {
-            --color-bg: #060712; /* fondo más profundo */
-            --color-bg-card: #0f1724; /* tarjetas oscuras */
-            --color-bg-card-alt: #081027; /* alternativo más oscuro */
-            --color-border: rgba(255,255,255,0.06); /* borde sutil claro */
-            --color-text: #e6eef8; /* texto principal claro */
-            --color-text-muted: #9aa6b2; /* texto secundario */
-            --color-primary: #60a5fa; /* azul más visible en dark */
+            --color-bg: #060712;
+            /* fondo más profundo */
+            --color-bg-card: #0f1724;
+            /* tarjetas oscuras */
+            --color-bg-card-alt: #081027;
+            /* alternativo más oscuro */
+            --color-border: rgba(255, 255, 255, 0.06);
+            /* borde sutil claro */
+            --color-text: #e6eef8;
+            /* texto principal claro */
+            --color-text-muted: #9aa6b2;
+            /* texto secundario */
+            --color-primary: #60a5fa;
+            /* azul más visible en dark */
             --color-primary-contrast: #0b1220;
             --color-danger: #ef5350;
             --color-success: #66bb6a;
             --color-warning: #f59e0b;
         }
+
         body {
             background: var(--color-bg);
             color: var(--color-text);
         }
-        .card, .config-panel, .panel, .form-section, .table, .table th, .table td {
+
+        .card,
+        .config-panel,
+        .panel,
+        .form-section,
+        .table,
+        .table th,
+        .table td {
             background: var(--color-bg-card) !important;
             color: var(--color-text) !important;
             border-color: var(--color-border) !important;
         }
-        .card-alt, .config-panel-alt, .panel-alt {
+
+        .card-alt,
+        .config-panel-alt,
+        .panel-alt {
             background: var(--color-bg-card-alt) !important;
         }
+
         .sidebar {
             background: var(--color-bg-card-alt) !important;
             border-right: 1px solid var(--color-border) !important;
         }
+
         .topbar {
             background: var(--color-bg-card) !important;
             border-bottom: 1px solid var(--color-border) !important;
         }
+
         .btn-primary {
             background: var(--color-primary) !important;
             color: var(--color-primary-contrast) !important;
         }
+
         .btn-danger {
             background: var(--color-danger) !important;
             color: var(--color-primary-contrast) !important;
         }
+
         .btn-success {
             background: var(--color-success) !important;
             color: var(--color-primary-contrast) !important;
         }
+
         .btn-warning {
             background: var(--color-warning) !important;
             color: var(--color-text) !important;
         }
-        input, select, textarea {
+
+        input,
+        select,
+        textarea {
             background: var(--color-bg-card) !important;
             color: var(--color-text) !important;
             border: 1px solid var(--color-border) !important;
         }
-        input:disabled, select:disabled, textarea:disabled {
+
+        input:disabled,
+        select:disabled,
+        textarea:disabled {
             background: var(--color-bg-card-alt) !important;
             color: var(--color-text-muted) !important;
         }
+
         .text-muted {
             color: var(--color-text-muted) !important;
         }
+
         .border {
             border-color: var(--color-border) !important;
         }
+
         .active {
             background: var(--color-primary) !important;
             color: var(--color-primary-contrast) !important;
         }
+
         .sidebar .active {
             background: var(--color-primary) !important;
             color: var(--color-primary-contrast) !important;
         }
+
         .sidebar a {
             color: var(--color-text) !important;
         }
+
         .sidebar a:hover {
             background: var(--color-primary);
             color: var(--color-primary-contrast) !important;
         }
-        .form-label, label {
+
+        .form-label,
+        label {
             color: var(--color-text) !important;
         }
+
         .form-section legend {
             color: var(--color-primary) !important;
         }
-        .switch input:checked + .slider {
+
+        .switch input:checked+.slider {
             background: var(--color-primary) !important;
         }
-        .switch input:checked + .slider:before {
+
+        .switch input:checked+.slider:before {
             background: var(--color-primary-contrast) !important;
         }
+
         .table th {
             background: var(--color-bg-card-alt) !important;
             color: var(--color-text) !important;
         }
+
         .table-striped tbody tr:nth-child(odd) {
             background: var(--color-bg-card-alt) !important;
         }
+
         .table-striped tbody tr:nth-child(even) {
             background: var(--color-bg-card) !important;
         }
+
         /* Mejorar contraste de los campos deshabilitados */
-        .form-section input:disabled, .form-section select:disabled, .form-section textarea:disabled {
+        .form-section input:disabled,
+        .form-section select:disabled,
+        .form-section textarea:disabled {
             opacity: 1 !important;
         }
+
         /* ============================ */
         /* Global modal styles (overlay + panel) */
         /* Asegura contraste correcto en light/dark sin tocar cada modal */
         .modal {
             /* overlay color: adaptado por tema */
-            background: rgba(0,0,0,0.55);
+            background: rgba(0, 0, 0, 0.55);
             backdrop-filter: blur(4px);
         }
-        html[data-theme="light"] .modal { background: rgba(0,0,0,0.45); }
-        html[data-theme="dark"] .modal { background: rgba(2,6,23,0.64); }
+
+        html[data-theme="light"] .modal {
+            background: rgba(0, 0, 0, 0.45);
+        }
+
+        html[data-theme="dark"] .modal {
+            background: rgba(2, 6, 23, 0.64);
+        }
 
         /* Modal inner panel: usar las variables de tema para fondo, borde y texto */
-        .modal > div, .modal .modal-panel, .modal .modal-content,
-        .modal .rounded-xl, .modal .rounded-lg, .modal .p-4, .modal .p-3 {
+        .modal>div,
+        .modal .modal-panel,
+        .modal .modal-content,
+        .modal .rounded-xl,
+        .modal .rounded-lg,
+        .modal .p-4,
+        .modal .p-3 {
             background: var(--color-bg-card) !important;
             color: var(--color-text) !important;
             border: 1px solid var(--color-border) !important;
-            box-shadow: 0 12px 30px rgba(2,6,23,0.18) !important;
+            box-shadow: 0 12px 30px rgba(2, 6, 23, 0.18) !important;
         }
 
         /* Light-mode: forzar panel más claro y overlay menos oscuro */
         html[data-theme="light"] .modal {
-            background: rgba(0,0,0,0.32) !important; /* tenue overlay */
+            background: rgba(0, 0, 0, 0.32) !important;
+            /* tenue overlay */
             backdrop-filter: blur(3px) !important;
         }
-        html[data-theme="light"] .modal > div,
+
+        html[data-theme="light"] .modal>div,
         html[data-theme="light"] .modal .modal-panel,
         html[data-theme="light"] .modal .modal-content {
             background: var(--color-bg-card) !important;
             color: var(--color-text) !important;
-            box-shadow: 0 10px 26px rgba(11,78,144,0.06) !important;
+            box-shadow: 0 10px 26px rgba(11, 78, 144, 0.06) !important;
         }
 
         /* Dark-mode: panel oscuro con contraste adecuado */
-        html[data-theme="dark"] .modal > div,
+        html[data-theme="dark"] .modal>div,
         html[data-theme="dark"] .modal .modal-panel,
         html[data-theme="dark"] .modal .modal-content {
-            background: var(--color-bg-card) !important; /* dark variables already set */
+            background: var(--color-bg-card) !important;
+            /* dark variables already set */
             color: var(--color-text) !important;
-            box-shadow: 0 12px 30px rgba(2,6,23,0.45) !important;
+            box-shadow: 0 12px 30px rgba(2, 6, 23, 0.45) !important;
         }
 
         /* Asegurar campos dentro del modal siguen la paleta y tienen buen contraste */
-        .modal input, .modal select, .modal textarea, .modal button {
+        .modal input,
+        .modal select,
+        .modal textarea,
+        .modal button {
             background: var(--color-bg-card) !important;
             color: var(--color-text) !important;
             border-color: var(--color-border) !important;
         }
 
         /* Forzar que botones claros en dark tengan suficiente contraste */
-        html[data-theme="dark"] .modal .btn, html[data-theme="dark"] .modal button {
+        html[data-theme="dark"] .modal .btn,
+        html[data-theme="dark"] .modal button {
             color: var(--color-text) !important;
         }
 
         /* Si algún modal tenía clases de fondo explícito (ej. bg-slate-900), las sobreescribimos
            para modo claro y oscuro, asignando el color del tema correspondiente. */
-        .modal .bg-slate-900, .modal .bg-slate-950, .modal .bg-slate-900\/80 {
+        .modal .bg-slate-900,
+        .modal .bg-slate-950,
+        .modal .bg-slate-900\/80 {
             background: var(--color-bg-card) !important;
             color: var(--color-text) !important;
         }
@@ -331,31 +461,42 @@
         }
 
         /* Inputs/textarea/select con clases semitransparentes: forzar fondo y texto */
-        .modal input[class], .modal select[class], .modal textarea[class] {
+        .modal input[class],
+        .modal select[class],
+        .modal textarea[class] {
             background: var(--color-bg-card) !important;
             color: var(--color-text) !important;
             border-color: var(--color-border) !important;
         }
 
         /* Si hay overlays oscuros dentro del modal (ej: elementos absolute), los aclaramos */
-        .modal *[class*="overlay"], .modal .overlay, .modal .backdrop {
+        .modal *[class*="overlay"],
+        .modal .overlay,
+        .modal .backdrop {
             background: transparent !important;
         }
 
         /* Very specific: if some modal panel uses inline dark classes on deep elements, override via descendant */
-        .modal .rounded-xl, .modal .rounded-lg {
+        .modal .rounded-xl,
+        .modal .rounded-lg {
             background: var(--color-bg-card) !important;
             color: var(--color-text) !important;
         }
 
         /* Títulos dentro de modales */
-        .modal .panel-title, .modal .card-title, .modal .box-title, .modal .form-section legend {
+        .modal .panel-title,
+        .modal .card-title,
+        .modal .box-title,
+        .modal .form-section legend {
             color: var(--color-text) !important;
             font-weight: 700;
         }
 
         /* Asegurar botones de acción dentro del modal (footer) mantengan visibilidad */
-        .modal .btn-primary, .modal .btn-danger, .modal .btn-success, .modal .btn-warning {
+        .modal .btn-primary,
+        .modal .btn-danger,
+        .modal .btn-success,
+        .modal .btn-warning {
             border-width: 1px !important;
         }
 
@@ -365,12 +506,12 @@
         */
         /* overlay seleccionadores según pattern [id$="-modal"] o .fixed.inset-0 (no se necesita regla vacía) */
         /* El panel interior (el primer div hijo) */
-        [id$="-modal"] > div,
-        .fixed.inset-0 > div {
+        [id$="-modal"]>div,
+        .fixed.inset-0>div {
             background: var(--color-bg-card) !important;
             color: var(--color-text) !important;
             border: 1px solid var(--color-border) !important;
-            box-shadow: 0 18px 40px rgba(2,6,23,0.12) !important;
+            box-shadow: 0 18px 40px rgba(2, 6, 23, 0.12) !important;
             z-index: 99999 !important;
         }
 
@@ -393,18 +534,21 @@
         .fixed.inset-0 input[class*="bg-white"],
         [id$="-modal"] select[class*="bg-white"],
         .fixed.inset-0 select[class*="bg-white"] {
-            background: rgba(255,255,255,0.92) !important;
+            background: rgba(255, 255, 255, 0.92) !important;
             color: var(--color-text) !important;
-            border: 1px solid rgba(15,23,42,0.06) !important;
+            border: 1px solid rgba(15, 23, 42, 0.06) !important;
         }
 
         /* Restaurar apariencia de botones secundarios / outline dentro de modales
            Muchos botones de cancelación usan clase bg-white/10 + btn-secondary; aseguramos
            que se muestren como botones de outline / secundarios (fondo suave) y no blancos planos.
         */
-        [id$="-modal"] .btn-secondary, .fixed.inset-0 .btn-secondary,
-        [id$="-modal"] .btn-outline, .fixed.inset-0 .btn-outline,
-        [id$="-modal"] button.bg-white\/10, .fixed.inset-0 button.bg-white\/10 {
+        [id$="-modal"] .btn-secondary,
+        .fixed.inset-0 .btn-secondary,
+        [id$="-modal"] .btn-outline,
+        .fixed.inset-0 .btn-outline,
+        [id$="-modal"] button.bg-white\/10,
+        .fixed.inset-0 button.bg-white\/10 {
             background: var(--color-bg-card-alt) !important;
             color: var(--color-text) !important;
             border: 1px solid var(--color-border) !important;
@@ -412,7 +556,8 @@
         }
 
         /* Forzar color de texto para utilidades como text-slate-100/300 dentro de los modales fijos */
-        [id$="-modal"] [class*="text-slate-"], .fixed.inset-0 [class*="text-slate-"] {
+        [id$="-modal"] [class*="text-slate-"],
+        .fixed.inset-0 [class*="text-slate-"] {
             color: var(--color-text) !important;
         }
 
@@ -420,7 +565,7 @@
            al elemento overlay (ej: <div id="add-item-modal" data-light-modal="true" ...>)
            y las reglas generales ya aplicarán con máxima prioridad.
         */
-        
+
         /* ============================ */
         /* Reglas adicionales muy específicas para cubrir más casos
            - cubre dialogs con role="dialog", .modal-box, .modal-dialog, .dialog-panel
@@ -428,43 +573,70 @@
            - aumenta z-index y fuerza fondo claro en modo light; respeta dark via data-theme
         */
         /* Panel/dialog base */
-        .modal-box, .modal-dialog, .dialog-panel, .dialog__panel, .dialog, [role="dialog"], .modal-wrapper, .modal-container, .modal-panel, .modal-content {
+        .modal-box,
+        .modal-dialog,
+        .dialog-panel,
+        .dialog__panel,
+        .dialog,
+        [role="dialog"],
+        .modal-wrapper,
+        .modal-container,
+        .modal-panel,
+        .modal-content {
             background: var(--color-bg-card) !important;
             color: var(--color-text) !important;
             border: 1px solid var(--color-border) !important;
-            box-shadow: 0 18px 40px rgba(2,6,23,0.14) !important;
+            box-shadow: 0 18px 40px rgba(2, 6, 23, 0.14) !important;
             z-index: 99999 !important;
         }
 
         /* Dropdowns y listas dentro del modal */
-        .modal .dropdown-content, .modal .dropdown-menu, .modal .menu, .modal .menu-item,
-        .modal .choices__list, .modal .choices__list--dropdown, .modal .choices__inner,
-        .modal .select2-container, .modal .select2-dropdown, .modal .select2-results,
-        .modal .react-select__menu, .modal .react-select__menu-list, .modal .flatpickr-calendar,
-        .modal .tippy-box, .modal .headlessui-popover__panel, .modal .headlessui-menu__items {
+        .modal .dropdown-content,
+        .modal .dropdown-menu,
+        .modal .menu,
+        .modal .menu-item,
+        .modal .choices__list,
+        .modal .choices__list--dropdown,
+        .modal .choices__inner,
+        .modal .select2-container,
+        .modal .select2-dropdown,
+        .modal .select2-results,
+        .modal .react-select__menu,
+        .modal .react-select__menu-list,
+        .modal .flatpickr-calendar,
+        .modal .tippy-box,
+        .modal .headlessui-popover__panel,
+        .modal .headlessui-menu__items {
             background: var(--color-bg-card) !important;
             color: var(--color-text) !important;
             border: 1px solid var(--color-border) !important;
-            box-shadow: 0 10px 30px rgba(2,6,23,0.08) !important;
+            box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08) !important;
             z-index: 100000 !important;
         }
 
         /* Selects nativos y custom dentro del modal */
-        .modal select, .modal .select, .modal .dropdown select, .modal .select-native {
+        .modal select,
+        .modal .select,
+        .modal .dropdown select,
+        .modal .select-native {
             background: var(--color-bg-card) !important;
             color: var(--color-text) !important;
             border-color: var(--color-border) !important;
         }
 
         /* Inputs dentro de listas/dropdowns (ej datepickers) */
-        .modal .flatpickr-input, .modal input.flatpickr-input, .modal .pika-single {
+        .modal .flatpickr-input,
+        .modal input.flatpickr-input,
+        .modal .pika-single {
             background: var(--color-bg-card) !important;
             color: var(--color-text) !important;
             border: 1px solid var(--color-border) !important;
         }
 
         /* Forzar contraste de badges/labels dentro de modales */
-        .modal .badge, .modal .tag, .modal .chip {
+        .modal .badge,
+        .modal .tag,
+        .modal .chip {
             background: var(--color-bg-card-alt) !important;
             color: var(--color-text) !important;
             border: 1px solid var(--color-border) !important;
@@ -473,7 +645,8 @@
         /* Aclarar cualquier sombra o overlay oscuro interno */
         .modal *[style*="background: rgba(0, 0, 0"],
         .modal *[style*="background: rgba(2,6,23"],
-        .modal .inner-overlay, .modal .dark-overlay {
+        .modal .inner-overlay,
+        .modal .dark-overlay {
             background: transparent !important;
         }
 
@@ -485,13 +658,38 @@
             border-color: var(--color-border) !important;
         }
 
-        </style>
+        /* ============================ */
+        /* UTILITIES FOR JS-INJECTED CONTENT (Bypass Tailwind) */
+        .surface {
+            background: var(--color-bg-card) !important;
+            color: var(--color-text) !important;
+            border: 1px solid var(--color-border) !important;
+        }
+
+        .surface-alt {
+            background: var(--color-bg-card-alt) !important;
+            color: var(--color-text) !important;
+        }
+
+        .text-main {
+            color: var(--color-text) !important;
+        }
+
+        .text-muted-custom {
+            color: var(--color-text-muted) !important;
+        }
+
+        /* Fix images in dark mode (invert filter if needed, but usually just proper background) */
+        img.broken-fix {
+            background: var(--color-bg-card-alt);
+        }
+    </style>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Microbollos POS</title>
     <link rel="stylesheet" href="./dist/output.css">
     <!-- Font Awesome -->
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <!-- libs PDF -->
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
@@ -499,7 +697,7 @@
     <script src="./js/services/pdf-generator.js"></script>
 </head>
 
-    <body class="min-h-dvh antialiased">
+<body class="min-h-dvh antialiased">
     <div id="app" class="h-dvh w-dvw"></div>
     <script type="module" src="./js/main.js"></script>
 </body>

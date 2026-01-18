@@ -115,7 +115,7 @@ export default {
     return /*html*/`
       <div class="h-full flex flex-col bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
         <!-- Header -->
-        <header class="flex-none bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4 flex justify-between items-center shadow-sm z-10">
+        <header class="flex-none surface-alt border-b border-slate-200 dark:border-slate-700 px-6 py-4 flex justify-between items-center shadow-sm z-10">
           <div>
             <h2 class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent flex items-center gap-2">
               <i class="fas fa-cogs text-blue-600"></i> Configuración
@@ -130,7 +130,7 @@ export default {
         { id: "tab-usr", label: "Usuarios", icon: "fa-users-cog" },
         { id: "tab-sec", label: "Seguridad", icon: "fa-shield-alt" }
       ].map(t => `
-              <button id="${t.id}" onclick="mount.setTab('${t.id}')"
+              <button id="${t.id}" onclick="window.mount.setTab('${t.id}')"
                 class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2
                        hover:bg-blue-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300">
                  <i class="fas ${t.icon}"></i> ${t.label}
@@ -144,14 +144,14 @@ export default {
           
           <!-- TAB: General -->
           <section id="panel-tab-gral" class="config-panel space-y-6 max-w-4xl mx-auto hidden animate-fade-in">
-            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-              <div class="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex items-center gap-2">
+            <div class="surface rounded-xl shadow-sm overflow-hidden">
+              <div class="p-4 border-b border-slate-200 dark:border-slate-700 surface-alt flex items-center gap-2">
                  <i class="fas fa-building text-blue-500"></i> <h3 class="font-bold text-lg">Datos de la Empresa</h3>
               </div>
               <div class="p-6 grid gap-6 md:grid-cols-2">
                 <div class="md:col-span-2 flex justify-center mb-4">
                    <div class="relative group cursor-pointer" onclick="document.getElementById('logoInput').click()">
-                     <img id="previewLogo" src="" alt="Logo" class="h-32 w-auto object-contain rounded border border-slate-200 dark:border-slate-600 bg-slate-100 dark:bg-slate-900" />
+                     <img id="previewLogo" src="" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjOTQxYjJjIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTIxIDE1diRhMnIgMiAwIDAgMS0yIDJIMUM1YTIgMjAgMCAwIDEtMi0ydjRhMiAyIDAgMCAxIDItMmgzIi8+PHBhdGggZD0iTTE2IDEzbC00LTRsLTQgNCIvPjxwYXRoIGQ9Ik0xMiA5djEzIi8+PC9zdmc+'" alt="Logo" class="h-32 w-auto object-contain rounded border border-slate-200 dark:border-slate-600 bg-slate-100 dark:bg-slate-900" />
                      <div class="absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded text-white text-xs">
                         <i class="fas fa-camera text-2xl mb-1"></i>
                         <span>Cambiar Logo</span>
@@ -161,32 +161,32 @@ export default {
                 </div>
 
                 <label class="block">
-                  <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Nombre de Fantasía</span>
-                  <input id="cfg-brand" type="text" class="ui-input w-full mt-1" placeholder="Ej: Microbollos">
+                  <span class="text-sm font-medium text-main">Nombre de Fantasía</span>
+                  <input id="cfg-brand" type="text" class="ui-input w-full mt-1 surface" placeholder="Ej: Microbollos">
                 </label>
                 <label class="block">
-                   <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Razón Social</span>
-                   <input id="cfg-company" type="text" class="ui-input w-full mt-1" placeholder="Ej: José Heredia">
+                   <span class="text-sm font-medium text-main">Razón Social</span>
+                   <input id="cfg-company" type="text" class="ui-input w-full mt-1 surface" placeholder="Ej: José Heredia">
                 </label>
                 <label class="block md:col-span-2">
-                   <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Dirección</span>
-                   <input id="cfg-addr" type="text" class="ui-input w-full mt-1">
+                   <span class="text-sm font-medium text-main">Dirección</span>
+                   <input id="cfg-addr" type="text" class="ui-input w-full mt-1 surface">
                 </label>
                 <label class="block">
-                   <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Teléfono</span>
-                   <input id="cfg-phone" type="text" class="ui-input w-full mt-1">
+                   <span class="text-sm font-medium text-main">Teléfono</span>
+                   <input id="cfg-phone" type="text" class="ui-input w-full mt-1 surface">
                 </label>
                 <label class="block">
-                   <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Email</span>
-                   <input id="cfg-email" type="email" class="ui-input w-full mt-1">
+                   <span class="text-sm font-medium text-main">Email</span>
+                   <input id="cfg-email" type="email" class="ui-input w-full mt-1 surface">
                 </label>
                 <label class="block">
-                    <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Impuestos default (%)</span>
-                    <input id="cfg-tax" type="number" step="0.5" class="ui-input w-full mt-1">
+                    <span class="text-sm font-medium text-main">Impuestos default (%)</span>
+                    <input id="cfg-tax" type="number" step="0.5" class="ui-input w-full mt-1 surface">
                 </label>
                 <label class="block">
-                    <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Tipo Factura</span>
-                    <select id="cfg-inv" class="ui-input w-full mt-1">
+                    <span class="text-sm font-medium text-main">Tipo Factura</span>
+                    <select id="cfg-inv" class="ui-input w-full mt-1 surface">
                        <option value="A">Factura A</option>
                        <option value="B">Factura B</option>
                        <option value="C">Factura C</option>
@@ -194,22 +194,22 @@ export default {
                     </select>
                 </label>
               </div>
-              <div class="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex justify-end">
-                <button onclick="mount.saveSettings()" class="btn-primary flex items-center gap-2">
+              <div class="p-4 border-t border-slate-200 dark:border-slate-700 surface-alt flex justify-end">
+                <button onclick="window.mount.saveSettings()" class="btn-primary flex items-center gap-2">
                     <i class="fas fa-save"></i> Guardar Cambios
                 </button>
               </div>
             </div>
 
-            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-               <div class="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex items-center gap-2">
+            <div class="surface rounded-xl shadow-sm overflow-hidden">
+               <div class="p-4 border-b border-slate-200 dark:border-slate-700 surface-alt flex items-center gap-2">
                   <i class="fas fa-paint-brush text-purple-500"></i> <h3 class="font-bold text-lg">Apariencia</h3>
                </div>
                <div class="p-6 flex items-center gap-4">
                   <span class="text-sm font-medium">Tema:</span>
-                  <button onclick="mount.setTheme('light')" class="px-3 py-1 border rounded hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2"><i class="fas fa-sun text-amber-500"></i> Claro</button>
-                  <button onclick="mount.setTheme('dark')" class="px-3 py-1 border rounded hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2"><i class="fas fa-moon text-indigo-400"></i> Oscuro</button>
-                  <button onclick="mount.setTheme('auto')" class="px-3 py-1 border rounded hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2"><i class="fas fa-adjust"></i> Auto</button>
+                  <button onclick="window.mount.setTheme('light')" class="px-3 py-1 border rounded hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 surface"><i class="fas fa-sun text-amber-500"></i> Claro</button>
+                  <button onclick="window.mount.setTheme('dark')" class="px-3 py-1 border rounded hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 surface"><i class="fas fa-moon text-indigo-400"></i> Oscuro</button>
+                  <button onclick="window.mount.setTheme('auto')" class="px-3 py-1 border rounded hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 surface"><i class="fas fa-adjust"></i> Auto</button>
                </div>
             </div>
           </section>
@@ -219,15 +219,15 @@ export default {
              <div class="flex justify-between items-center mb-4">
                 <div class="relative">
                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                   <input type="text" id="branchSearch" onkeyup="mount.filterBranches()" placeholder="Buscar sucursal..." class="pl-10 pr-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 outline-none w-64">
+                   <input type="text" id="branchSearch" onkeyup="window.mount.filterBranches()" placeholder="Buscar sucursal..." class="pl-10 pr-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 surface focus:ring-2 focus:ring-blue-500 outline-none w-64">
                 </div>
-                <button onclick="mount.openBranch()" class="btn-primary flex items-center gap-2">
+                <button onclick="window.mount.openBranch()" class="btn-primary flex items-center gap-2">
                    <i class="fas fa-plus"></i> Nueva Sucursal
                 </button>
              </div>
-             <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+             <div class="surface rounded-xl shadow-sm overflow-hidden">
                 <table class="w-full text-left border-collapse">
-                   <thead class="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 text-xs uppercase font-bold tracking-wider">
+                   <thead class="surface-alt text-slate-500 dark:text-slate-400 text-xs uppercase font-bold tracking-wider">
                       <tr>
                          <th class="p-4">Nombre</th>
                          <th class="p-4">Dirección</th>
@@ -248,15 +248,15 @@ export default {
              <div class="flex justify-between items-center mb-4">
                 <div class="relative">
                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                   <input type="text" id="userSearch" onkeyup="mount.filterUsers()" placeholder="Buscar usuarios..." class="pl-10 pr-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 outline-none w-64">
+                   <input type="text" id="userSearch" onkeyup="window.mount.filterUsers()" placeholder="Buscar usuarios..." class="pl-10 pr-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 surface focus:ring-2 focus:ring-blue-500 outline-none w-64">
                 </div>
-                <button onclick="mount.openUser()" class="btn-primary flex items-center gap-2">
+                <button onclick="window.mount.openUser()" class="btn-primary flex items-center gap-2">
                    <i class="fas fa-user-plus"></i> Nuevo Usuario
                 </button>
              </div>
-             <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+             <div class="surface rounded-xl shadow-sm overflow-hidden">
                 <table class="w-full text-left border-collapse">
-                   <thead class="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 text-xs uppercase font-bold tracking-wider">
+                   <thead class="surface-alt text-slate-500 dark:text-slate-400 text-xs uppercase font-bold tracking-wider">
                       <tr>
                          <th class="p-4">Usuario</th>
                          <th class="p-4">Nombre</th>
@@ -273,37 +273,37 @@ export default {
              </div>
           </section>
 
-          <!-- TAB: Seguridad & Backup (Simplificado) -->
+          <!-- TAB: Seguridad & Backup -->
           <section id="panel-tab-sec" class="config-panel space-y-6 max-w-4xl mx-auto hidden animate-fade-in">
              <div class="grid md:grid-cols-2 gap-6">
                 <!-- Backup -->
-                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                <div class="surface rounded-xl shadow-sm p-6">
                    <div class="flex items-center gap-3 mb-4 text-blue-600">
                       <i class="fas fa-database text-2xl"></i> <h3 class="font-bold text-lg">Copia de Seguridad</h3>
                    </div>
                    <p class="text-sm text-slate-500 mb-6">Descarga toda la base de datos local en formato JSON.</p>
-                   <button onclick="mount.downloadBackup()" class="w-full btn-outline flex justify-center items-center gap-2">
+                   <button onclick="window.mount.downloadBackup()" class="w-full btn-outline flex justify-center items-center gap-2">
                        <i class="fas fa-download"></i> Descargar Backup
                    </button>
                    <div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
                       <label class="block text-sm mb-2 font-medium">Restaurar copia</label>
                       <input type="file" id="restoreFile" class="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 text-slate-500">
-                      <button onclick="mount.restoreBackup()" class="mt-2 w-full btn-secondary text-xs">
+                      <button onclick="window.mount.restoreBackup()" class="mt-2 w-full btn-secondary text-xs">
                           <i class="fas fa-upload"></i> Restaurar
                       </button>
                    </div>
                 </div>
                 
                 <!-- Auditoría -->
-                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 flex flex-col">
+                <div class="surface rounded-xl shadow-sm p-6 flex flex-col">
                    <div class="flex items-center gap-3 mb-4 text-amber-600">
                       <i class="fas fa-list-alt text-2xl"></i> <h3 class="font-bold text-lg">Log de Auditoría</h3>
                    </div>
-                   <div class="flex-1 overflow-auto max-h-60 bg-slate-50 dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700 p-2 text-xs font-mono space-y-1" id="auditLogContainer">
+                   <div class="flex-1 overflow-auto max-h-60 surface-alt rounded border border-slate-200 dark:border-slate-700 p-2 text-xs font-mono space-y-1" id="auditLogContainer">
                       <!-- logs -->
                       <div class="text-slate-400 italic text-center py-4">Sin registros recientes</div>
                    </div>
-                   <button onclick="mount.clearAudit()" class="mt-4 text-xs text-red-500 hover:underline text-right">
+                   <button onclick="window.mount.clearAudit()" class="mt-4 text-xs text-red-500 hover:underline text-right">
                        <i class="fas fa-trash-alt"></i> Limpiar historial
                    </button>
                 </div>
