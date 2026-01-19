@@ -165,7 +165,6 @@ export default {
         form.name.value = c.name;
         form.phone.value = c.phone || "";
         form.email.value = c.email || "";
-        form.address.value = c.address || "";
       } else {
         modalTitle.textContent = "Nuevo Cliente";
         form.cid.value = "";
@@ -249,7 +248,6 @@ export default {
         name: form.name.value.trim(),
         phone: form.phone.value.trim(),
         email: form.email.value.trim(),
-        address: form.address.value.trim(),
         vehicles: currentVehicles
       };
       if (!data.name) return alert("Nombre obligatorio");
