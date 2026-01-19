@@ -1159,6 +1159,7 @@ export default {
       }
     }
     paintBranchesIntoSelect();
+    loadClientsIntoSelect();
 
     // Reaccionar a cambios del panel de Configuración
     document.addEventListener("cfg:branches-updated", (e) => {
