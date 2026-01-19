@@ -2052,11 +2052,51 @@ export default {
     const shareMailBtn = root.querySelector("#share-mail");
 
     if (shareWaBtn) {
-      shareWaBtn.addEventListener("click", () => {
+      shareWaBtn.addEventListener("click", async () => {
         const tel = telefono.value.replace(/[^\d]/g, "");
         if (!tel) { toast("Ingresá un teléfono para WhatsApp", "warning"); return; }
-        const msg = `Hola ${nombre.value || "Cliente"}, adjunto presupuesto #${numInput.value || "S/N"}. Total: ${totalEl.textContent}`;
-        window.open(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`, "_blank");
+
+        const toastId = toast("Generando PDF para compartir...", "info");
+        try {
+          // 1. Generate PDF
+          let data = collectBudgetDataForPdf();
+          if (!data.company?.logoData) {
+            // Try to load logo if missing
+            try {
+              const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+              const candidates = isDark ? ['assets/LOGO%20NUEVO-BLANCO.png'] : ['assets/LOGO%20NUEVO.png'];
+              for (const c of candidates) {
+                const urlData = await imageUrlToDataUrl(c);
+                if (urlData) { data.company.logoData = urlData; break; }
+              }
+            } catch (e) { }
+          }
+          await ensurePdfLoaded();
+          const pdf = await generateBudgetPDF(data);
+          const cleanNum = (data.numero || "S_N").replace(/[^\w\d]/g, "-");
+          const filename = `Presupuesto-${cleanNum}.pdf`;
+          const pdfBlob = pdf.output("blob");
+          const pdfFile = new File([pdfBlob], filename, { type: "application/pdf" });
+
+          // 2. Try Web Share API (Mobile)
+          if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+            await navigator.share({
+              files: [pdfFile],
+              title: `Presupuesto ${data.numero}`,
+              text: `Hola ${nombre.value || "Cliente"}, adjunto el presupuesto #${data.numero}.`
+            });
+            toast("Compartido correctamente ✅", "success");
+          } else {
+            // 3. Fallback (Desktop)
+            pdf.save(filename); // Auto download
+            const msg = `Hola ${nombre.value || "Cliente"}, te envío el presupuesto #${data.numero}. (El archivo se ha descargado en tu dispositivo).`;
+            window.open(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`, "_blank");
+            toast("PDF descargado. Abriendo WhatsApp...", "success");
+          }
+        } catch (e) {
+          console.error(e);
+          toast("No se pudo compartir el PDF", "error");
+        }
       });
     }
     if (shareMailBtn) {

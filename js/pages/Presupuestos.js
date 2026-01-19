@@ -88,7 +88,7 @@ export default {
     [data-page="saved-budgets"] .g-pink  { background:linear-gradient(135deg,rgba(236,72,153,.18),rgba(236,72,153,.08)); }
     [data-page="saved-budgets"] .g-cyan  { background:linear-gradient(135deg,rgba(6,182,212,.18),rgba(6,182,212,.08)); }
     /* Tabla */
-  [data-page="saved-budgets"] .table-wrap{ border:1px solid var(--border-main); }
+  [data-page="saved-budgets"] .table-wrap{ border:1px solid var(--border-main); overflow-x: auto; }
     [data-page="saved-budgets"] .table th{ font-weight:600; color:#cbd5e1; white-space:nowrap; }
     [data-page="saved-budgets"] .table td, .table th{ padding:.6rem .75rem; border-bottom:1px solid rgba(255,255,255,.06) }
     /* Badges estado */
@@ -410,7 +410,7 @@ export default {
         <tr class="hover:bg-white/5">
           <td class="font-medium">${b.numero}</td>
           <td>${toDMY(b.fecha)}</td>
-          <td class="max-w-[240px] truncate">${b.cliente || "Sin especificar"}</td>
+          <td class="max-w-[240px] truncate">${b.cliente?.nombre || b.cliente || "Sin especificar"}</td>
           <td class="max-w-[260px] truncate">${vehicleInfo(b)}</td>
           <td>${sucName}</td>
           <td class="font-medium">${b.total}</td>
@@ -665,7 +665,7 @@ export default {
       const data = filtered.map(b => ({
         "Número": b.numero,
         "Fecha": toDMY(b.fecha),
-        "Cliente": b.cliente || "Sin nombre",
+        "Cliente": b.cliente?.nombre || b.cliente || "Sin nombre",
         "Vehículo": vehicleInfo(b),
         "Sucursal": getBranchName(b.sucursal),
         "Total": b.total,

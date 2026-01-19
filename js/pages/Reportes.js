@@ -87,7 +87,7 @@ export default {
     [data-page="reports"] .btn-primary:hover{ background:rgba(16,185,129,1) }
     [data-page="reports"] .btn-secondary{ background:rgba(99,102,241,.85); border-color:transparent }
     [data-page="reports"] .btn-secondary:hover{ background:rgba(99,102,241,1) }
-  [data-page="reports"] .table-wrap{ border:1px solid var(--border-main); border-radius:.5rem; overflow:hidden; }
+  [data-page="reports"] .table-wrap{ border:1px solid var(--border-main); border-radius:.5rem; overflow:hidden; overflow-x: auto; }
   [data-page="reports"] .table td, .table th{ padding:.5rem .65rem; border-bottom:1px solid var(--border-main) }
   [data-page="reports"] th{ font-weight:600; color:var(--text-secondary); white-space:nowrap; }
     [data-page="reports"] .badge{ font-size:.68rem; padding:.16rem .45rem; border-radius:.45rem }

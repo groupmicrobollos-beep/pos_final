@@ -27,8 +27,38 @@ function makeSummary(data) {
 }
 
 async function list() {
-  const quotes = await store.quotes.list();
-  return quotes.map(makeSummary);
+  const [quotes, clients] = await Promise.all([
+    store.quotes.list(),
+    store.clients.list().catch(() => []) // fail safe
+  ]);
+
+  return quotes.map(q => {
+    const summary = makeSummary(q);
+    // Enrich with client data if available
+    const cName = (summary.cliente?.nombre || summary.cliente || "").toLowerCase();
+    const clientMatch = clients.find(c => c.name.toLowerCase() === cName);
+
+    if (clientMatch) {
+      // If we found the client, try to match the vehicle or default to first
+      const vName = (summary.cliente?.vehiculo || "").toLowerCase();
+      // Try to find a vehicle in client's list that includes the stored vehicle string or vice versa
+      const vMatch = (clientMatch.vehicles || []).find(v =>
+        (v.brand?.toLowerCase() || "").includes(vName) ||
+        (v.vehiculo?.toLowerCase() || "").includes(vName) ||
+        vName.includes((v.brand || "").toLowerCase())
+      ) || clientMatch.vehicles?.[0];
+
+      if (vMatch) {
+        if (typeof summary.cliente === "object") {
+          summary.cliente.patente = vMatch.plate || vMatch.patente || summary.cliente.patente;
+          summary.cliente.modelo = vMatch.model || vMatch.modelo || summary.cliente.modelo;
+          summary.cliente.compania = vMatch.insurance || vMatch.compania || summary.cliente.compania;
+          // Si el nombre del vehiculo en budget es muy generico, quizás podríamos enriquecerlo, pero mejor respetar lo guardado.
+        }
+      }
+    }
+    return summary;
+  });
 }
 
 async function get(id) {
