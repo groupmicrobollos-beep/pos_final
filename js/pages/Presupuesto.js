@@ -1965,7 +1965,8 @@ export default {
 
     // === PDF integrado
     function collectBudgetDataForPdf() {
-      const branch = CFG_BRANCHES.find(b => b.id === sucId);
+      const sucVal = selSucursal.value;
+      const branch = CFG_BRANCHES.find(b => b.id === sucVal);
       const suc = branch?.name || "";
       const items = collectItemsForPdf();
       const subtotalNum = items.reduce((s, i) => s + (i.total || 0), 0);
@@ -1989,7 +1990,7 @@ export default {
       return {
         numero: numInput.value || "",
         fecha: dateInput.value || todayISO(),
-        sucursalId: sucId,
+        sucursalId: sucVal,
         sucursalNombre: suc,
         sucursalCuit: branch?.cuit || "",
         cliente: {
@@ -2130,7 +2131,7 @@ export default {
       } else {
         numInput.value = selSucursal.value ? await budgetsService.previewNextNumber(selSucursal.value) : "";
       }
-      dateInput.value = (b.fecha || todayISO());
+      dateInput.value = (b.fecha || todayISO()).slice(0, 10);
 
       // Estado y usuario asignado
       if (b.estado && selStatus) selStatus.value = b.estado;
