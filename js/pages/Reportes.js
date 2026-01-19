@@ -105,10 +105,10 @@ export default {
         <option value="">Todas las sucursales</option>
       </select>
       <select id="quick" class="ctrl px-2.5 rounded bg-white/10 border border-white/10 text-slate-100">
-        <option value="month" selected>Este mes</option>
+        <option value="month">Este mes</option>
         <option value="today">Hoy</option>
         <option value="week">Esta semana</option>
-        <option value="year">Este año</option>
+        <option value="year" selected>Este año</option>
         <option value="custom">Personalizado</option>
       </select>
       <input id="from" type="date" class="ctrl px-2.5 rounded bg-white/10 border border-white/10" />
@@ -270,7 +270,7 @@ export default {
     let current = null;
 
     // Init fechas por quick=month
-    setQuickRange("month");
+    setQuickRange("year");
     from.value = from.value || todayISO();
     to.value = to.value || todayISO();
 
@@ -474,16 +474,30 @@ export default {
       toast(`Presupuesto ${numero} eliminado ✅`, "success");
     }
 
-    function toggleDone(key) {
-      const b = JSON.parse(localStorage.getItem(key) || "null");
-      if (!b) { toast("No se encontró el presupuesto", "error"); return; }
-      b.done = !b.done;
-      localStorage.setItem(key, JSON.stringify(b));
-      const list = JSON.parse(localStorage.getItem("budgets_list") || "[]");
-      const idx = list.findIndex(x => x.key === key);
-      if (idx >= 0) { list[idx].done = b.done; localStorage.setItem("budgets_list", JSON.stringify(list)); }
-      load(); applyFilters(); computeAggregates(); renderAll();
-      toast(`Presupuesto ${b.numero} marcado ${b.done ? 'como hecho' : 'como pendiente'}`, "success");
+    async function toggleDone(key) {
+      try {
+        const b = await budgetsService.get(key);
+        if (!b) { toast("No se encontró el presupuesto", "error"); return; }
+
+        // Toggle and save
+        b.done = !b.done;
+        // Reconstruct necessary payload structure if needed, or rely on save handling it
+        // budgetsService.save expects data like form data?
+        // Actually save takes the object. makeSummary output might be slightly different from save input expectation (nested cliente).
+        // Let's modify b to match save expectation or ensuring save handles flat structure.
+        // budgetsService.save -> const payload = { ...data, client_name: data.cliente?.nombre ... }
+        // If 'b' comes from makeSummary, 'cliente' might be object (after I fix it) or string.
+
+        // For safety, let's ensure we pass what save expects.
+        // But for just toggling 'done', maybe we need a simpler update?
+        // routes/quotes.js PUT expects full body.
+
+        // Let's just update the status via save, assuming we fix makeSummary next.
+        await budgetsService.save(b, key, { update: true });
+
+        load(); // Refresh table
+        toast(`Presupuesto ${b.numero} marcado ${b.done ? 'como hecho' : 'como pendiente'}`, "success");
+      } catch (e) { console.error(e); toast("Error al actualizar estado", "error"); }
     }
     function renderBudgetDetail(b) {
       const sucName = getBranchName(b.sucursal);

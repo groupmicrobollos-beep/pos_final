@@ -6,12 +6,23 @@ function makeSummary(data) {
   return {
     ...data,
     sucursalNombre: data.branch_id ? labelForBranch(data.branch_id) : (data.sucursal || ""),
-    cliente: data.client_name || data.cliente || "Sin nombre",
-    // Aseguramos que items y total vengan bien
+    // Map flattened DB columns to nested object for Frontend
+    cliente: {
+      nombre: data.client_name || data.cliente || "Sin nombre",
+      telefono: data.client_phone,
+      email: data.client_email,
+      address: data.client_address,
+      vehiculo: data.vehicle
+    },
+    siniestro: data.siniestro,
     items: data.items || [],
     total: data.total || 0,
-    numero: data.numero || data.id, // Si el backend no tiene numero secuencial aun
-    key: data.id
+    numero: data.numero || data.id,
+    key: data.id,
+    fecha: data.date || data.fecha || new Date().toISOString(),
+    sucursal: data.branch_id || data.sucursal,
+    estado: data.status || data.estado,
+    done: data.status === "realizado" || data.done // Map status to done boolean if needed, or keep separate
   };
 }
 
