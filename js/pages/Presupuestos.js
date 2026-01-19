@@ -77,19 +77,7 @@ const getCompany = () => ({
 
 export default {
   render() {
-    // ... (styles) ...
-  },
-
-  async load() { // moved load here to be accessible? No, load is inside mount usually or outside?
-    // ...
-  }
-      // Wait, load is inside mount in the original file. 
-      // I am replacing 'getBranchName' at the top level first.
-
-
-export default {
-    render() {
-      return /*html*/ `
+    return /*html*/ `
 <section data-page="saved-budgets" class="space-y-4">
   <style>
     /* Onda dark sobria + legibilidad de selects al desplegar */
@@ -213,195 +201,195 @@ export default {
   </div>
 </section>
     `;
-    },
+  },
 
-    mount(root) {
-      // Refs
-      const statTotal = root.querySelector("#stat-total");
-      const statToday = root.querySelector("#stat-today");
-      const statAmount = root.querySelector("#stat-amount");
-      const statDone = root.querySelector("#stat-done");
-      const statPending = root.querySelector("#stat-pending");
+  mount(root) {
+    // Refs
+    const statTotal = root.querySelector("#stat-total");
+    const statToday = root.querySelector("#stat-today");
+    const statAmount = root.querySelector("#stat-amount");
+    const statDone = root.querySelector("#stat-done");
+    const statPending = root.querySelector("#stat-pending");
 
-      const q = root.querySelector("#q");
-      const branch = root.querySelector("#branch");
-      const period = root.querySelector("#period");
-      const exportBtn = root.querySelector("#export-xlsx");
+    const q = root.querySelector("#q");
+    const branch = root.querySelector("#branch");
+    const period = root.querySelector("#period");
+    const exportBtn = root.querySelector("#export-xlsx");
 
-      const rows = root.querySelector("#rows");
-      const empty = root.querySelector("#empty");
+    const rows = root.querySelector("#rows");
+    const empty = root.querySelector("#empty");
 
-      const modal = root.querySelector("#detail-modal");
-      const modalBody = root.querySelector("#detail-body");
-      const modalClose = root.querySelector("#modal-close");
-      const modalPrint = root.querySelector("#modal-print");
-      const modalPdf = root.querySelector("#modal-pdf");
+    const modal = root.querySelector("#detail-modal");
+    const modalBody = root.querySelector("#detail-body");
+    const modalClose = root.querySelector("#modal-close");
+    const modalPrint = root.querySelector("#modal-print");
+    const modalPdf = root.querySelector("#modal-pdf");
 
-      // Estado
-      let all = [];         // lista con { numero, sucursal, fecha, cliente, total, key, details? }
-      let filtered = [];    // vista filtrada
-      let current = null;   // presupuesto abierto en modal
-      // Paginación
-      let currentPage = 1;
-      let pageSize = 10; // muestras por página por defecto
-      const pageSizeOptions = [10, 15, 25];
+    // Estado
+    let all = [];         // lista con { numero, sucursal, fecha, cliente, total, key, details? }
+    let filtered = [];    // vista filtrada
+    let current = null;   // presupuesto abierto en modal
+    // Paginación
+    let currentPage = 1;
+    let pageSize = 10; // muestras por página por defecto
+    const pageSizeOptions = [10, 15, 25];
 
-      // Pinta opciones sucursales
-      function paintBranchesFilter(keep = null) {
-        const prev = keep ?? branch.value;
-        branch.innerHTML = `<option value="">Todas las sucursales</option>` +
-          (CFG_BRANCHES || []).map(b => `<option value="${b.id}">${b.name || b.address || b.id}</option>`).join("");
-        branch.value = (CFG_BRANCHES || []).some(b => b.id === prev) ? prev : "";
-      }
+    // Pinta opciones sucursales
+    function paintBranchesFilter(keep = null) {
+      const prev = keep ?? branch.value;
+      branch.innerHTML = `<option value="">Todas las sucursales</option>` +
+        (CFG_BRANCHES || []).map(b => `<option value="${b.id}">${b.name || b.address || b.id}</option>`).join("");
+      branch.value = (CFG_BRANCHES || []).some(b => b.id === prev) ? prev : "";
+    }
+    paintBranchesFilter();
+
+    // Reaccionar a cambios desde Configuración
+    document.addEventListener("cfg:branches-updated", (e) => {
+      CFG_BRANCHES = e.detail?.branches || [];
       paintBranchesFilter();
+      renderTable(); // refresca nombres de sucursal
+    });
+    document.addEventListener("cfg:settings-updated", (e) => {
+      CFG_SETTINGS = e.detail?.settings || CFG_SETTINGS;
+      CURRENCY = CFG_SETTINGS.currency || CURRENCY;
+      LOCALE = CFG_SETTINGS.locale || LOCALE;
+      DECIMALS = Number.isInteger(CFG_SETTINGS.decimals) ? CFG_SETTINGS.decimals : DECIMALS;
+      renderStats();
+      renderTable();
+      toast("Ajustes aplicados en Presupuestos guardados ✅", "success");
+    });
 
-      // Reaccionar a cambios desde Configuración
-      document.addEventListener("cfg:branches-updated", (e) => {
-        CFG_BRANCHES = e.detail?.branches || [];
-        paintBranchesFilter();
-        renderTable(); // refresca nombres de sucursal
-      });
-      document.addEventListener("cfg:settings-updated", (e) => {
-        CFG_SETTINGS = e.detail?.settings || CFG_SETTINGS;
-        CURRENCY = CFG_SETTINGS.currency || CURRENCY;
-        LOCALE = CFG_SETTINGS.locale || LOCALE;
-        DECIMALS = Number.isInteger(CFG_SETTINGS.decimals) ? CFG_SETTINGS.decimals : DECIMALS;
-        renderStats();
-        renderTable();
-        toast("Ajustes aplicados en Presupuestos guardados ✅", "success");
-      });
-
-      // Escuchar eventos de actualización de presupuestos (emitidos por Presupuesto.js)
-      document.addEventListener("budgets:updated", (e) => {
-        try {
-          // recargar desde localStorage y refrescar vista
-          load();
-          refresh();
-          toast("Lista de presupuestos actualizada", "success");
-        } catch (err) {
-          console.debug("budgets:updated handler error", err);
-        }
-      });
-
-      // También reacciona a eventos storage (otras pestañas/navegadores)
-      window.addEventListener("storage", (e) => {
-        try {
-          if (!e.key) return;
-          if (e.key === "budgets_list" || e.key.startsWith("budget_")) {
-            load(); refresh();
-          }
-        } catch (err) { console.debug("storage handler error", err); }
-      });
-
-      // Init
-      if (window.XLSX) exportBtn.classList.remove("hidden");
-      load(); // Async call, fire and forget for init (refresh will be called when done)
-
-      // === Carga ===
-      async function load() {
-        // Usar el servicio centralizado para obtener la lista (incluye details)
-        try {
-          // Parallel load: Budgets + Branches (to ensure names/addresses are up to date)
-          const [list, branches] = await Promise.all([
-            budgetsService.list(),
-            fetch("/api/branches").then(r => r.ok ? r.json() : []).catch(() => [])
-          ]);
-
-          if (branches.length) CFG_BRANCHES = branches; // Update local cache
-
-          all = list.map(s => ({ ...s, details: s }));
-        } catch (e) {
-          console.error("Error loading budgets", e);
-          all = [];
-        }
-        paintBranchesFilter(); // Refresh filter options with new branches
-        filtered = [...all];
+    // Escuchar eventos de actualización de presupuestos (emitidos por Presupuesto.js)
+    document.addEventListener("budgets:updated", (e) => {
+      try {
+        // recargar desde localStorage y refrescar vista
+        load();
         refresh();
+        toast("Lista de presupuestos actualizada", "success");
+      } catch (err) {
+        console.debug("budgets:updated handler error", err);
       }
+    });
 
-      // === Stats + Tabla/Empty ===
-      function refresh() {
-        renderStats();
-        applyFilters();
-        renderTable();
-        renderEmptyState();
+    // También reacciona a eventos storage (otras pestañas/navegadores)
+    window.addEventListener("storage", (e) => {
+      try {
+        if (!e.key) return;
+        if (e.key === "budgets_list" || e.key.startsWith("budget_")) {
+          load(); refresh();
+        }
+      } catch (err) { console.debug("storage handler error", err); }
+    });
+
+    // Init
+    if (window.XLSX) exportBtn.classList.remove("hidden");
+    load(); // Async call, fire and forget for init (refresh will be called when done)
+
+    // === Carga ===
+    async function load() {
+      // Usar el servicio centralizado para obtener la lista (incluye details)
+      try {
+        // Parallel load: Budgets + Branches (to ensure names/addresses are up to date)
+        const [list, branches] = await Promise.all([
+          budgetsService.list(),
+          fetch("/api/branches").then(r => r.ok ? r.json() : []).catch(() => [])
+        ]);
+
+        if (branches.length) CFG_BRANCHES = branches; // Update local cache
+
+        all = list.map(s => ({ ...s, details: s }));
+      } catch (e) {
+        console.error("Error loading budgets", e);
+        all = [];
       }
-      function renderStats() {
-        const todayISO = new Date().toISOString().slice(0, 10);
-        const todayCount = all.filter(b => b.fecha === todayISO).length;
-        const totalAmount = all.reduce((acc, b) => acc + parseMoney(b.total), 0);
-        const branches = new Set(all.map(b => b.sucursal)).size;
+      paintBranchesFilter(); // Refresh filter options with new branches
+      filtered = [...all];
+      refresh();
+    }
 
-        statTotal.textContent = all.length;
-        statToday.textContent = todayCount;
-        statAmount.textContent = money(totalAmount);
-        // cantidad hechos / pendientes
-        const doneCount = all.filter(b => (b.details && b.details.done)).length;
-        statDone.textContent = doneCount;
-        statPending.textContent = Math.max(0, all.length - doneCount);
-      }
-      function renderEmptyState() {
-        if (!filtered.length) { empty.classList.remove("hidden"); }
-        else { empty.classList.add("hidden"); }
-      }
-      function applyFilters() {
-        const term = (q.value || "").toLowerCase().trim();
-        const br = branch.value;
-        const per = period.value;
+    // === Stats + Tabla/Empty ===
+    function refresh() {
+      renderStats();
+      applyFilters();
+      renderTable();
+      renderEmptyState();
+    }
+    function renderStats() {
+      const todayISO = new Date().toISOString().slice(0, 10);
+      const todayCount = all.filter(b => b.fecha === todayISO).length;
+      const totalAmount = all.reduce((acc, b) => acc + parseMoney(b.total), 0);
+      const branches = new Set(all.map(b => b.sucursal)).size;
 
-        filtered = all.filter(b => {
-          // búsqueda por número, cliente o vehículo
-          const vehInfo = vehicleInfo(b);
-          const matchesTerm =
-            !term ||
-            (b.numero || "").toLowerCase().includes(term) ||
-            (b.cliente || "").toLowerCase().includes(term) ||
-            vehInfo.toLowerCase().includes(term);
+      statTotal.textContent = all.length;
+      statToday.textContent = todayCount;
+      statAmount.textContent = money(totalAmount);
+      // cantidad hechos / pendientes
+      const doneCount = all.filter(b => (b.details && b.details.done)).length;
+      statDone.textContent = doneCount;
+      statPending.textContent = Math.max(0, all.length - doneCount);
+    }
+    function renderEmptyState() {
+      if (!filtered.length) { empty.classList.remove("hidden"); }
+      else { empty.classList.add("hidden"); }
+    }
+    function applyFilters() {
+      const term = (q.value || "").toLowerCase().trim();
+      const br = branch.value;
+      const per = period.value;
 
-          // sucursal
-          const matchesBranch = !br || b.sucursal === br;
+      filtered = all.filter(b => {
+        // búsqueda por número, cliente o vehículo
+        const vehInfo = vehicleInfo(b);
+        const matchesTerm =
+          !term ||
+          (b.numero || "").toLowerCase().includes(term) ||
+          (b.cliente || "").toLowerCase().includes(term) ||
+          vehInfo.toLowerCase().includes(term);
 
-          // período
-          let matchesPeriod = true;
-          if (per) {
-            const bd = new Date(b.fecha.slice(0, 10) + "T00:00:00");
-            const now = new Date();
-            if (per === "today") {
-              matchesPeriod = bd.toDateString() === now.toDateString();
-            } else if (per === "week") {
-              const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-              matchesPeriod = bd >= weekAgo;
-            } else if (per === "month") {
-              const first = new Date(now.getFullYear(), now.getMonth(), 1);
-              matchesPeriod = bd >= first;
-            }
+        // sucursal
+        const matchesBranch = !br || b.sucursal === br;
+
+        // período
+        let matchesPeriod = true;
+        if (per) {
+          const bd = new Date(b.fecha.slice(0, 10) + "T00:00:00");
+          const now = new Date();
+          if (per === "today") {
+            matchesPeriod = bd.toDateString() === now.toDateString();
+          } else if (per === "week") {
+            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            matchesPeriod = bd >= weekAgo;
+          } else if (per === "month") {
+            const first = new Date(now.getFullYear(), now.getMonth(), 1);
+            matchesPeriod = bd >= first;
           }
+        }
 
-          return matchesTerm && matchesBranch && matchesPeriod;
-        });
-        // reset paginación al cambiar filtros
-        currentPage = 1;
-      }
-      function renderTable() {
-        // paginar la vista filtrada
-        const total = filtered.length;
-        const totalPages = Math.max(1, Math.ceil(total / pageSize));
-        if (currentPage > totalPages) currentPage = totalPages;
-        const start = (currentPage - 1) * pageSize;
-        const pageItems = filtered.slice(start, start + pageSize);
-        rows.innerHTML = pageItems.map(rowTpl).join("");
-        renderPagination();
-      }
+        return matchesTerm && matchesBranch && matchesPeriod;
+      });
+      // reset paginación al cambiar filtros
+      currentPage = 1;
+    }
+    function renderTable() {
+      // paginar la vista filtrada
+      const total = filtered.length;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      if (currentPage > totalPages) currentPage = totalPages;
+      const start = (currentPage - 1) * pageSize;
+      const pageItems = filtered.slice(start, start + pageSize);
+      rows.innerHTML = pageItems.map(rowTpl).join("");
+      renderPagination();
+    }
 
-      function renderPagination() {
-        const pagination = root.querySelector('#pagination');
-        if (!pagination) return;
-        const total = filtered.length;
-        const totalPages = Math.max(1, Math.ceil(total / pageSize));
-        const start = total === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-        const end = Math.min(total, currentPage * pageSize);
-        // build HTML
-        pagination.innerHTML = `
+    function renderPagination() {
+      const pagination = root.querySelector('#pagination');
+      if (!pagination) return;
+      const total = filtered.length;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      const start = total === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+      const end = Math.min(total, currentPage * pageSize);
+      // build HTML
+      pagination.innerHTML = `
         <div class="flex items-center gap-3 w-full">
           <div class="flex items-center gap-2">
             <button id="pg-prev" class="px-3 py-1 rounded bg-white/5" ${currentPage <= 1 ? 'disabled' : ''}><i class="fas fa-chevron-left" aria-hidden="true"></i> Anterior</button>
@@ -416,19 +404,19 @@ export default {
           </div>
         </div>
       `;
-        // attach listeners
-        const prev = pagination.querySelector('#pg-prev');
-        const next = pagination.querySelector('#pg-next');
-        const sizeSel = pagination.querySelector('#pg-size');
-        if (prev) prev.addEventListener('click', () => { if (currentPage > 1) { currentPage--; renderTable(); renderEmptyState(); } });
-        if (next) next.addEventListener('click', () => { if (currentPage < totalPages) { currentPage++; renderTable(); renderEmptyState(); } });
-        if (sizeSel) sizeSel.addEventListener('change', (e) => { pageSize = Number(e.target.value) || 10; currentPage = 1; renderTable(); renderEmptyState(); });
-      }
-      function rowTpl(b) {
-        const dd = daysFrom(b.fecha);
-        const expired = dd > 30;
-        const sucName = getBranchName(b.sucursal);
-        return `
+      // attach listeners
+      const prev = pagination.querySelector('#pg-prev');
+      const next = pagination.querySelector('#pg-next');
+      const sizeSel = pagination.querySelector('#pg-size');
+      if (prev) prev.addEventListener('click', () => { if (currentPage > 1) { currentPage--; renderTable(); renderEmptyState(); } });
+      if (next) next.addEventListener('click', () => { if (currentPage < totalPages) { currentPage++; renderTable(); renderEmptyState(); } });
+      if (sizeSel) sizeSel.addEventListener('change', (e) => { pageSize = Number(e.target.value) || 10; currentPage = 1; renderTable(); renderEmptyState(); });
+    }
+    function rowTpl(b) {
+      const dd = daysFrom(b.fecha);
+      const expired = dd > 30;
+      const sucName = getBranchName(b.sucursal);
+      return `
         <tr class="hover:bg-white/5">
           <td class="font-medium">${b.numero}</td>
           <td>${toDMY(b.fecha)}</td>
@@ -445,80 +433,80 @@ export default {
           </td>
         </tr>
       `;
-      }
-      function vehicleInfo(b) {
-        const c = b.details?.cliente || b.cliente || {};
-        const v = c.vehiculo || "";
-        const m = c.modelo || "";
-        const p = c.patente || "";
-        const parts = [v, m, p].filter(Boolean);
-        return parts.length ? parts.join(" - ") : "No especificado";
-      }
+    }
+    function vehicleInfo(b) {
+      const c = b.details?.cliente || b.cliente || {};
+      const v = c.vehiculo || "";
+      const m = c.modelo || "";
+      const p = c.patente || "";
+      const parts = [v, m, p].filter(Boolean);
+      return parts.length ? parts.join(" - ") : "No especificado";
+    }
 
-      // === Eventos Filtros ===
-      q.addEventListener("input", () => { applyFilters(); renderTable(); renderEmptyState(); });
-      branch.addEventListener("change", () => { applyFilters(); renderTable(); renderEmptyState(); });
-      period.addEventListener("change", () => { applyFilters(); renderTable(); renderEmptyState(); });
+    // === Eventos Filtros ===
+    q.addEventListener("input", () => { applyFilters(); renderTable(); renderEmptyState(); });
+    branch.addEventListener("change", () => { applyFilters(); renderTable(); renderEmptyState(); });
+    period.addEventListener("change", () => { applyFilters(); renderTable(); renderEmptyState(); });
 
-      // === Delegación acciones fila ===
-      rows.addEventListener("click", (e) => {
-        const btn = e.target.closest("button[data-act]"); if (!btn) return;
-        const act = btn.dataset.act; const key = btn.dataset.key; const num = btn.dataset.num;
+    // === Delegación acciones fila ===
+    rows.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-act]"); if (!btn) return;
+      const act = btn.dataset.act; const key = btn.dataset.key; const num = btn.dataset.num;
 
-        if (act === "view") openDetail(key);
-        if (act === "edit") editBudget(key);
-        if (act === "toggle") toggleDone(key);
-        if (act === "print") printBudget(key);
-        if (act === "del") deleteBudget(key, num);
-      });
+      if (act === "view") openDetail(key);
+      if (act === "edit") editBudget(key);
+      if (act === "toggle") toggleDone(key);
+      if (act === "print") printBudget(key);
+      if (act === "del") deleteBudget(key, num);
+    });
 
-      async function toggleDone(key) {
-        const b = await budgetsService.get(key);
-        if (!b) { toast("No se encontró el presupuesto", "error"); return; }
-        b.done = !b.done;
-        await budgetsService.save(b, key, { update: true });
-        load(); // refresh
-        toast(`Presupuesto ${b.numero} marcado ${b.done ? 'como hecho' : 'como pendiente'}`, "success");
-      }
+    async function toggleDone(key) {
+      const b = await budgetsService.get(key);
+      if (!b) { toast("No se encontró el presupuesto", "error"); return; }
+      b.done = !b.done;
+      await budgetsService.save(b, key, { update: true });
+      load(); // refresh
+      toast(`Presupuesto ${b.numero} marcado ${b.done ? 'como hecho' : 'como pendiente'}`, "success");
+    }
 
-      // === Modal ===
-      async function openDetail(key) {
-        const budget = await budgetsService.get(key);
-        if (!budget) { toast("No se encontró el presupuesto", "error"); return; }
-        current = budget;
-        modalBody.innerHTML = renderDetail(budget);
-        // PDF botón visible solo si existe el generador
-        if (typeof window.generateBudgetPDF === "function") modalPdf.classList.remove("hidden");
-        else modalPdf.classList.add("hidden");
-        modal.classList.remove("hidden");
-        modal.classList.add("flex");
-      }
-      function closeDetail() { modal.classList.add("hidden"); modal.classList.remove("flex"); current = null; }
-      modalClose.addEventListener("click", closeDetail);
-      modal.addEventListener("click", (e) => { if (e.target === modal) closeDetail(); });
-      if (modalPrint) modalPrint.addEventListener("click", () => { if (current) simplePrint(current); });
-      if (modalPdf) modalPdf.addEventListener("click", async () => {
-        if (!current) return;
-        try {
-          const data = normalizeForPdf(current);
-          const pdf = await window.generateBudgetPDF?.(data);
-          if (pdf) {
-            const clean = (data.numero || "SIN").replace(/[^\w\d]/g, "-");
-            pdf.save(`Presupuesto-${clean}.pdf`);
-          }
-        } catch (e) { console.error(e); toast("No se pudo generar el PDF", "error"); }
-      });
+    // === Modal ===
+    async function openDetail(key) {
+      const budget = await budgetsService.get(key);
+      if (!budget) { toast("No se encontró el presupuesto", "error"); return; }
+      current = budget;
+      modalBody.innerHTML = renderDetail(budget);
+      // PDF botón visible solo si existe el generador
+      if (typeof window.generateBudgetPDF === "function") modalPdf.classList.remove("hidden");
+      else modalPdf.classList.add("hidden");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    }
+    function closeDetail() { modal.classList.add("hidden"); modal.classList.remove("flex"); current = null; }
+    modalClose.addEventListener("click", closeDetail);
+    modal.addEventListener("click", (e) => { if (e.target === modal) closeDetail(); });
+    if (modalPrint) modalPrint.addEventListener("click", () => { if (current) simplePrint(current); });
+    if (modalPdf) modalPdf.addEventListener("click", async () => {
+      if (!current) return;
+      try {
+        const data = normalizeForPdf(current);
+        const pdf = await window.generateBudgetPDF?.(data);
+        if (pdf) {
+          const clean = (data.numero || "SIN").replace(/[^\w\d]/g, "-");
+          pdf.save(`Presupuesto-${clean}.pdf`);
+        }
+      } catch (e) { console.error(e); toast("No se pudo generar el PDF", "error"); }
+    });
 
-      function renderDetail(b) {
-        const sucName = getBranchName(b.sucursal);
-        const c = b.cliente || {};
-        const items = (b.items || []);
-        const totalNum = items.reduce((s, it) => s + (parseMoney(it.total)), 0);
-        const dd = daysFrom(b.fecha);
-        const expired = dd > 30;
-        const status = expired ? `Vencido (${dd} días)` : `Vigente (${Math.max(0, 30 - dd)} días restantes)`;
+    function renderDetail(b) {
+      const sucName = getBranchName(b.sucursal);
+      const c = b.cliente || {};
+      const items = (b.items || []);
+      const totalNum = items.reduce((s, it) => s + (parseMoney(it.total)), 0);
+      const dd = daysFrom(b.fecha);
+      const expired = dd > 30;
+      const status = expired ? `Vencido (${dd} días)` : `Vigente (${Math.max(0, 30 - dd)} días restantes)`;
 
-        return `
+      return `
         <div class="glass rounded-lg p-3">
           <div class="font-medium mb-1">Información general</div>
           <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
@@ -558,7 +546,7 @@ export default {
               </thead>
               <tbody>
                 ${items.length
-            ? items.map(it => `
+          ? items.map(it => `
                         <tr>
                           <td class="px-3 py-2">${it.cantidad ?? "-"}</td>
                           <td class="px-3 py-2">${it.descripcion ?? "-"}</td>
@@ -566,8 +554,8 @@ export default {
                           <td class="px-3 py-2 text-right">${it.total ?? "-"}</td>
                         </tr>
                       `).join("")
-            : `<tr><td colspan="4" class="px-3 py-6 text-center text-slate-400">No hay ítems</td></tr>`
-          }
+          : `<tr><td colspan="4" class="px-3 py-6 text-center text-slate-400">No hay ítems</td></tr>`
+        }
               </tbody>
               <tfoot class="bg-white/5">
                 <tr>
@@ -579,34 +567,34 @@ export default {
           </div>
         </div>
       `;
-      }
+    }
 
-      // === Acciones ===
-      function editBudget(key) {
-        try { sessionStorage.setItem("editBudgetKey", key); } catch { }
-        location.hash = "#/presupuesto"; // ajustá si tu router usa otra ruta
-      }
+    // === Acciones ===
+    function editBudget(key) {
+      try { sessionStorage.setItem("editBudgetKey", key); } catch { }
+      location.hash = "#/presupuesto"; // ajustá si tu router usa otra ruta
+    }
 
-      async function printBudget(key) {
-        const b = await budgetsService.get(key);
-        if (!b) return toast("No se encontró el presupuesto", "error");
-        simplePrint(b);
-      }
+    async function printBudget(key) {
+      const b = await budgetsService.get(key);
+      if (!b) return toast("No se encontró el presupuesto", "error");
+      simplePrint(b);
+    }
 
-      async function deleteBudget(key, numero) {
-        if (!confirm(`¿Eliminar el presupuesto ${numero}? Esta acción no se puede deshacer.`)) return;
-        await budgetsService.remove(key);
-        await load();
-        toast(`Presupuesto ${numero} eliminado ✅`, "success");
-      }
+    async function deleteBudget(key, numero) {
+      if (!confirm(`¿Eliminar el presupuesto ${numero}? Esta acción no se puede deshacer.`)) return;
+      await budgetsService.remove(key);
+      await load();
+      toast(`Presupuesto ${numero} eliminado ✅`, "success");
+    }
 
-      // === Utilidades impresión & PDF ===
-      function simplePrint(b) {
-        const c = b.cliente || {};
-        const items = b.items || [];
-        const comp = getCompany();
-        const brand = (comp.brandName || comp.companyName || "Presupuesto");
-        const html = `
+    // === Utilidades impresión & PDF ===
+    function simplePrint(b) {
+      const c = b.cliente || {};
+      const items = b.items || [];
+      const comp = getCompany();
+      const brand = (comp.brandName || comp.companyName || "Presupuesto");
+      const html = `
         <html><head><title>${b.numero}</title>
         <meta charset="utf-8" />
         <style>
@@ -633,73 +621,73 @@ export default {
           <thead><tr><th>Cant.</th><th>Descripción</th><th class="right">Precio Unit.</th><th class="right">Total</th></tr></thead>
           <tbody>
             ${items.length
-            ? items.map(it => `<tr><td>${it.cantidad ?? "-"}</td><td>${it.descripcion ?? "-"}</td><td class="right">${it.precio ?? (it.unit ? money(it.unit) : "-")}</td><td class="right">${it.total ?? "-"}</td></tr>`).join("")
-            : `<tr><td colspan="4" class="right">Sin ítems</td></tr>`
-          }
+          ? items.map(it => `<tr><td>${it.cantidad ?? "-"}</td><td>${it.descripcion ?? "-"}</td><td class="right">${it.precio ?? (it.unit ? money(it.unit) : "-")}</td><td class="right">${it.total ?? "-"}</td></tr>`).join("")
+          : `<tr><td colspan="4" class="right">Sin ítems</td></tr>`
+        }
           </tbody>
           <tfoot><tr><td colspan="3" class="right"><strong>TOTAL</strong></td><td class="right"><strong>${b.total || "-"}</strong></td></tr></tfoot>
         </table>
         </body></html>`;
-        const w = window.open("", "_blank");
-        w.document.write(html); w.document.close(); w.focus(); w.print();
-      }
-
-      function normalizeForPdf(b) {
-        // Convierte al formato que espera generateBudgetPDF del módulo Presupuesto
-        const subtotalNum = (b.items || []).reduce((s, it) => s + (parseMoney(it.total)), 0);
-        return {
-          numero: b.numero || "",
-          fecha: (b.fecha || new Date().toISOString().slice(0, 10)),
-          sucursalId: b.sucursal || "",
-          sucursalNombre: getBranchName(b.sucursal),
-          cliente: {
-            nombre: b.cliente?.nombre || "",
-            telefono: b.cliente?.telefono || "",
-            vehiculo: b.cliente?.vehiculo || "",
-            patente: b.cliente?.patente || "",
-            modelo: b.cliente?.modelo || "",
-            compania: b.cliente?.compania || "",
-            chasis: b.cliente?.chasis || ""
-          },
-          items: (b.items || []).map(x => ({
-            cantidad: Number(x.cantidad) || 1,
-            descripcion: x.descripcion || "-",
-            unit: parseMoney(x.unit ?? x.precio),
-            total: parseMoney(x.total)
-          })),
-          subtotal: subtotalNum,
-          total: subtotalNum,
-          firmaDataUrl: localStorage.getItem("digital_signature") || null,
-          company: { ...getCompany(), logoData: CFG_SETTINGS.logoData },
-          taxRate: CFG_SETTINGS.taxRate || 0,
-          taxAmount: (subtotalNum * (CFG_SETTINGS.taxRate || 0)) / 100, // naive tax calc for display if needed
-          total: subtotalNum * (1 + (CFG_SETTINGS.taxRate || 0) / 100), // simplistic logic, budget might save its own total though
-          sucursalCuit: (CFG_BRANCHES || []).find(b => b.id === b.sucursal)?.cuit || ""
-        };
-        // Important: Use saved total if available to avoid recalc diffs
-        if (b.total) ret.total = parseMoney(b.total);
-        return ret;
-      }
-
-      // === Exportar Excel (si XLSX existe) ===
-      exportBtn.addEventListener("click", () => {
-        if (!window.XLSX) return;
-        const data = filtered.map(b => ({
-          "Número": b.numero,
-          "Fecha": toDMY(b.fecha),
-          "Cliente": b.cliente?.nombre || b.cliente || "Sin nombre",
-          "Vehículo": vehicleInfo(b),
-          "Sucursal": getBranchName(b.sucursal),
-          "Total": b.total,
-          "Estado": daysFrom(b.fecha) > 30 ? "Vencido" : "Vigente"
-        }));
-        const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.json_to_sheet(data);
-        ws["!cols"] = [{ wch: 20 }, { wch: 12 }, { wch: 26 }, { wch: 28 }, { wch: 24 }, { wch: 14 }, { wch: 12 }];
-        XLSX.utils.book_append_sheet(wb, ws, "Presupuestos");
-        const f = `Presupuestos_${new Date().toISOString().slice(0, 10)}.xlsx`;
-        XLSX.writeFile(wb, f);
-        toast(`Excel "${f}" exportado ✅`, "success");
-      });
+      const w = window.open("", "_blank");
+      w.document.write(html); w.document.close(); w.focus(); w.print();
     }
-  };
+
+    function normalizeForPdf(b) {
+      // Convierte al formato que espera generateBudgetPDF del módulo Presupuesto
+      const subtotalNum = (b.items || []).reduce((s, it) => s + (parseMoney(it.total)), 0);
+      return {
+        numero: b.numero || "",
+        fecha: (b.fecha || new Date().toISOString().slice(0, 10)),
+        sucursalId: b.sucursal || "",
+        sucursalNombre: getBranchName(b.sucursal),
+        cliente: {
+          nombre: b.cliente?.nombre || "",
+          telefono: b.cliente?.telefono || "",
+          vehiculo: b.cliente?.vehiculo || "",
+          patente: b.cliente?.patente || "",
+          modelo: b.cliente?.modelo || "",
+          compania: b.cliente?.compania || "",
+          chasis: b.cliente?.chasis || ""
+        },
+        items: (b.items || []).map(x => ({
+          cantidad: Number(x.cantidad) || 1,
+          descripcion: x.descripcion || "-",
+          unit: parseMoney(x.unit ?? x.precio),
+          total: parseMoney(x.total)
+        })),
+        subtotal: subtotalNum,
+        total: subtotalNum,
+        firmaDataUrl: localStorage.getItem("digital_signature") || null,
+        company: { ...getCompany(), logoData: CFG_SETTINGS.logoData },
+        taxRate: CFG_SETTINGS.taxRate || 0,
+        taxAmount: (subtotalNum * (CFG_SETTINGS.taxRate || 0)) / 100, // naive tax calc for display if needed
+        total: subtotalNum * (1 + (CFG_SETTINGS.taxRate || 0) / 100), // simplistic logic, budget might save its own total though
+        sucursalCuit: (CFG_BRANCHES || []).find(b => b.id === b.sucursal)?.cuit || ""
+      };
+      // Important: Use saved total if available to avoid recalc diffs
+      if (b.total) ret.total = parseMoney(b.total);
+      return ret;
+    }
+
+    // === Exportar Excel (si XLSX existe) ===
+    exportBtn.addEventListener("click", () => {
+      if (!window.XLSX) return;
+      const data = filtered.map(b => ({
+        "Número": b.numero,
+        "Fecha": toDMY(b.fecha),
+        "Cliente": b.cliente?.nombre || b.cliente || "Sin nombre",
+        "Vehículo": vehicleInfo(b),
+        "Sucursal": getBranchName(b.sucursal),
+        "Total": b.total,
+        "Estado": daysFrom(b.fecha) > 30 ? "Vencido" : "Vigente"
+      }));
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(data);
+      ws["!cols"] = [{ wch: 20 }, { wch: 12 }, { wch: 26 }, { wch: 28 }, { wch: 24 }, { wch: 14 }, { wch: 12 }];
+      XLSX.utils.book_append_sheet(wb, ws, "Presupuestos");
+      const f = `Presupuestos_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      XLSX.writeFile(wb, f);
+      toast(`Excel "${f}" exportado ✅`, "success");
+    });
+  }
+};
