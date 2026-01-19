@@ -12,6 +12,7 @@ const ROUTES = {
     "/presupuestos": { public: false, loader: () => import("./pages/Presupuestos.js"), requireAny: ["quotes"] },
     "/reportes": { public: false, loader: () => import("./pages/Reportes.js"), requireAny: ["reports"] },
     "/inventario": { public: false, loader: () => import("./pages/Inventario.js"), requireAny: ["inventory", "suppliers"] },
+    "/clientes": { public: false, loader: () => import("./pages/Clientes.js"), requireAny: ["quotes", "pos"] },
     "/configuracion": { public: false, loader: () => import("./pages/Configuracion.js"), requireAny: ["settings"] },
 
     // Ruta técnica para cerrar sesión

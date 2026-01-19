@@ -1378,6 +1378,8 @@ export default {
       const payload = {
         name: clientData.name,
         phone: clientData.phone,
+        email: clientData.email || "", // Fix: Include email
+        address: clientData.address || "", // Fix: Include address
         vehicles: vehicles
       };
 

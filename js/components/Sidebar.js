@@ -30,7 +30,7 @@ export function Sidebar() {
       setAuth({ token: null, user: null });
 
       // (opcional) limpiar cosas temporales de tu app
-      try { sessionStorage.clear(); } catch {}
+      try { sessionStorage.clear(); } catch { }
 
       // navegar al login
       location.hash = "#/login";
@@ -69,6 +69,7 @@ export function Sidebar() {
         ${link("#/presupuestos", "📁 Presupuestos")}
         ${link("#/reportes", "📈 Reportes")}
         ${link("#/inventario", "📦 Inventario")}
+        ${link("#/clientes", "👥 Clientes")}
         ${link("#/configuracion", "⚙️ Configuración")}
       </nav>
 
