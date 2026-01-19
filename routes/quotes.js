@@ -34,8 +34,12 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
     try {
         const q = req.body;
-        const newId = q.id || `quote_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+        // Frontend sends 'numero' as the formatted ID (e.g. 0001-000001). Use it if present.
+        const newId = q.numero || q.id || `quote_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
         const itemsStr = JSON.stringify(q.items || []);
+
+        // Map frontend nested 'cliente' object to flat DB columns
+        const c = q.cliente || {};
 
         await db.execute({
             sql: `INSERT INTO quotes (
@@ -43,9 +47,22 @@ router.post('/', async (req, res) => {
                 vehicle, siniestro, branch_id, total, items, signature, status, date, vat_policy
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             args: [
-                newId, q.client_name || '', q.client_dni || '', q.client_address || '', q.client_phone || '', q.client_email || '',
-                q.vehicle || '', q.siniestro || '', q.branch_id || null, q.total || 0, itemsStr, q.signature || null,
-                q.status || 'draft', q.date ? new Date(q.date).toISOString() : new Date().toISOString(), q.vat_policy || 'all'
+                newId,
+                c.nombre || q.client_name || '',
+                c.dni || q.client_dni || '',
+                c.address || q.client_address || '',
+                c.telefono || q.client_phone || '',
+                c.email || q.client_email || '',
+                // Vehicle info might be in 'vehicle' string or inside client object
+                c.vehiculo || q.vehicle || '',
+                q.siniestro || '',
+                q.sucursal || q.branch_id || null,
+                q.total || 0,
+                itemsStr,
+                q.signature || null,
+                q.estado || q.status || 'draft',
+                q.fecha ? new Date(q.fecha).toISOString() : new Date().toISOString(),
+                q.vatPolicy || q.vat_policy || 'all'
             ]
         });
         res.json({ success: true, id: newId });
@@ -59,14 +76,27 @@ router.put('/:id', async (req, res) => {
     try {
         const q = req.body;
         const itemsStr = JSON.stringify(q.items || []);
+        const c = q.cliente || {};
+
         await db.execute({
             sql: `UPDATE quotes SET 
                 client_name=?, client_dni=?, client_address=?, client_phone=?, client_email=?, 
                 vehicle=?, siniestro=?, branch_id=?, total=?, items=?, signature=?, status=?, vat_policy=?
                 WHERE id=?`,
             args: [
-                q.client_name, q.client_dni, q.client_address, q.client_phone, q.client_email,
-                q.vehicle, q.siniestro, q.branch_id, q.total, itemsStr, q.signature, q.status, q.vat_policy || 'all',
+                c.nombre || q.client_name,
+                c.dni || q.client_dni,
+                c.address || q.client_address,
+                c.telefono || q.client_phone,
+                c.email || q.client_email,
+                c.vehiculo || q.vehicle,
+                q.siniestro,
+                q.sucursal || q.branch_id,
+                q.total,
+                itemsStr,
+                q.signature,
+                q.estado || q.status,
+                q.vatPolicy || q.vat_policy || 'all',
                 req.params.id
             ]
         });

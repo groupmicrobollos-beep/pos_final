@@ -203,7 +203,29 @@ export default {
           throw new Error('Error al cargar datos');
         }
 
-        items = await itemsRes.json();
+        const rawItems = await itemsRes.json();
+        // Map backend (description, price) -> frontend (name, cost)
+        items = rawItems.map(p => {
+          // Try extracting code if description is "CODE - NAME"
+          let name = p.description || "";
+          let code = "";
+          const parts = name.split(" - ");
+          if (parts.length > 1 && parts[0].length <= 6) {
+            code = parts[0];
+            name = parts.slice(1).join(" - ");
+          }
+          return {
+            ...p,
+            name: name,
+            code: code, // inferred
+            cost: p.price,
+            // unit/min/supplierId are missing in DB, default them
+            unit: 'u',
+            min: 5,
+            supplierId: ''
+          };
+        });
+
         suppliers = await suppliersRes.json();
 
         refreshItems();
@@ -509,16 +531,17 @@ export default {
 
       try {
         if (data.id) {
-          await apiPut(`/api/products/${data.id}`, data);
+          await store.products.update(data.id, data);
         } else {
-          await apiPost('/api/products/save', data);
+          await store.products.create(data);
         }
 
-        items = await apiGet('/api/products/list');
+        await loadData(); // Reload fully to get mapped/fresh data
+        // items = await apiGet('/api/products/list'); <- replaced by loadData
         autoNeed(data);
 
         setTab("items");
-        refreshItems();
+        // refreshItems(); <- loadData does this
         toast("Insumo guardado ✅", "success");
 
         if (mode === "new") {
@@ -535,12 +558,11 @@ export default {
       if (!confirm("¿Eliminar insumo?")) return;
 
       try {
-        await apiDelete(`/api/products/${id}`);
+        await store.products.remove(id);
         buyList = buyList.filter(b => b.itemId !== id);
         save(INV_LIST_KEY, buyList);
 
-        items = await apiGet('/api/products/list');
-        refreshItems();
+        await loadData();
         toast("Insumo eliminado", "success");
       } catch (err) {
         console.error(err);

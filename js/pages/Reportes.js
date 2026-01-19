@@ -13,10 +13,11 @@ const ls = (k, d) => { try { return JSON.parse(localStorage.getItem(k) ?? JSON.s
 
 let CFG_SETTINGS = (window.CFG?.getSettings?.() || ls("cfg_settings", {}));
 let CFG_BRANCHES = (window.CFG?.getBranches?.() || ls("cfg_branches", []));
+import budgetsService from "../services/budgets.js";
 
 // moneda/locale/decimales dinámicos desde Ajustes
 let CURRENCY = CFG_SETTINGS?.currency || "ARS";
-let LOCALE   = CFG_SETTINGS?.locale   || "es-AR";
+let LOCALE = CFG_SETTINGS?.locale || "es-AR";
 let DECIMALS = Number.isInteger(CFG_SETTINGS?.decimals) ? CFG_SETTINGS.decimals : 2;
 
 const money = (n) => (Number(n) || 0).toLocaleString(LOCALE, {
@@ -39,34 +40,34 @@ const parseMoney = (text) => {
 };
 
 const toDMY = (iso) => {
-  const d = new Date((iso || "").slice(0,10)+"T00:00:00"); if (isNaN(d)) return "-";
-  const dd = String(d.getDate()).padStart(2,"0"); const mm = String(d.getMonth()+1).padStart(2,"0"); const yy = d.getFullYear();
+  const d = new Date((iso || "").slice(0, 10) + "T00:00:00"); if (isNaN(d)) return "-";
+  const dd = String(d.getDate()).padStart(2, "0"); const mm = String(d.getMonth() + 1).padStart(2, "0"); const yy = d.getFullYear();
   return `${dd}/${mm}/${yy}`;
 };
-const monthName = (i) => ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"][i] || "";
-const todayISO = () => new Date().toISOString().slice(0,10);
+const monthName = (i) => ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"][i] || "";
+const todayISO = () => new Date().toISOString().slice(0, 10);
 
-function toast(msg, type="info"){
-  const bg = type==="error" ? "bg-rose-600" : type==="success" ? "bg-emerald-600" : "bg-sky-700";
+function toast(msg, type = "info") {
+  const bg = type === "error" ? "bg-rose-600" : type === "success" ? "bg-emerald-600" : "bg-sky-700";
   const el = document.createElement("div");
   el.className = `fixed top-4 right-4 z-[4000] px-3 py-2 rounded-lg text-white shadow-2xl text-xs ${bg}`;
   el.textContent = msg;
   document.body.appendChild(el);
-  setTimeout(()=>{ el.style.opacity="0"; el.style.transform="translateX(10px)"; setTimeout(()=>el.remove(),160); }, 2000);
+  setTimeout(() => { el.style.opacity = "0"; el.style.transform = "translateX(10px)"; setTimeout(() => el.remove(), 160); }, 2000);
 }
 
 // Helpers sucursales / empresa
 const getBranchName = (id) => (CFG_BRANCHES || []).find(b => b.id === id)?.name || id || "-";
 const getCompany = () => ({
   companyName: CFG_SETTINGS?.companyName || "",
-  brandName:   CFG_SETTINGS?.brandName   || "",
-  address:     CFG_SETTINGS?.address     || "",
-  phone:       CFG_SETTINGS?.phone       || "",
-  email:       CFG_SETTINGS?.email       || ""
+  brandName: CFG_SETTINGS?.brandName || "",
+  address: CFG_SETTINGS?.address || "",
+  phone: CFG_SETTINGS?.phone || "",
+  email: CFG_SETTINGS?.email || ""
 });
 
 export default {
-  render(){
+  render() {
     return /*html*/`
 <section data-page="reports" class="space-y-6 text-[13px]">
   <style>
@@ -125,12 +126,12 @@ export default {
 
   <!-- KPIs -->
   <div class="grid sm:grid-cols-3 xl:grid-cols-5 gap-3">
-  ${kpi("<i class='fas fa-briefcase' aria-hidden='true'></i>","Presupuestos","kpi-count","g-indigo")}
-  ${kpi("<i class='fas fa-money-bill-wave' aria-hidden='true'></i>","Monto","kpi-amount","g-emerald")}
-  ${kpi("<i class='fas fa-receipt' aria-hidden='true'></i>","Ticket Prom.","kpi-avg","g-pink")}
-  ${kpi("<i class='fas fa-building' aria-hidden='true'></i>","Hechos","kpi-done","g-amber")}
-  ${kpi("<i class='fas fa-clock' aria-hidden='true'></i>","Pendientes","kpi-pending","g-slate")}
-  ${kpi("<i class='fas fa-calendar-alt' aria-hidden='true'></i>","Rango activo","kpi-range","g-slate")}
+  ${kpi("<i class='fas fa-briefcase' aria-hidden='true'></i>", "Presupuestos", "kpi-count", "g-indigo")}
+  ${kpi("<i class='fas fa-money-bill-wave' aria-hidden='true'></i>", "Monto", "kpi-amount", "g-emerald")}
+  ${kpi("<i class='fas fa-receipt' aria-hidden='true'></i>", "Ticket Prom.", "kpi-avg", "g-pink")}
+  ${kpi("<i class='fas fa-building' aria-hidden='true'></i>", "Hechos", "kpi-done", "g-amber")}
+  ${kpi("<i class='fas fa-clock' aria-hidden='true'></i>", "Pendientes", "kpi-pending", "g-slate")}
+  ${kpi("<i class='fas fa-calendar-alt' aria-hidden='true'></i>", "Rango activo", "kpi-range", "g-slate")}
   </div>
 
   <!-- Chart -->
@@ -203,21 +204,21 @@ export default {
     `;
   },
 
-  mount(root){
+  mount(root) {
     // Refs filtros
     const branch = root.querySelector("#branch");
-    const quick  = root.querySelector("#quick");
-    const from   = root.querySelector("#from");
-    const to     = root.querySelector("#to");
-    const group  = root.querySelector("#group");
+    const quick = root.querySelector("#quick");
+    const from = root.querySelector("#from");
+    const to = root.querySelector("#to");
+    const group = root.querySelector("#group");
     const exportBtn = root.querySelector("#export");
 
     // KPIs
     const kCount = root.querySelector("#kpi-count");
     const kAmount = root.querySelector("#kpi-amount");
     const kAvg = root.querySelector("#kpi-avg");
-  const kBranches = root.querySelector("#kpi-done");
-  const kPending = root.querySelector("#kpi-pending");
+    const kBranches = root.querySelector("#kpi-done");
+    const kPending = root.querySelector("#kpi-pending");
     const kRange = root.querySelector("#kpi-range");
 
     // Chart
@@ -256,10 +257,10 @@ export default {
     document.addEventListener("cfg:settings-updated", (e) => {
       CFG_SETTINGS = e.detail?.settings || CFG_SETTINGS;
       CURRENCY = CFG_SETTINGS.currency || CURRENCY;
-      LOCALE   = CFG_SETTINGS.locale   || LOCALE;
+      LOCALE = CFG_SETTINGS.locale || LOCALE;
       DECIMALS = Number.isInteger(CFG_SETTINGS.decimals) ? CFG_SETTINGS.decimals : DECIMALS;
       renderAll(); // re-formatea KPIs, tablas y gráfico
-      toast("Ajustes aplicados en Reportes ✅","success");
+      toast("Ajustes aplicados en Reportes ✅", "success");
     });
 
     // Estado
@@ -273,11 +274,11 @@ export default {
     from.value = from.value || todayISO();
     to.value = to.value || todayISO();
 
-    load(); applyFilters(); computeAggregates(); renderAll();
+    load(); // async internal handling
 
     // Eventos
     branch.addEventListener("change", () => { applyFilters(); computeAggregates(); renderAll(); });
-    group.addEventListener("change",  () => { computeAggregates(); renderAll(); });
+    group.addEventListener("change", () => { computeAggregates(); renderAll(); });
     [from, to].forEach(el => el.addEventListener("change", () => {
       quick.value = "custom";
       applyFilters(); computeAggregates(); renderAll();
@@ -292,103 +293,110 @@ export default {
     detailBody.addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-act]"); if (!btn) return;
       const act = btn.dataset.act, key = btn.dataset.key, num = btn.dataset.num;
-      if (act==="view") openDetail(key);
-      if (act==="edit") { try{ sessionStorage.setItem("editBudgetKey", key); }catch{}; location.hash="#/presupuesto"; }
-      if (act==="toggle") toggleDone(key);
-      if (act==="del")  deleteBudget(key, num);
+      if (act === "view") openDetail(key);
+      if (act === "edit") { try { sessionStorage.setItem("editBudgetKey", key); } catch { }; location.hash = "#/presupuesto"; }
+      if (act === "toggle") toggleDone(key);
+      if (act === "del") deleteBudget(key, num);
     });
 
     // Modal
     modalClose.addEventListener("click", closeDetail);
-    modal.addEventListener("click", (e)=>{ if(e.target===modal) closeDetail(); });
-    modalPdf.addEventListener("click", async ()=>{
+    modal.addEventListener("click", (e) => { if (e.target === modal) closeDetail(); });
+    modalPdf.addEventListener("click", async () => {
       if (!current || typeof window.generateBudgetPDF !== "function") return;
       try {
         const data = normalizeForPdf(current);
         const pdf = await window.generateBudgetPDF(data);
-        const clean = (data.numero||"SIN").replace(/[^\w\d]/g,"-");
+        const clean = (data.numero || "SIN").replace(/[^\w\d]/g, "-");
         pdf.save(`Presupuesto-${clean}.pdf`);
-      } catch (e) { console.error(e); toast("No se pudo generar el PDF","error"); }
+      } catch (e) { console.error(e); toast("No se pudo generar el PDF", "error"); }
     });
 
     // ====== Load + Filters + Aggregation ======
-    function load(){
-      const list = JSON.parse(localStorage.getItem("budgets_list") || "[]");
-      all = list.map(s => {
-        const full = JSON.parse(localStorage.getItem(s.key) || "null");
-        return { ...s, details: full || null };
-      }).filter(b => !!b.details);
+    async function load() {
+      try {
+        const list = await budgetsService.list();
+        all = list.map(s => ({ ...s, details: s.details || null }));
+      } catch (e) {
+        console.error("Reports load error", e);
+        const list = JSON.parse(localStorage.getItem("budgets_list") || "[]");
+        all = list.map(s => {
+          const full = JSON.parse(localStorage.getItem(s.key) || "null");
+          return { ...s, details: full || null };
+        }).filter(b => !!b.details);
+      }
+      applyFilters(); computeAggregates(); renderAll();
     }
 
-    function setQuickRange(value){
-      const now = new Date(); now.setHours(0,0,0,0);
+    function setQuickRange(value) {
+      const now = new Date(); now.setHours(0, 0, 0, 0);
       let a = new Date(now), b = new Date(now);
       if (value === "today") { /* hoy */ }
       else if (value === "week") {
-        const day = (now.getDay()+6)%7; // lunes=0
-        a.setDate(now.getDate()-day);
-        b.setDate(a.getDate()+6);
+        const day = (now.getDay() + 6) % 7; // lunes=0
+        a.setDate(now.getDate() - day);
+        b.setDate(a.getDate() + 6);
       } else if (value === "month") {
         a = new Date(now.getFullYear(), now.getMonth(), 1);
-        b = new Date(now.getFullYear(), now.getMonth()+1, 0);
+        b = new Date(now.getFullYear(), now.getMonth() + 1, 0);
       } else if (value === "year") {
         a = new Date(now.getFullYear(), 0, 1);
         b = new Date(now.getFullYear(), 11, 31);
       } // custom -> no tocamos
-      from.value = a.toISOString().slice(0,10);
-      to.value   = b.toISOString().slice(0,10);
+      from.value = a.toISOString().slice(0, 10);
+      to.value = b.toISOString().slice(0, 10);
     }
 
-    function applyFilters(){
+    function applyFilters() {
       const br = branch.value;
-      const a = new Date((from.value||todayISO())+"T00:00:00");
-      const b = new Date((to.value||todayISO())+"T23:59:59");
+      const a = new Date((from.value || todayISO()) + "T00:00:00");
+      const b = new Date((to.value || todayISO()) + "T23:59:59");
       filtered = all.filter(x => {
         if (br && x.sucursal !== br) return false;
-        const d = new Date((x.fecha||"").slice(0,10)+"T12:00:00");
-        return d>=a && d<=b;
+        const d = new Date((x.fecha || "").slice(0, 10) + "T12:00:00");
+        return d >= a && d <= b;
       });
     }
 
-    function computeAggregates(){
+    function computeAggregates() {
       const mode = group.value; // day/week/month/year
       const map = new Map();
       filtered.forEach(b => {
-        const d = new Date((b.fecha||"").slice(0,10)+"T12:00:00");
+        const d = new Date((b.fecha || "").slice(0, 10) + "T12:00:00");
         const amount = parseMoney(b.total);
-        const {key, label} = bucket(d, mode);
-        if (!map.has(key)) map.set(key, { key, label, count:0, amount:0 });
+        const { key, label } = bucket(d, mode);
+        if (!map.has(key)) map.set(key, { key, label, count: 0, amount: 0 });
         const it = map.get(key);
         it.count += 1; it.amount += amount;
       });
-      aggregated = Array.from(map.values()).sort((a,b)=> a.key < b.key ? -1 : 1)
-        .map(x => ({...x, avg: x.count ? x.amount/x.count : 0}));
+      aggregated = Array.from(map.values()).sort((a, b) => a.key < b.key ? -1 : 1)
+        .map(x => ({ ...x, avg: x.count ? x.amount / x.count : 0 }));
     }
 
     // ====== Render ======
-    function renderAll(){
+    function renderAll() {
       renderKPIs();
       renderChart();
       renderSummary();
       renderDetail();
     }
-    function renderKPIs(){
+    function renderKPIs() {
       const count = filtered.length;
-      const amount = filtered.reduce((s,b)=> s + parseMoney(b.total), 0);
+      const amount = filtered.reduce((s, b) => s + parseMoney(b.total), 0);
       const avg = count ? amount / count : 0;
-  const branches = new Set(filtered.map(b=>b.sucursal)).size || 0;
-  const doneCount = filtered.filter(b => b.details && b.details.done).length;
-  const pendingCount = Math.max(0, count - doneCount);
-  kCount.textContent = count;
-  kAmount.textContent = money(amount);
-  kAvg.textContent = money(avg);
-  kBranches.textContent = doneCount;
-  if (kPending) kPending.textContent = pendingCount;
+      const branches = new Set(filtered.map(b => b.sucursal)).size || 0;
+      const doneCount = filtered.filter(b => b.details && b.details.done).length;
+      const pendingCount = Math.max(0, count - doneCount);
+      kCount.textContent = count;
+      kAmount.textContent = money(amount);
+      kAvg.textContent = money(avg);
+      kBranches.textContent = doneCount;
+      if (kPending) kPending.textContent = pendingCount;
       kRange.textContent = `${toDMY(from.value)} — ${toDMY(to.value)}`;
     }
 
-    function renderSummary(){
-      if (!aggregated.length){
+    function renderSummary() {
+      if (!aggregated.length) {
         sumBody.innerHTML = "";
         sumEmpty.classList.remove("hidden");
         return;
@@ -404,8 +412,8 @@ export default {
       `).join("");
     }
 
-    function renderDetail(){
-      if (!filtered.length){
+    function renderDetail() {
+      if (!filtered.length) {
         detailBody.innerHTML = "";
         detailEmpty.classList.remove("hidden");
         return;
@@ -413,7 +421,7 @@ export default {
       detailEmpty.classList.add("hidden");
       detailBody.innerHTML = filtered
         .slice()
-        .sort((a,b)=> (b.details?.fechaCreacion||b.fecha||"") > (a.details?.fechaCreacion||a.fecha||"") ? 1 : -1)
+        .sort((a, b) => (b.details?.fechaCreacion || b.fecha || "") > (a.details?.fechaCreacion || a.fecha || "") ? 1 : -1)
         .map(b => {
           const veh = vehicleInfo(b);
           const suc = getBranchName(b.sucursal);
@@ -426,7 +434,7 @@ export default {
               <td class="max-w-[260px] truncate">${veh}</td>
               <td>${suc}</td>
               <td class="text-right font-medium">${b.total}</td>
-              <td>${b.details?.done ? `<span class="badge status-active">Hecho</span>` : `<span class="badge ${expired?"status-expired":"status-active"}">${expired? "Vencido":"Vigente"}</span>`}</td>
+              <td>${b.details?.done ? `<span class="badge status-active">Hecho</span>` : `<span class="badge ${expired ? "status-expired" : "status-active"}">${expired ? "Vencido" : "Vigente"}</span>`}</td>
               <td class="text-right whitespace-nowrap">
                 <button data-act="view" data-key="${b.key}" class="btn" style="height:28px;line-height:26px;padding:0 .45rem;"><i class="fas fa-eye" aria-hidden="true"></i></button>
                 <button data-act="toggle" data-key="${b.key}" class="btn" style="height:28px;line-height:26px;padding:0 .45rem;margin:0 6px;background:rgba(16,185,129,.2);border-color:transparent;" title="Marcar hecho"><i class="fas fa-check" aria-hidden="true"></i></button>
@@ -439,25 +447,25 @@ export default {
     }
 
     // ====== Chart (barras) ======
-    function renderChart(){
+    function renderChart() {
       const mode = group.value;
-      chartGroupLabel.textContent = (mode==="day"?"día":mode==="week"?"semana":mode==="month"?"mes":"año");
+      chartGroupLabel.textContent = (mode === "day" ? "día" : mode === "week" ? "semana" : mode === "month" ? "mes" : "año");
       chartSub.textContent = `${toDMY(from.value)} → ${toDMY(to.value)}`;
-      drawBars(barCanvas, aggregated.map(x=>x.label), aggregated.map(x=>x.amount));
+      drawBars(barCanvas, aggregated.map(x => x.label), aggregated.map(x => x.amount));
     }
 
     // ====== Modal detalle ======
-    function openDetail(key){
+    function openDetail(key) {
       const b = JSON.parse(localStorage.getItem(key) || "null");
-      if (!b) return toast("No se encontró el presupuesto","error");
+      if (!b) return toast("No se encontró el presupuesto", "error");
       current = b;
       modalBody.innerHTML = renderBudgetDetail(b);
       if (typeof window.generateBudgetPDF === "function") modalPdf.classList.remove("hidden");
       else modalPdf.classList.add("hidden");
       modal.classList.remove("hidden"); modal.classList.add("flex");
     }
-    function closeDetail(){ modal.classList.add("hidden"); modal.classList.remove("flex"); current = null; }
-    function deleteBudget(key, numero){
+    function closeDetail() { modal.classList.add("hidden"); modal.classList.remove("flex"); current = null; }
+    function deleteBudget(key, numero) {
       if (!confirm(`¿Eliminar el presupuesto ${numero}? Esta acción no se puede deshacer.`)) return;
       localStorage.removeItem(key);
       const list = JSON.parse(localStorage.getItem("budgets_list") || "[]").filter(x => x.key !== key);
@@ -466,25 +474,25 @@ export default {
       toast(`Presupuesto ${numero} eliminado ✅`, "success");
     }
 
-    function toggleDone(key){
+    function toggleDone(key) {
       const b = JSON.parse(localStorage.getItem(key) || "null");
       if (!b) { toast("No se encontró el presupuesto", "error"); return; }
       b.done = !b.done;
       localStorage.setItem(key, JSON.stringify(b));
       const list = JSON.parse(localStorage.getItem("budgets_list") || "[]");
       const idx = list.findIndex(x => x.key === key);
-      if (idx >= 0){ list[idx].done = b.done; localStorage.setItem("budgets_list", JSON.stringify(list)); }
+      if (idx >= 0) { list[idx].done = b.done; localStorage.setItem("budgets_list", JSON.stringify(list)); }
       load(); applyFilters(); computeAggregates(); renderAll();
-      toast(`Presupuesto ${b.numero} marcado ${b.done? 'como hecho':'como pendiente'}` , "success");
+      toast(`Presupuesto ${b.numero} marcado ${b.done ? 'como hecho' : 'como pendiente'}`, "success");
     }
-    function renderBudgetDetail(b){
+    function renderBudgetDetail(b) {
       const sucName = getBranchName(b.sucursal);
       const c = b.cliente || {};
       const items = b.items || [];
-      const totalNum = items.reduce((s,it)=> s + parseMoney(it.total), 0);
+      const totalNum = items.reduce((s, it) => s + parseMoney(it.total), 0);
       const dd = daysFrom(b.fecha);
       const expired = dd > 30;
-      const status = expired ? `Vencido (${dd} días)` : `Vigente (${Math.max(0,30-dd)} días restantes)`;
+      const status = expired ? `Vencido (${dd} días)` : `Vigente (${Math.max(0, 30 - dd)} días restantes)`;
       return `
         <div class="glass rounded-lg p-3">
           <div class="font-medium mb-1">Información general</div>
@@ -492,7 +500,7 @@ export default {
             <div><div class="text-slate-400">Número</div><div class="font-semibold">${b.numero}</div></div>
             <div><div class="text-slate-400">Fecha</div><div>${toDMY(b.fecha)}</div></div>
             <div><div class="text-slate-400">Sucursal</div><div>${sucName}</div></div>
-            <div><div class="text-slate-400">Estado</div><div class="${expired?'text-rose-400':'text-emerald-400'} font-medium">${status}</div></div>
+            <div><div class="text-slate-400">Estado</div><div class="${expired ? 'text-rose-400' : 'text-emerald-400'} font-medium">${status}</div></div>
             <div><div class="text-slate-400">Subtotal</div><div>${b.subtotal || money(totalNum)}</div></div>
             <div><div class="text-slate-400">Total</div><div class="font-semibold">${b.total || money(totalNum)}</div></div>
           </div>
@@ -523,18 +531,17 @@ export default {
                 </tr>
               </thead>
               <tbody>
-                ${
-                  items.length
-                    ? items.map(it=>`
+                ${items.length
+          ? items.map(it => `
                         <tr>
                           <td class="px-3 py-2">${it.cantidad ?? "-"}</td>
                           <td class="px-3 py-2">${it.descripcion ?? "-"}</td>
-                          <td class="px-3 py-2 text-right">${it.precio ?? (it.unit? money(it.unit) : "-")}</td>
+                          <td class="px-3 py-2 text-right">${it.precio ?? (it.unit ? money(it.unit) : "-")}</td>
                           <td class="px-3 py-2 text-right">${it.total ?? "-"}</td>
                         </tr>
                       `).join("")
-                    : `<tr><td colspan="4" class="px-3 py-6 text-center text-slate-400">No hay ítems</td></tr>`
-                }
+          : `<tr><td colspan="4" class="px-3 py-6 text-center text-slate-400">No hay ítems</td></tr>`
+        }
               </tbody>
               <tfoot class="bg-white/5">
                 <tr>
@@ -549,9 +556,9 @@ export default {
     }
 
     // ====== Export ======
-    function exportData(){
-      if (!filtered.length){
-        toast("No hay datos para exportar con los filtros actuales","error"); return;
+    function exportData() {
+      if (!filtered.length) {
+        toast("No hay datos para exportar con los filtros actuales", "error"); return;
       }
       const resumen = aggregated.map(r => ({
         "Periodo": r.label,
@@ -569,13 +576,13 @@ export default {
         "Estado": isExpired(b.fecha) ? "Vencido" : "Vigente"
       }));
 
-      const fname = `Reporte_${from.value}_a_${to.value}_${group.value}.xlsx`.replace(/-/g,"");
-      if (window.XLSX){
+      const fname = `Reporte_${from.value}_a_${to.value}_${group.value}.xlsx`.replace(/-/g, "");
+      if (window.XLSX) {
         const wb = XLSX.utils.book_new();
         const ws1 = XLSX.utils.json_to_sheet(resumen);
         const ws2 = XLSX.utils.json_to_sheet(detalle);
-        ws1["!cols"] = [{wch:20},{wch:14},{wch:16},{wch:16}];
-        ws2["!cols"] = [{wch:22},{wch:12},{wch:28},{wch:26},{wch:24},{wch:14},{wch:12}];
+        ws1["!cols"] = [{ wch: 20 }, { wch: 14 }, { wch: 16 }, { wch: 16 }];
+        ws2["!cols"] = [{ wch: 22 }, { wch: 12 }, { wch: 28 }, { wch: 26 }, { wch: 24 }, { wch: 14 }, { wch: 12 }];
         XLSX.utils.book_append_sheet(wb, ws1, "Resumen");
         XLSX.utils.book_append_sheet(wb, ws2, "Detalle");
         XLSX.writeFile(wb, fname);
@@ -584,15 +591,15 @@ export default {
         // Fallback: CSV doble (Resumen y Detalle)
         const csv = toCSV(resumen);
         const csv2 = toCSV(detalle);
-        downloadText(csv, fname.replace(/\.xlsx$/,"_resumen.csv"));
-        downloadText(csv2, fname.replace(/\.xlsx$/,"_detalle.csv"));
-        toast("CSV exportado (no se encontró XLSX) ✅","success");
+        downloadText(csv, fname.replace(/\.xlsx$/, "_resumen.csv"));
+        downloadText(csv2, fname.replace(/\.xlsx$/, "_detalle.csv"));
+        toast("CSV exportado (no se encontró XLSX) ✅", "success");
       }
     }
 
     // ====== Helpers ======
-    function round2(n){ return Math.round((Number(n)||0)*100)/100; }
-    function toCSV(arr){
+    function round2(n) { return Math.round((Number(n) || 0) * 100) / 100; }
+    function toCSV(arr) {
       if (!arr.length) return "";
       const headers = Object.keys(arr[0]);
       const lines = [headers.join(",")].concat(
@@ -601,38 +608,38 @@ export default {
       );
       return lines.join("\n");
     }
-    function csvEscape(v){
+    function csvEscape(v) {
       const s = String(v ?? "");
-      if (/[",\n]/.test(s)) return `"${s.replace(/"/g,'""')}"`;
+      if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
       return s;
     }
-    function downloadText(text, filename){
-      const blob = new Blob([text], {type:"text/csv;charset=utf-8;"});
+    function downloadText(text, filename) {
+      const blob = new Blob([text], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a"); a.href = url; a.download = filename; a.click();
-      setTimeout(()=>URL.revokeObjectURL(url), 500);
+      setTimeout(() => URL.revokeObjectURL(url), 500);
     }
 
-    function vehicleInfo(b){
+    function vehicleInfo(b) {
       const c = b.details?.cliente || b.cliente || {};
       const v = c.vehiculo || "";
       const m = c.modelo || "";
       const p = c.patente || "";
-      const parts = [v,m,p].filter(Boolean);
+      const parts = [v, m, p].filter(Boolean);
       return parts.length ? parts.join(" - ") : "No especificado";
     }
-    function isExpired(iso){
-      const d = new Date((iso||"").slice(0,10)+"T00:00:00");
-      const delta = Math.floor((Date.now() - d.getTime())/(1000*60*60*24));
+    function isExpired(iso) {
+      const d = new Date((iso || "").slice(0, 10) + "T00:00:00");
+      const delta = Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24));
       return delta > 30;
     }
-    function daysFrom(iso){
-      const d = new Date((iso||"").slice(0,10)+"T00:00:00");
-      return Math.floor((Date.now() - d.getTime())/(1000*60*60*24));
+    function daysFrom(iso) {
+      const d = new Date((iso || "").slice(0, 10) + "T00:00:00");
+      return Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24));
     }
 
-    function normalizeForPdf(b){
-      const subtotalNum = (b.items||[]).reduce((s,it)=> s+parseMoney(it.total), 0);
+    function normalizeForPdf(b) {
+      const subtotalNum = (b.items || []).reduce((s, it) => s + parseMoney(it.total), 0);
       return {
         numero: b.numero || "",
         fecha: (b.fecha || todayISO()),
@@ -648,7 +655,7 @@ export default {
           chasis: b.cliente?.chasis || ""
         },
         items: (b.items || []).map(x => ({
-          cantidad: Number(x.cantidad)||1,
+          cantidad: Number(x.cantidad) || 1,
           descripcion: x.descripcion || "-",
           unit: parseMoney(x.unit ?? x.precio),
           total: parseMoney(x.total)
@@ -661,42 +668,42 @@ export default {
     }
 
     // === Buckets ===
-    function bucket(d, mode){
+    function bucket(d, mode) {
       const y = d.getFullYear();
       const m = d.getMonth();
       const dd = d.getDate();
-      if (mode === "day"){
-        const key = `${y}-${String(m+1).padStart(2,"0")}-${String(dd).padStart(2,"0")}`;
+      if (mode === "day") {
+        const key = `${y}-${String(m + 1).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
         return { key, label: toDMY(key) };
       }
-      if (mode === "week"){
-        const {year, week, start, end} = isoWeek(d);
-        const key = `${year}-W${String(week).padStart(2,"0")}`;
-        const label = `Sem ${week} (${toDMY(start.toISOString().slice(0,10))}–${toDMY(end.toISOString().slice(0,10))})`;
+      if (mode === "week") {
+        const { year, week, start, end } = isoWeek(d);
+        const key = `${year}-W${String(week).padStart(2, "0")}`;
+        const label = `Sem ${week} (${toDMY(start.toISOString().slice(0, 10))}–${toDMY(end.toISOString().slice(0, 10))})`;
         return { key, label };
       }
-      if (mode === "month"){
-        const key = `${y}-${String(m+1).padStart(2,"0")}`;
+      if (mode === "month") {
+        const key = `${y}-${String(m + 1).padStart(2, "0")}`;
         const label = `${monthName(m)} ${y}`;
         return { key, label };
       }
       // year
       return { key: String(y), label: String(y) };
     }
-    function isoWeek(d){
+    function isoWeek(d) {
       const tmp = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
       const dayNum = tmp.getUTCDay() || 7;
       tmp.setUTCDate(tmp.getUTCDate() + 4 - dayNum);
-      const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(),0,1));
-      const weekNo = Math.ceil((((tmp - yearStart)/86400000) + 1)/7);
+      const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
+      const weekNo = Math.ceil((((tmp - yearStart) / 86400000) + 1) / 7);
       // start/end monday-sunday
-      const start = new Date(tmp); start.setUTCDate(tmp.getUTCDate() - (tmp.getUTCDay()||7) + 1);
-      const end = new Date(start); end.setUTCDate(start.getUTCDate()+6);
+      const start = new Date(tmp); start.setUTCDate(tmp.getUTCDate() - (tmp.getUTCDay() || 7) + 1);
+      const end = new Date(start); end.setUTCDate(start.getUTCDate() + 6);
       return { year: tmp.getUTCFullYear(), week: weekNo, start, end };
     }
 
     // === Bar chart (canvas nativo) ===
-    function drawBars(canvas, labels, values){
+    function drawBars(canvas, labels, values) {
       const dpr = window.devicePixelRatio || 1;
       const n = Math.max(labels.length, 1);
       const barW = 36; const gap = 16;
@@ -705,8 +712,8 @@ export default {
       const H = canvas.clientHeight || 200;
       canvas.width = W * dpr; canvas.height = H * dpr;
       const ctx = canvas.getContext("2d");
-      ctx.setTransform(dpr,0,0,dpr,0,0);
-      ctx.clearRect(0,0,W,H);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, W, H);
 
       // fondo
       ctx.fillStyle = "rgba(255,255,255,0.025)";
@@ -719,16 +726,16 @@ export default {
       const max = Math.max(...values, 1);
       // grid
       ctx.strokeStyle = "rgba(255,255,255,0.06)"; ctx.lineWidth = 1;
-      for(let i=1;i<=3;i++){
-        const y = padT + chartH * (i/4);
-        ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W-padR, y); ctx.stroke();
+      for (let i = 1; i <= 3; i++) {
+        const y = padT + chartH * (i / 4);
+        ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
       }
 
       // barras
       const step = chartW / n;
-      for(let i=0;i<n;i++){
+      for (let i = 0; i < n; i++) {
         const v = values[i] || 0;
-        const x = padL + i*step + (step - barW)/2;
+        const x = padL + i * step + (step - barW) / 2;
         const h = Math.max(2, v * chartH / max);
         const y = padT + chartH - h;
         ctx.fillStyle = "rgba(99,102,241,0.92)";
@@ -738,20 +745,20 @@ export default {
         ctx.fillStyle = "rgba(226,232,240,0.9)";
         ctx.font = "11px system-ui, -apple-system, Segoe UI, Roboto, Arial";
         const val = money(v);
-        if (h > 18) ctx.fillText(val, x + barW/2 - ctx.measureText(val).width/2, y - 4);
+        if (h > 18) ctx.fillText(val, x + barW / 2 - ctx.measureText(val).width / 2, y - 4);
       }
 
       // labels eje X
       ctx.fillStyle = "rgba(148,163,184,0.9)";
       ctx.font = "11px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-      labels.forEach((lab,i) => {
-        const x = padL + i*step + step/2;
+      labels.forEach((lab, i) => {
+        const x = padL + i * step + step / 2;
         const text = lab;
         const w = ctx.measureText(text).width;
         ctx.save();
         ctx.translate(x, H - 12);
-        ctx.rotate(-Math.PI/6); // -30°
-        ctx.fillText(text, -w/2, 0);
+        ctx.rotate(-Math.PI / 6); // -30°
+        ctx.fillText(text, -w / 2, 0);
         ctx.restore();
       });
 
@@ -762,9 +769,9 @@ export default {
       ctx.fillText(mStr, 6, padT + 8);
     }
 
-    function roundRect(ctx, x, y, w, h, r, fill, stroke){
-      if (typeof r === "number") r = {tl:r, tr:r, br:r, bl:r};
-      else r = Object.assign({tl:0,tr:0,br:0,bl:0}, r);
+    function roundRect(ctx, x, y, w, h, r, fill, stroke) {
+      if (typeof r === "number") r = { tl: r, tr: r, br: r, bl: r };
+      else r = Object.assign({ tl: 0, tr: 0, br: 0, bl: 0 }, r);
       ctx.beginPath();
       ctx.moveTo(x + r.tl, y);
       ctx.lineTo(x + w - r.tr, y);
@@ -782,7 +789,7 @@ export default {
 };
 
 // === UI helpers (cards)
-function kpi(icon, label, id, g="g-indigo"){
+function kpi(icon, label, id, g = "g-indigo") {
   return /*html*/`
   <div class="glass card ${g} p-3.5 flex items-center gap-3 min-h-[64px]">
     <div>${icon}</div>

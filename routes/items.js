@@ -13,13 +13,18 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
     try {
-        const { id, description, price, type, category, stock } = req.body;
+        const { id, name, description, cost, price, type, category, stock, code } = req.body;
         const newId = id || `prod_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+        // Mapping: name->description, cost->price.
+        // If code exists, append to description for now? e.g. "Code - Name"
+        const finalDesc = name ? (code ? `${code} - ${name}` : name) : description;
+        const finalPrice = cost !== undefined ? cost : (price || 0);
+
         await db.execute({
             sql: "INSERT INTO products (id, description, price, type, category, stock) VALUES (?, ?, ?, ?, ?, ?)",
-            args: [newId, description, price || 0, type || 'product', category || null, stock || 0]
+            args: [newId, finalDesc, finalPrice, type || 'product', category || null, stock || 0]
         });
-        res.json({ id: newId, description, price, type, category });
+        res.json({ id: newId, description: finalDesc, price: finalPrice, stock });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -27,10 +32,13 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
     try {
-        const { description, price, type, category, stock } = req.body;
+        const { name, description, cost, price, type, category, stock, code } = req.body;
+        const finalDesc = name ? (code ? `${code} - ${name}` : name) : description;
+        const finalPrice = cost !== undefined ? cost : (price || 0);
+
         await db.execute({
             sql: "UPDATE products SET description = ?, price = ?, type = ?, category = ?, stock = ? WHERE id = ?",
-            args: [description, price, type, category, stock, req.params.id]
+            args: [finalDesc, finalPrice, type, category, stock, req.params.id]
         });
         res.json({ success: true });
     } catch (err) {
