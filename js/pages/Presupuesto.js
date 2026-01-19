@@ -1208,7 +1208,12 @@ export default {
       try {
         localClients = await store.clients.list();
         selectId.innerHTML = `<option value="">Seleccionar cliente existente...</option>` +
-          localClients.map(c => `<option value="${c.id}">${c.name} — ${c.phone || "s/tel"}</option>`).join("");
+          localClients.map(c => {
+            const vInfo = (c.vehicles && c.vehicles.length)
+              ? ` [${c.vehicles.map(v => v.brand || v.vehiculo || "Vehículo").join(", ")}]`
+              : "";
+            return `<option value="${c.id}">${c.name} — ${c.phone || "s/tel"}${vInfo}</option>`;
+          }).join("");
         if (keepId) selectId.value = keepId;
         deleteClientBtn.disabled = !selectId.value;
       } catch (e) { console.error(e); toast("Error cargando clientes", "error"); }

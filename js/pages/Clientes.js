@@ -4,8 +4,8 @@ import store from "../store.js";
 const rid = (p = "id") => `${p}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
 
 export default {
-    render() {
-        return /*html*/`
+  render() {
+    return /*html*/`
 <section data-page="clients" class="space-y-6 text-[13px]">
   <div class="flex items-center justify-between">
     <h1 class="text-[18px] font-semibold leading-none">Clientes</h1>
@@ -32,7 +32,6 @@ export default {
             <th>Nombre</th>
             <th>Teléfono</th>
             <th>Email</th>
-            <th>Dirección</th>
             <th class="text-right">Vehículos</th>
             <th class="text-right">Acciones</th>
           </tr>
@@ -64,15 +63,9 @@ export default {
               <input name="phone" class="w-full px-2 py-1.5 rounded bg-white/5 border border-white/10 focus:border-indigo-500 outline-none">
             </div>
           </div>
-          <div class="grid sm:grid-cols-2 gap-3">
-            <div>
+          <div>
               <label class="block text-slate-400 text-xs mb-1">Email</label>
               <input name="email" type="email" class="w-full px-2 py-1.5 rounded bg-white/5 border border-white/10 focus:border-indigo-500 outline-none">
-            </div>
-            <div>
-              <label class="block text-slate-400 text-xs mb-1">Dirección</label>
-              <input name="address" class="w-full px-2 py-1.5 rounded bg-white/5 border border-white/10 focus:border-indigo-500 outline-none">
-            </div>
           </div>
 
           <!-- Sección Vehículos dentro del modal -->
@@ -98,55 +91,55 @@ export default {
 
 </section>
     `;
-    },
+  },
 
-    mount(root) {
-        // Refs
-        const q = root.querySelector("#q-clients");
-        const btnAdd = root.querySelector("#btn-add-client");
-        const tableBody = root.querySelector("#rows-clients");
-        const emptyMsg = root.querySelector("#empty-clients");
+  mount(root) {
+    // Refs
+    const q = root.querySelector("#q-clients");
+    const btnAdd = root.querySelector("#btn-add-client");
+    const tableBody = root.querySelector("#rows-clients");
+    const emptyMsg = root.querySelector("#empty-clients");
 
-        const modal = root.querySelector("#client-modal");
-        const form = root.querySelector("#client-form");
-        const modalTitle = root.querySelector("#modal-title");
-        const btnClose = root.querySelector("#client-close");
-        const btnCancel = root.querySelector("#client-cancel");
-        const btnSave = root.querySelector("#client-save");
+    const modal = root.querySelector("#client-modal");
+    const form = root.querySelector("#client-form");
+    const modalTitle = root.querySelector("#modal-title");
+    const btnClose = root.querySelector("#client-close");
+    const btnCancel = root.querySelector("#client-cancel");
+    const btnSave = root.querySelector("#client-save");
 
-        const btnAddVeh = root.querySelector("#btn-add-veh-modal");
-        const vehList = root.querySelector("#veh-list-modal");
+    const btnAddVeh = root.querySelector("#btn-add-veh-modal");
+    const vehList = root.querySelector("#veh-list-modal");
 
-        // State
-        let clients = [];
-        let currentVehicles = []; // {id, brand, model, Year, plate...} (temp in modal)
+    // State
+    let clients = [];
+    let currentVehicles = []; // {id, brand, model, Year, plate...} (temp in modal)
 
-        // Load
-        async function loadData() {
-            try {
-                clients = await store.clients.list();
-                renderTable();
-            } catch (e) { console.error(e); }
-        }
-        loadData();
+    // Load
+    async function loadData() {
+      try {
+        clients = await store.clients.list();
+        renderTable();
+      } catch (e) { console.error(e); }
+    }
+    loadData();
 
-        // Render Table
-        function renderTable() {
-            const term = (q.value || "").toLowerCase().trim();
-            const filtered = clients.filter(c =>
-                !term ||
-                c.name.toLowerCase().includes(term) ||
-                (c.email || "").toLowerCase().includes(term) ||
-                (c.phone || "").includes(term)
-            );
+    // Render Table
+    function renderTable() {
+      const term = (q.value || "").toLowerCase().trim();
+      const filtered = clients.filter(c =>
+        !term ||
+        c.name.toLowerCase().includes(term) ||
+        (c.email || "").toLowerCase().includes(term) ||
+        (c.phone || "").includes(term)
+      );
 
-            if (!filtered.length) {
-                tableBody.innerHTML = "";
-                emptyMsg.classList.remove("hidden");
-                return;
-            }
-            emptyMsg.classList.add("hidden");
-            tableBody.innerHTML = filtered.map(c => `
+      if (!filtered.length) {
+        tableBody.innerHTML = "";
+        emptyMsg.classList.remove("hidden");
+        return;
+      }
+      emptyMsg.classList.add("hidden");
+      tableBody.innerHTML = filtered.map(c => `
         <tr class="hover:bg-white/5">
           <td class="font-medium">${c.name}</td>
           <td>${c.phone || "-"}</td>
@@ -159,57 +152,57 @@ export default {
           </td>
         </tr>
       `).join("");
-        }
-        q.addEventListener("input", renderTable);
+    }
+    q.addEventListener("input", renderTable);
 
-        // Modal logic
-        function openModal(c = null) {
-            form.reset();
-            currentVehicles = c ? JSON.parse(JSON.stringify(c.vehicles || [])) : [];
-            if (c) {
-                modalTitle.textContent = "Editar Cliente";
-                form.cid.value = c.id;
-                form.name.value = c.name;
-                form.phone.value = c.phone || "";
-                form.email.value = c.email || "";
-                form.address.value = c.address || "";
-            } else {
-                modalTitle.textContent = "Nuevo Cliente";
-                form.cid.value = "";
-            }
-            renderVehiclesForm();
-            modal.classList.remove("hidden");
-            modal.classList.add("flex");
-        }
-        function closeModal() { modal.classList.add("hidden"); modal.classList.remove("flex"); }
+    // Modal logic
+    function openModal(c = null) {
+      form.reset();
+      currentVehicles = c ? JSON.parse(JSON.stringify(c.vehicles || [])) : [];
+      if (c) {
+        modalTitle.textContent = "Editar Cliente";
+        form.cid.value = c.id;
+        form.name.value = c.name;
+        form.phone.value = c.phone || "";
+        form.email.value = c.email || "";
+        form.address.value = c.address || "";
+      } else {
+        modalTitle.textContent = "Nuevo Cliente";
+        form.cid.value = "";
+      }
+      renderVehiclesForm();
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    }
+    function closeModal() { modal.classList.add("hidden"); modal.classList.remove("flex"); }
 
-        btnAdd.addEventListener("click", () => openModal(null));
-        btnClose.addEventListener("click", closeModal);
-        btnCancel.addEventListener("click", closeModal);
-        modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
+    btnAdd.addEventListener("click", () => openModal(null));
+    btnClose.addEventListener("click", closeModal);
+    btnCancel.addEventListener("click", closeModal);
+    modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
 
-        // Table Actions
-        tableBody.addEventListener("click", async (e) => {
-            const btn = e.target.closest("button[data-act]");
-            if (!btn) return;
-            const id = btn.dataset.id;
-            if (btn.dataset.act === "edit") {
-                const c = clients.find(x => x.id === id);
-                if (c) openModal(c);
-            }
-            if (btn.dataset.act === "del") {
-                if (!confirm("¿Eliminar cliente y sus vehículos?")) return;
-                try {
-                    await store.clients.remove(id);
-                    loadData();
-                    // toast success?
-                } catch (err) { console.error(err); alert("Error al eliminar"); }
-            }
-        });
+    // Table Actions
+    tableBody.addEventListener("click", async (e) => {
+      const btn = e.target.closest("button[data-act]");
+      if (!btn) return;
+      const id = btn.dataset.id;
+      if (btn.dataset.act === "edit") {
+        const c = clients.find(x => x.id === id);
+        if (c) openModal(c);
+      }
+      if (btn.dataset.act === "del") {
+        if (!confirm("¿Eliminar cliente y sus vehículos?")) return;
+        try {
+          await store.clients.remove(id);
+          loadData();
+          // toast success?
+        } catch (err) { console.error(err); alert("Error al eliminar"); }
+      }
+    });
 
-        // Vehicle Form List (Dynamic inputs)
-        function renderVehiclesForm() {
-            vehList.innerHTML = currentVehicles.map((v, i) => `
+    // Vehicle Form List (Dynamic inputs)
+    function renderVehiclesForm() {
+      vehList.innerHTML = currentVehicles.map((v, i) => `
         <div class="glass p-2 rounded flex flex-col gap-2 relative group">
           <div class="flex gap-2">
              <input placeholder="Marca/Vehículo" class="w-1/2 px-2 py-1 rounded bg-white/5 border border-white/10 text-xs" value="${v.brand || v.vehiculo || ""}" data-idx="${i}" data-field="brand">
@@ -225,55 +218,55 @@ export default {
           <button type="button" class="absolute top-1 right-1 text-rose-400 hover:text-rose-300 opacity-60 hover:opacity-100" data-del-veh="${i}"><i class="fas fa-times"></i></button>
         </div>
       `).join("");
-        }
-
-        btnAddVeh.addEventListener("click", () => {
-            currentVehicles.push({ id: rid("v"), brand: "", plate: "" }); // new ID
-            renderVehiclesForm();
-        });
-
-        vehList.addEventListener("click", (e) => {
-            const btn = e.target.closest("button[data-del-veh]");
-            if (btn) {
-                const idx = parseInt(btn.dataset.delVeh);
-                currentVehicles.splice(idx, 1);
-                renderVehiclesForm();
-            }
-        });
-
-        vehList.addEventListener("input", (e) => {
-            if (e.target.dataset.field) {
-                const idx = parseInt(e.target.dataset.idx);
-                const f = e.target.dataset.field;
-                currentVehicles[idx][f] = e.target.value;
-            }
-        });
-
-        // Save
-        btnSave.addEventListener("click", async (e) => {
-            e.preventDefault(); // in case of form submit
-            const data = {
-                name: form.name.value.trim(),
-                phone: form.phone.value.trim(),
-                email: form.email.value.trim(),
-                address: form.address.value.trim(),
-                vehicles: currentVehicles
-            };
-            if (!data.name) return alert("Nombre obligatorio");
-            if (!data.phone) return alert("Teléfono obligatorio");
-
-            try {
-                if (form.cid.value) {
-                    await store.clients.update(form.cid.value, data);
-                } else {
-                    await store.clients.create(data);
-                }
-                closeModal();
-                loadData();
-            } catch (err) {
-                console.error(err);
-                alert("Error al guardar cliente");
-            }
-        });
     }
+
+    btnAddVeh.addEventListener("click", () => {
+      currentVehicles.push({ id: rid("v"), brand: "", plate: "" }); // new ID
+      renderVehiclesForm();
+    });
+
+    vehList.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-del-veh]");
+      if (btn) {
+        const idx = parseInt(btn.dataset.delVeh);
+        currentVehicles.splice(idx, 1);
+        renderVehiclesForm();
+      }
+    });
+
+    vehList.addEventListener("input", (e) => {
+      if (e.target.dataset.field) {
+        const idx = parseInt(e.target.dataset.idx);
+        const f = e.target.dataset.field;
+        currentVehicles[idx][f] = e.target.value;
+      }
+    });
+
+    // Save
+    btnSave.addEventListener("click", async (e) => {
+      e.preventDefault(); // in case of form submit
+      const data = {
+        name: form.name.value.trim(),
+        phone: form.phone.value.trim(),
+        email: form.email.value.trim(),
+        address: form.address.value.trim(),
+        vehicles: currentVehicles
+      };
+      if (!data.name) return alert("Nombre obligatorio");
+      if (!data.phone) return alert("Teléfono obligatorio");
+
+      try {
+        if (form.cid.value) {
+          await store.clients.update(form.cid.value, data);
+        } else {
+          await store.clients.create(data);
+        }
+        closeModal();
+        loadData();
+      } catch (err) {
+        console.error(err);
+        alert("Error al guardar cliente");
+      }
+    });
+  }
 }
