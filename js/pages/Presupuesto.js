@@ -1745,8 +1745,18 @@ export default {
 
     // === Repuestos
     let tempParts = [];
-    const openParts = () => { partsModal.classList.remove("hidden"); resetParts(); };
-    const closeParts = () => { partsModal.classList.add("hidden"); resetParts(); };
+    const openParts = () => {
+      partsModal.classList.remove("hidden");
+      partsModal.classList.add("flex"); // Ensure centering logic works
+      document.body.style.overflow = "hidden"; // Lock scroll
+      resetParts();
+    };
+    const closeParts = () => {
+      partsModal.classList.add("hidden");
+      partsModal.classList.remove("flex");
+      document.body.style.overflow = ""; // Unlock scroll
+      resetParts();
+    };
     partsBtn.addEventListener("click", openParts);
     closePartsModal.addEventListener("click", closeParts);
     cancelPartsBtn.addEventListener("click", closeParts);
@@ -1830,8 +1840,18 @@ export default {
     }
     let drawing = false, last = null;
     const pos = (ev, canvas) => { const r = canvas.getBoundingClientRect(); const x = (ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left; const y = (ev.touches ? ev.touches[0].clientY : ev.clientY) - r.top; return { x, y }; };
-    function showSign() { signModal.classList.remove("hidden"); resizeSignCanvas(); loadSignatureToEdit(); }
-    function hideSign() { signModal.classList.add("hidden"); }
+    function showSign() {
+      signModal.classList.remove("hidden");
+      signModal.classList.add("flex");
+      document.body.style.overflow = "hidden";
+      resizeSignCanvas();
+      loadSignatureToEdit();
+    }
+    function hideSign() {
+      signModal.classList.add("hidden");
+      signModal.classList.remove("flex");
+      document.body.style.overflow = "";
+    }
     function clearSignature() { signCtx.clearRect(0, 0, signCanvas.width, signCanvas.height); }
     function saveSignature() {
       const data = signCanvas.toDataURL("image/png"); localStorage.setItem("digital_signature", data);

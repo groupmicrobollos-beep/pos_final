@@ -480,8 +480,14 @@ export default {
       else modalPdf.classList.add("hidden");
       modal.classList.remove("hidden");
       modal.classList.add("flex");
+      document.body.style.overflow = "hidden"; // Lock scroll
     }
-    function closeDetail() { modal.classList.add("hidden"); modal.classList.remove("flex"); current = null; }
+    function closeDetail() {
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+      document.body.style.overflow = ""; // Unlock scroll
+      current = null;
+    }
     modalClose.addEventListener("click", closeDetail);
     modal.addEventListener("click", (e) => { if (e.target === modal) closeDetail(); });
     if (modalPrint) modalPrint.addEventListener("click", () => { if (current) simplePrint(current); });

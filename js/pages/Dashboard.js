@@ -326,7 +326,7 @@ export default {
       }
       emptyEl && emptyEl.classList.add("hidden");
       container.innerHTML = list.slice(0, 8).map(b => {
-        return `<div class="flex items-center justify-between"><div class="truncate"><strong>${b.numero}</strong> — ${String(b.cliente || 'Sin nombre').slice(0, 36)}</div><div class="text-right">${money(b.total)}</div></div>`;
+        return `<div class="flex items-center justify-between"><div class="truncate"><strong>${b.numero}</strong> — ${(b.cliente?.nombre || b.cliente || 'Sin nombre').slice(0, 36)}</div><div class="text-right">${money(b.total)}</div></div>`;
       }).join("");
       if (totalEl) totalEl.textContent = money(list.reduce((s, b) => s + parseMoney(b.total), 0));
     }
@@ -349,7 +349,7 @@ export default {
           <tr class="hover:bg-white/5">
             <td class="font-medium">${b.numero}</td>
             <td>${toDMY(b.fecha)}</td>
-            <td class="max-w-[260px] truncate">${b.cliente || "Sin nombre"}</td>
+            <td class="max-w-[260px] truncate">${b.cliente?.nombre || b.cliente || "Sin nombre"}</td>
             <td class="font-medium text-right">${money(b.total)}</td>
             <td><span class="badge ${expired ? "status-expired" : "status-active"}">${expired ? "Vencido" : "Vigente"}</span></td>
             <td class="text-right whitespace-nowrap">
