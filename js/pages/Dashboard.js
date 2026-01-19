@@ -253,7 +253,17 @@ export default {
     // ===== Datos =====
     async function loadBudgets() {
       try {
-        const list = await budgetsService.list();
+        // Parallel fetch: budgets + branches
+        const [list, branches] = await Promise.all([
+          budgetsService.list(),
+          fetch("/api/branches").then(r => r.ok ? r.json() : []).catch(() => [])
+        ]);
+
+        if (branches.length) {
+          localStorage.setItem(CFG_BRANCHES_KEY, JSON.stringify(branches));
+          paintBranchFilter(); // Pinta el select con nombres reales
+        }
+
         budgets = list.map(s => ({ ...s, details: s.details || null }));
       } catch (e) {
         console.error("Dashboard load error", e);

@@ -315,7 +315,17 @@ export default {
     // ====== Load + Filters + Aggregation ======
     async function load() {
       try {
-        const list = await budgetsService.list();
+        // Cargar presupuestos y sucursales (para tener nombres frescos)
+        const [list, branches] = await Promise.all([
+          budgetsService.list(),
+          fetch("/api/branches").then(r => r.ok ? r.json() : []).catch(() => [])
+        ]);
+
+        if (branches.length) {
+          CFG_BRANCHES = branches;
+          paintBranchesFilter(); // Refrescar select con nombres reales
+        }
+
         all = list.map(s => ({ ...s, details: s.details || null }));
       } catch (e) {
         console.error("Reports load error", e);
@@ -430,7 +440,7 @@ export default {
             <tr class="hover:bg-white/5">
               <td class="font-medium">${b.numero}</td>
               <td>${toDMY(b.fecha)}</td>
-              <td class="max-w-[260px] truncate">${b.cliente || "Sin nombre"}</td>
+              <td class="max-w-[260px] truncate">${b.cliente?.nombre || b.cliente || "Sin nombre"}</td>
               <td class="max-w-[260px] truncate">${veh}</td>
               <td>${suc}</td>
               <td class="text-right font-medium">${b.total}</td>
