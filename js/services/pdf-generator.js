@@ -71,10 +71,14 @@ window.generateBudgetPDF = async function (data) {
     // Asegurar que no sea undefined
     const emailInfo = data.company?.email || "";
     const phoneInfo = data.company?.phone || "";
+    const cuitInfo = data.company?.cuit || data.sucursalCuit || "20-21581927-3"; // Hardcoded fallback requested by user
     const contact = [phoneInfo, emailInfo].filter(Boolean).join(" | ");
 
     doc.text(address, textX, y + 18);
     doc.text(contact, textX, y + 23);
+    doc.setFont("helvetica", "bold");
+    doc.text(`CUIT: ${cuitInfo}`, textX, y + 28);
+    doc.setFont("helvetica", "normal");
 
     // Título Documento (Derecha del header)
     doc.setFontSize(16);

@@ -1603,11 +1603,6 @@ export default {
     }
 
 
-    // Selección de servicios predefinidos
-    ["input", "change"].forEach(ev => {
-      serviceQuantity.addEventListener(ev, updateConfirmBtn);
-      serviceCost.addEventListener(ev, updateConfirmBtn);
-    });
 
     // Selección de servicios predefinidos
     othersModal.addEventListener("click", (e) => {
