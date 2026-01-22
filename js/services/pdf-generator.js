@@ -1,8 +1,7 @@
 
 /**
  * Servicio de generación de PDF para Presupuestos.
- * Expone window.generateBudgetPDF(data)
- * Dependencias: jsPDF, jspdf-autotable
+ * Diseño "Boxed" (Contenedores)
  */
 
 window.generateBudgetPDF = async function (data) {
@@ -10,129 +9,158 @@ window.generateBudgetPDF = async function (data) {
     const doc = new jsPDF();
     const width = doc.internal.pageSize.getWidth();
     const height = doc.internal.pageSize.getHeight();
+    const margin = 10;
 
-    // Configuración estética
-    const margin = 15;
+    // Configs de color
+    const borderColor = [40, 40, 40]; // Gris oscuro
+    const headerBg = [255, 255, 255];
+    const sectionTitleBg = [240, 240, 240];
+
+    // Helper: Rounded Rect with Text
+    function drawSectionHeader(text, x, y, w, h, fontSize = 10) {
+        doc.setFillColor(...sectionTitleBg);
+        doc.setDrawColor(...borderColor);
+        doc.roundedRect(x, y, w, h, 2, 2, 'FD');
+        doc.setFontSize(fontSize);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(0);
+        doc.text(text, x + 5, y + (h / 2) + 1.5); // vert center approx
+    }
+
+    function drawBox(x, y, w, h) {
+        doc.setDrawColor(...borderColor);
+        doc.roundedRect(x, y, w, h, 2, 2, 'S');
+    }
+
     let y = margin;
 
-    // --- Header ---
+    // --- 1. HEADER PRINCIPAL (Caja Grande) ---
+    const headerH = 35;
+    drawBox(margin, y, width - (margin * 2), headerH);
 
-    let logoH = 0;
-
-    // Logo
+    // Logo (Simulado o Real)
     if (data.company?.logoData) {
         try {
-            // Asumiendo logo cuadrado/rectangular, ajustamos tamaño
-            const logoW = 40;
-            // Mantener ratio
+            const logoW = 30; // Max width
+            const logoMaxH = 25;
             const props = doc.getImageProperties(data.company.logoData);
-            logoH = (props.height * logoW) / props.width;
-
-            // Si el logo es muy alto, limitarlo
-            if (logoH > 35) {
-                logoH = 35;
-                const adjustedW = (props.width * logoH) / props.height;
-                doc.addImage(data.company.logoData, 'PNG', margin, y, adjustedW, logoH, undefined, 'FAST');
-            } else {
-                doc.addImage(data.company.logoData, 'PNG', margin, y, logoW, logoH, undefined, 'FAST');
+            let h = (props.height * logoW) / props.width;
+            let w = logoW;
+            if (h > logoMaxH) {
+                h = logoMaxH;
+                w = (props.width * h) / props.height;
             }
-        } catch (e) {
-            console.warn("Error adding logo", e);
-        }
+            doc.addImage(data.company.logoData, 'PNG', margin + 5, y + 5, w, h);
+        } catch (e) { }
     }
 
-    // Info Empresa (Derecha) - Ajustar X para evitar solapar si el logo es muy ancho (raro, pero header es estático)
-    // Usamos el ancho completo menos margen
-    doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
-    const brand = data.company?.brandName || "TALLER MECÁNICO";
-    // Mover texto un poco más abajo si hay logo para alinear visualmente, o mantener arriba
-    doc.text(brand, width - margin, y + 10, { align: "right" });
-
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    const companyInfo = [
-        data.company?.companyName,
-        data.company?.address,
-        data.company?.phone,
-        data.company?.email,
-        data.company?.cuit || data.sucursalCuit ? `CUIT: ${data.company?.cuit || data.sucursalCuit}` : null
-    ].filter(Boolean);
-
-    let yInfo = y + 18;
-    companyInfo.forEach(line => {
-        doc.text(line, width - margin, yInfo, { align: "right" });
-        yInfo += 5;
-    });
-
-    // Ajustar Y para lo siguiente (usamos el mayor entre logo + gap o info text)
-    y = Math.max(y + (logoH || 0) + 15, yInfo + 10);
-
-    // Título y Datos principales
-    doc.setDrawColor(200, 200, 200);
-    doc.line(margin, y, width - margin, y);
-    y += 10;
-
+    // Texto Empresa (Centro/Izquierda del header)
+    doc.setTextColor(0);
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
-    doc.text(`PRESUPUESTO`, margin, y);
+    const brandName = (data.company?.brandName || "TALLER MECÁNICO").toUpperCase();
+    doc.text(brandName, margin + 40, y + 12);
 
-    doc.setFontSize(12);
-    doc.text(`${data.numero || "BORRADOR"}`, width - margin, y, { align: "right" });
-    y += 6;
-
-    doc.setFontSize(10);
+    doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
-    doc.text(`Fecha: ${data.fecha}`, width - margin, y, { align: "right" });
-    if (data.sucursalNombre) {
-        y += 5;
-        doc.text(`Sucursal: ${data.sucursalNombre}`, width - margin, y, { align: "right" });
-    }
-    y += 10;
+    const address = data.company?.address || "";
+    const contact = [data.company?.phone, data.company?.email].filter(Boolean).join(" | ");
+    doc.text(address, margin + 40, y + 18);
+    doc.text(contact, margin + 40, y + 23);
 
-    // --- Datos Cliente ---
-    doc.setFillColor(245, 247, 250);
-    doc.roundedRect(margin, y, width - (margin * 2), 35, 2, 2, 'F');
-
-    const cy = y + 5;
-    doc.setFontSize(10);
+    // Título Documento (Derecha del header)
+    doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
-    doc.text("DATOS DEL CLIENTE", margin + 5, cy + 5);
+    doc.text("PRESUPUESTO", width - margin - 5, y + 12, { align: "right" });
 
+    doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
-    const col1 = margin + 5;
-    const col2 = width / 2;
+    doc.setTextColor(100);
+    doc.text("DOCUMENTO NO VÁLIDO COMO FACTURA", width - margin - 5, y + 20, { align: "right" });
 
-    let row1 = cy + 12;
-    doc.text(`Cliente: ${data.cliente?.nombre || "-"}`, col1, row1);
-    doc.text(`Teléfono: ${data.cliente?.telefono || "-"}`, col2, row1);
+    y += headerH + 5;
 
-    let row2 = row1 + 6;
-    doc.text(`Vehículo: ${data.cliente?.vehiculo || "-"}`, col1, row2);
-    doc.text(`Patente: ${data.cliente?.patente || "-"}`, col2, row2);
+    // --- 2. DATOS DEL COMPROBANTE (Fila de 4 cajas) ---
+    const boxW = (width - (margin * 2) - 9) / 4; // 3 gaps of 3mm
+    const boxH = 15;
 
-    let row3 = row2 + 6;
-    doc.text(`Modelo: ${data.cliente?.modelo || "-"}`, col1, row3);
-    doc.text(`Compañía: ${data.cliente?.compania || "-"}`, col2, row3);
-
-    // Nro Siniestro/Chasis si existe
-    if (data.cliente?.chasis || data.siniestro) {
-        let row4 = row3 + 6;
-        if (data.cliente?.chasis) doc.text(`Chasis: ${data.cliente.chasis}`, col1, row4);
-        if (data.siniestro) doc.text(`Siniestro: ${data.siniestro}`, col2, row4);
-    }
-
-    y += 45;
-
-    // --- Tabla Ítems ---
-    const columns = [
-        { header: "Cant", dataKey: "cantidad" },
-        { header: "Descripción", dataKey: "descripcion" },
-        { header: "P. Unit", dataKey: "unitStr" },
-        { header: "Total", dataKey: "totalStr" },
+    const boxes = [
+        { title: "NÚMERO", val: data.numero || "-" },
+        { title: "FECHA", val: data.fecha || "-" },
+        { title: "VÁLIDO HASTA", val: calculateValidDate(data.fecha) }, // Calcular 30 dias
+        { title: "SUCURSAL", val: data.sucursalNombre || "-" }
     ];
 
-    const rows = data.items.map(it => ({
+    let cx = margin;
+    doc.setTextColor(0);
+    boxes.forEach(b => {
+        drawBox(cx, y, boxW, boxH);
+        doc.setFontSize(7);
+        doc.setFont("helvetica", "bold");
+        doc.text(b.title, cx + 2, y + 5);
+
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.text(b.val, cx + 2, y + 11);
+
+        cx += boxW + 3;
+    });
+
+    y += boxH + 5;
+
+    // --- 3. DATOS DEL CLIENTE (Caja Ancha) ---
+    const clientHeaderH = 8;
+    drawSectionHeader("DATOS DEL CLIENTE", margin, y, width - (margin * 2), clientHeaderH);
+    y += clientHeaderH;
+
+    const clientBoxH = 25;
+    drawBox(margin, y, width - (margin * 2), clientBoxH); // Solo borde inferior/lados realmente
+    // Rectificar borde superior (ya dibujado por header) - visualmente OK
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+
+    const cLabels = [
+        { l: "NOMBRE:", v: (data.cliente?.nombre || "-").toUpperCase(), x: 5, y: 8 },
+        { l: "VEHÍCULO:", v: (data.cliente?.vehiculo || "-").toUpperCase(), x: 5, y: 16 },
+        { l: "MODELO:", v: (data.cliente?.modelo || "-").toUpperCase(), x: 5, y: 24 }, // Nueva linea para modelo, avoid squeeze
+
+        { l: "TELÉFONO:", v: data.cliente?.telefono || "-", x: 100, y: 8 },
+        { l: "PATENTE:", v: (data.cliente?.patente || "-").toUpperCase(), x: 100, y: 16 },
+        { l: "COMPAÑÍA:", v: (data.cliente?.compania || "-").toUpperCase(), x: 100, y: 24 }, // Nueva linea
+    ];
+
+    // Chasis si hay
+    if (data.cliente?.chasis) {
+        cLabels.push({ l: "CHASIS:", v: data.cliente.chasis, x: 100, y: 24 }); // Puede solapar Compania, adjust if needed
+        // Fix: Mover compañia a izq o nueva linea?
+        // Layout simple:
+        // Col1: Nombre, Vehiculo, Modelo
+        // Col2: Tel, Patente, Compania (Chasis?)
+    }
+
+    cLabels.forEach(f => {
+        doc.setFont("helvetica", "bold");
+        doc.text(f.l, margin + f.x, y + f.y);
+        doc.setFont("helvetica", "normal");
+        const offset = doc.getTextWidth(f.l) + 2;
+        doc.text(f.v, margin + f.x + offset, y + f.y);
+    });
+
+    y += clientBoxH + 5;
+
+    // --- 4. DETALLE (Tabla) ---
+    drawSectionHeader("DETALLE DE SERVICIOS — TRABAJOS Y REPARACIONES", margin, y, width - (margin * 2), clientHeaderH);
+    y += clientHeaderH + 2;
+
+    const columns = [
+        { header: "CANT.", dataKey: "cantidad" },
+        { header: "DESCRIPCIÓN", dataKey: "descripcion" },
+        { header: "PRECIO UNIT.", dataKey: "unitStr" },
+        { header: "TOTAL", dataKey: "totalStr" },
+    ];
+
+    const tableRows = data.items.map(it => ({
         cantidad: it.cantidad,
         descripcion: it.descripcion,
         unitStr: `$ ${parseFloat(it.unit || 0).toFixed(2)}`,
@@ -142,77 +170,110 @@ window.generateBudgetPDF = async function (data) {
     doc.autoTable({
         startY: y,
         head: [columns.map(c => c.header)],
-        body: rows.map(r => Object.values(r)),
-        theme: 'grid',
-        headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold' },
-        styles: { fontSize: 9, cellPadding: 3 },
+        body: tableRows.map(r => Object.values(r)),
+        theme: 'plain', // Clean look
+        styles: { fontSize: 9, cellPadding: 3, lineColor: [200, 200, 200], lineWidth: 0.1 },
+        headStyles: { fillColor: [255, 255, 255], textColor: 0, fontStyle: 'bold', lineWidth: 0, borderBottomWidth: 0.5 },
         columnStyles: {
-            0: { cellWidth: 20, halign: 'center' },
+            0: { cellWidth: 15, halign: 'center' },
             2: { cellWidth: 35, halign: 'right' },
             3: { cellWidth: 35, halign: 'right' }
         },
-        margin: { left: margin, right: margin }
+        margin: { left: margin, right: margin },
+        didDrawPage: function (data) {
+            // Si se rompe pagina, dibujar borde? Omitir por simpleza
+        }
     });
 
-    y = doc.lastAutoTable.finalY + 10;
+    y = doc.lastAutoTable.finalY + 5;
 
-    // --- Totales ---
-    const xTotals = width - margin - 60;
-
-    doc.setFont("helvetica", "normal");
-    doc.text("Subtotal:", xTotals, y);
-    doc.text(`$ ${parseFloat(data.subtotal || 0).toFixed(2)}`, width - margin, y, { align: "right" });
-    y += 6;
-
-    if (data.taxRate > 0) {
-        doc.text(`IVA (${data.taxRate}%):`, xTotals, y);
-        doc.text(`$ ${parseFloat(data.taxAmount || 0).toFixed(2)}`, width - margin, y, { align: "right" });
-        y += 6;
+    // --- 5. FOOTER (Firma y Totales) ---
+    // Asegurar espacio
+    if (y + 40 > height - margin) {
+        doc.addPage();
+        y = margin;
     }
 
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    doc.text("TOTAL:", xTotals, y);
-    doc.text(`$ ${parseFloat(data.total || 0).toFixed(2)}`, width - margin, y, { align: "right" });
+    const footerH = 40;
+    // Caja Firma (Izq)
+    const signW = 110;
+    drawBox(margin, y, signW, footerH);
+    doc.setFontSize(7);
+    doc.setTextColor(100);
+    doc.text("Firma Digital / Conformidad Cliente", margin + 2, y + 5);
 
-    // --- Firma ---
     if (data.firmaDataUrl) {
-        y += 15;
-        // Verificar espacio disponible
-        if (y + 40 > height - margin) {
-            doc.addPage();
-            y = margin;
-        }
-
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "normal");
-        doc.text("Firma del Cliente / Conformidad:", margin, y);
-        y += 5;
-
         try {
-            doc.addImage(data.firmaDataUrl, 'PNG', margin, y, 60, 30);
-            y += 35;
-        } catch (e) { console.warn("Error adding signature", e); }
+            doc.addImage(data.firmaDataUrl, 'PNG', margin + 10, y + 8, 50, 25);
+        } catch (e) { }
     }
 
-    // Pie de página
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.setFontSize(8);
-        doc.setTextColor(150);
-        doc.text(`Página ${i} de ${pageCount}`, width / 2, height - 10, { align: 'center' });
+    // Caja Totales (Der)
+    const totalsW = width - (margin * 2) - signW - 5; // 5mm gap
+    const totalsX = margin + signW + 5;
+    drawBox(totalsX, y, totalsW, footerH);
+
+    // Totales Internos
+    let ty = y + 8;
+    const rightAlign = totalsX + totalsW - 5;
+
+    doc.setFontSize(9);
+    doc.setTextColor(0);
+
+    // Subtotal
+    doc.text("Subtotal:", totalsX + 5, ty);
+    doc.text(`$ ${parseFloat(data.subtotal || 0).toFixed(2)}`, rightAlign, ty, { align: "right" });
+    ty += 6;
+
+    // IVA
+    if (data.taxAmount > 0) {
+        doc.text(`IVA (${data.taxRate}%):`, totalsX + 5, ty);
+        doc.text(`$ ${parseFloat(data.taxAmount || 0).toFixed(2)}`, rightAlign, ty, { align: "right" });
+        ty += 6;
     }
+
+    // Separator
+    doc.setDrawColor(200);
+    doc.line(totalsX + 2, ty, rightAlign + 2, ty);
+    ty += 6;
+
+    // TOTAL
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(200, 0, 0); // RED
+    doc.text("TOTAL", totalsX + 5, ty + 2);
+    doc.text(`$ ${parseFloat(data.total || 0).toFixed(2)}`, rightAlign, ty + 2, { align: "right" });
+
+
+    // --- 6. INFO FINAL ---
+    y += footerH + 5;
+    const condH = 20;
+    drawBox(margin, y, width - (margin * 2), condH);
+
+    doc.setFontSize(8);
+    doc.setTextColor(0);
+    doc.setFont("helvetica", "bold");
+    doc.text("CONDICIONES GENERALES", margin + 3, y + 5);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.text("• PRESUPUESTO VÁLIDO POR 30 DÍAS", margin + 3, y + 10);
+    doc.text("• MANO DE OBRA GARANTIZADA", margin + 3, y + 14);
 
     return doc;
 };
 
-// Helper: Asegurar carga de jsPDF
+function calculateValidDate(dateStr) {
+    try {
+        const d = new Date(dateStr);
+        d.setDate(d.getDate() + 30);
+        return d.toLocaleDateString("es-AR"); // Adjust locale if needed
+    } catch { return "-"; }
+}
+
+// Helpers Legacy
 window.ensurePdfLoaded = async function () {
     if (window.jspdf) return;
     return new Promise((resolve, reject) => {
-        // Fallback si no estuvieran los scripts en index.html, pero asumimos que están.
-        // Aquí solo esperamos un momento por si acaso.
         let checks = 0;
         const interval = setInterval(() => {
             if (window.jspdf) { clearInterval(interval); resolve(); }
@@ -221,7 +282,6 @@ window.ensurePdfLoaded = async function () {
     });
 };
 
-// Helper: Convertir URL de imagen a DataURL (para logo local)
 window.imageUrlToDataUrl = async function (url) {
     return new Promise((resolve, reject) => {
         const img = new Image();

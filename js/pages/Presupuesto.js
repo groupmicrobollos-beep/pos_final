@@ -1584,6 +1584,19 @@ export default {
       const hasCost = parseFloat(serviceCost.value) > 0;
       confirmServiceBtn.disabled = !(hasService && hasCost);
     }
+    // Sync status/done UI immediately
+    if (selStatus && budgetDone) {
+      budgetDone.addEventListener("change", () => {
+        if (budgetDone.checked) selStatus.value = "realizado";
+        else if (selStatus.value === "realizado") selStatus.value = "pendiente";
+      });
+      selStatus.addEventListener("change", () => {
+        if (selStatus.value === "realizado") budgetDone.checked = true;
+        else budgetDone.checked = false;
+      });
+    }
+
+    // Selección de servicios predefinidos
     ["input", "change"].forEach(ev => {
       serviceQuantity.addEventListener(ev, updateConfirmBtn);
       serviceCost.addEventListener(ev, updateConfirmBtn);
