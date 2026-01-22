@@ -17,24 +17,37 @@ window.generateBudgetPDF = async function (data) {
 
     // --- Header ---
 
+    let logoH = 0;
+
     // Logo
     if (data.company?.logoData) {
         try {
             // Asumiendo logo cuadrado/rectangular, ajustamos tamaño
             const logoW = 40;
-            const logoH = 20; // Aproximado, idealmente leer ratio
-            doc.addImage(data.company.logoData, 'PNG', margin, y, logoW, logoH, undefined, 'FAST');
-            // No incrementamos Y aun, escribimos info a la derecha
+            // Mantener ratio
+            const props = doc.getImageProperties(data.company.logoData);
+            logoH = (props.height * logoW) / props.width;
+
+            // Si el logo es muy alto, limitarlo
+            if (logoH > 35) {
+                logoH = 35;
+                const adjustedW = (props.width * logoH) / props.height;
+                doc.addImage(data.company.logoData, 'PNG', margin, y, adjustedW, logoH, undefined, 'FAST');
+            } else {
+                doc.addImage(data.company.logoData, 'PNG', margin, y, logoW, logoH, undefined, 'FAST');
+            }
         } catch (e) {
             console.warn("Error adding logo", e);
         }
     }
 
-    // Info Empresa (Derecha)
+    // Info Empresa (Derecha) - Ajustar X para evitar solapar si el logo es muy ancho (raro, pero header es estático)
+    // Usamos el ancho completo menos margen
     doc.setFontSize(18);
     doc.setFont("helvetica", "bold");
     const brand = data.company?.brandName || "TALLER MECÁNICO";
-    doc.text(brand, width - margin, y + 8, { align: "right" });
+    // Mover texto un poco más abajo si hay logo para alinear visualmente, o mantener arriba
+    doc.text(brand, width - margin, y + 10, { align: "right" });
 
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
@@ -46,14 +59,14 @@ window.generateBudgetPDF = async function (data) {
         data.company?.cuit || data.sucursalCuit ? `CUIT: ${data.company?.cuit || data.sucursalCuit}` : null
     ].filter(Boolean);
 
-    let yInfo = y + 14;
+    let yInfo = y + 18;
     companyInfo.forEach(line => {
         doc.text(line, width - margin, yInfo, { align: "right" });
         yInfo += 5;
     });
 
-    // Ajustar Y para lo siguiente
-    y = Math.max(y + 25, yInfo + 10);
+    // Ajustar Y para lo siguiente (usamos el mayor entre logo + gap o info text)
+    y = Math.max(y + (logoH || 0) + 15, yInfo + 10);
 
     // Título y Datos principales
     doc.setDrawColor(200, 200, 200);

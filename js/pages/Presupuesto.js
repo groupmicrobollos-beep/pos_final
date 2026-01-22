@@ -521,170 +521,139 @@ export default {
   render() {
     return /*html*/ `
       <section data-page="budget" class="space-y-4">
-        <!-- Estilado local de opciones del select para legibilidad -->
+        <!-- Estilado local para selects en glassmorphism -->
         <style>
+          /* Fix específico para opciones de select en modo oscuro/glass */
           [data-page="budget"] select option {
-             background-color: var(--color-bg-card, #0f172a);
-             color: var(--color-text, #f1f5f9);
+             background-color: var(--color-bg-card);
+             color: var(--color-text);
           }
-          [data-page="budget"] .glass { 
-             background: var(--color-bg-card, rgba(30, 41, 59, 0.7)); 
-             backdrop-filter: blur(10px);
-             border: 1px solid var(--color-border, rgba(255,255,255,0.1));
-          }
-          /* Ensure inputs and selects inside glass match theme */
-          [data-page="budget"] input, 
-          [data-page="budget"] select, 
-          [data-page="budget"] textarea {
-             background-color: transparent; 
-             color: var(--color-text, #f1f5f9);
-             border-color: var(--color-border, rgba(255,255,255,0.1));
-          }
-          /* If creating new inputs with white background, force them to theme */
-          [data-page="budget"] input:not([type="checkbox"]),
-          [data-page="budget"] select, 
-          [data-page="budget"] textarea {
-             background-color: var(--color-bg-input, rgba(255,255,255,0.05));
-          }
-
-          /* Labels and helper text */
-          [data-page="budget"] label span,
-          [data-page="budget"] .text-slate-300,
-          [data-page="budget"] .text-slate-400 {
-             color: var(--color-text-muted, #94a3b8) !important;
-          }
-
-          [data-page="budget"] h1,
-          [data-page="budget"] .font-medium,
-          [data-page="budget"] strong {
-             color: var(--color-text, #f8fafc) !important;
-          }
-
-          @media print { .print-only{ display:block !important } }
+          /* Placeholder de firma */
+          .signature-placeholder { pointer-events: none; margin-top: -50px; position: relative; z-index: 10; }
         </style>
 
-        <h1 class="text-2xl font-semibold">Presupuesto</h1>
+        <h1 class="text-2xl font-semibold text-main">Presupuesto</h1>
 
         <!-- Información del Presupuesto -->
         <div class="glass rounded-xl p-4 space-y-3">
-          <div class="font-medium">Información del Presupuesto</div>
+          <div class="font-medium text-main">Información del Presupuesto</div>
           <div class="grid md:grid-cols-3 gap-3 budget-info-row">
             <label class="text-sm relative z-50 overflow-visible">
-              <span class="block mb-1 text-slate-300">Sucursal:</span>
+              <span class="block mb-1 text-muted-custom">Sucursal:</span>
               <select id="sucursal"
-                class="w-full h-10 px-3 rounded bg-slate-900 text-slate-100 border border-white/10
+                class="w-full h-10 px-3 rounded surface text-main border border-white/10
                        focus:outline-none focus:ring focus:ring-indigo-500/40">
                 <option value="">Seleccionar sucursal...</option>
               </select>
             </label>
             <label class="text-sm">
-              <span class="block mb-1 text-slate-300">Usuario responsable:</span>
-              <select id="budget-user" class="w-full h-10 px-3 rounded bg-white/10 border border-white/10 text-slate-100">
+              <span class="block mb-1 text-muted-custom">Usuario responsable:</span>
+              <select id="budget-user" class="w-full h-10 px-3 rounded surface border border-white/10 text-main">
                 <option value="">(Asignar usuario)</option>
               </select>
             </label>
             <label class="text-sm">
-              <span class="block mb-1 text-slate-300">Estado:</span>
-              <select id="budget-status" class="w-full h-10 px-3 rounded bg-white/10 border border-white/10 text-slate-100">
+              <span class="block mb-1 text-muted-custom">Estado:</span>
+              <select id="budget-status" class="w-full h-10 px-3 rounded surface border border-white/10 text-main">
                 <option value="pendiente">Pendiente (solo presupuesto)</option>
                 <option value="realizado">Realizado (vehículo llevado)</option>
               </select>
             </label>
             <label class="text-sm flex items-center gap-2">
-              <input id="budget-done" type="checkbox" class="h-4 w-4 rounded" />
-              <span class="block mb-1 text-slate-300">Hecho</span>
+              <input id="budget-done" type="checkbox" class="h-4 w-4 rounded accent-emerald-500" />
+              <span class="block mb-1 text-muted-custom">Hecho</span>
             </label>
             <label class="text-sm">
-              <span class="block mb-1 text-slate-300">Número de Presupuesto:</span>
+              <span class="block mb-1 text-muted-custom">Número de Presupuesto:</span>
               <input id="budget-number" type="text" readonly placeholder="Selecciona una sucursal"
-                class="w-full h-10 px-3 rounded bg-white/10 border border-white/10">
+                class="w-full h-10 px-3 rounded surface border border-white/10 text-main">
             </label>
             <label class="text-sm">
-              <span class="block mb-1 text-slate-300">Fecha:</span>
-              <input id="budget-date" type="date" readonly class="w-full h-10 px-3 rounded bg-white/10 border border-white/10">
+              <span class="block mb-1 text-muted-custom">Fecha:</span>
+              <input id="budget-date" type="date" readonly class="w-full h-10 px-3 rounded surface border border-white/10 text-main">
             </label>
           </div>
         </div>
 
         <!-- Datos del Cliente -->
         <div class="glass rounded-xl p-4 space-y-5">
-          <div class="font-medium">Datos del Cliente</div>
+          <div class="font-medium text-main">Datos del Cliente</div>
 
           <div class="grid md:grid-cols-[1fr_auto] gap-3 items-end">
             <label class="text-sm relative z-40">
-              <span class="block mb-1 text-slate-300">Cliente Existente:</span>
-              <select id="existing-client" class="w-full h-10 px-3 rounded bg-white/10 border border-white/10 text-slate-100">
+              <span class="block mb-1 text-muted-custom">Cliente Existente:</span>
+              <select id="existing-client" class="w-full h-10 px-3 rounded surface border border-white/10 text-main">
                 <option value="">Seleccionar cliente existente...</option>
               </select>
             </label>
               <div class="flex gap-2">
-              <button id="new-client-btn" class="px-3 py-2 rounded bg-white/10 hover:bg-white/20"><i class="fas fa-user-tie" aria-hidden="true"></i> Nuevo Cliente</button>
-              <button id="delete-client-btn" class="px-3 py-2 rounded bg-rose-700/80 hover:bg-rose-700 disabled:opacity-40" disabled><i class="fas fa-trash" aria-hidden="true"></i> Eliminar Cliente</button>
+              <button id="new-client-btn" class="px-3 py-2 rounded surface hover:bg-white/20 text-main"><i class="fas fa-user-tie" aria-hidden="true"></i> Nuevo Cliente</button>
+              <button id="delete-client-btn" class="px-3 py-2 rounded bg-rose-700/80 hover:bg-rose-700 disabled:opacity-40"><i class="fas fa-trash" aria-hidden="true"></i> Eliminar Cliente</button>
             </div>
           </div>
 
           <div class="grid md:grid-cols-2 gap-3">
             <label class="text-sm">
-              <span class="block mb-1 text-slate-300">Nombre o Razón Social *</span>
-              <input id="nombre" class="w-full h-10 px-3 rounded bg-white/10 border border-white/10" />
+              <span class="block mb-1 text-muted-custom">Nombre o Razón Social *</span>
+              <input id="nombre" class="w-full h-10 px-3 rounded surface border border-white/10 text-main" />
             </label>
             <label class="text-sm">
-              <span class="block mb-1 text-slate-300">Teléfono *</span>
-              <input id="telefono" class="w-full h-10 px-3 rounded bg-white/10 border border-white/10" />
+              <span class="block mb-1 text-muted-custom">Teléfono *</span>
+              <input id="telefono" class="w-full h-10 px-3 rounded surface border border-white/10 text-main" />
             </label>
             <label class="text-sm">
-              <span class="block mb-1 text-slate-300">Email</span>
-              <input id="email" type="email" class="w-full h-10 px-3 rounded bg-white/10 border border-white/10" placeholder="cliente@email.com" />
+              <span class="block mb-1 text-muted-custom">Email</span>
+              <input id="email" type="email" class="w-full h-10 px-3 rounded surface border border-white/10 text-main" placeholder="cliente@email.com" />
             </label>
           </div>
 
           <!-- Bloque: vehículos del cliente -->
           <div id="client-vehicles-block" class="hidden">
-            <div class="font-medium mt-3 mb-2">Vehículos del cliente</div>
+            <div class="font-medium mt-3 mb-2 text-main">Vehículos del cliente</div>
             <div class="flex flex-wrap gap-2 items-end">
               <label class="text-sm flex-1 min-w-[240px] relative z-40">
-                <span class="block mb-1 text-slate-300">Seleccionar vehículo</span>
-                <select id="client-vehicle" class="w-full h-10 px-3 rounded bg-white/10 border border-white/10 text-slate-100">
+                <span class="block mb-1 text-muted-custom">Seleccionar vehículo</span>
+                <select id="client-vehicle" class="w-full h-10 px-3 rounded surface border border-white/10 text-main">
                   <option value="">(Sin seleccionar)</option>
                 </select>
               </label>
               <button id="add-vehicle-btn" class="px-3 py-2 rounded bg-emerald-600/80 hover:bg-emerald-600"><i class="fas fa-car-side" aria-hidden="true"></i> Añadir vehículo</button>
               <button id="delete-vehicle-btn" class="px-3 py-2 rounded bg-rose-700/80 hover:bg-rose-700 disabled:opacity-40" disabled><i class="fas fa-trash" aria-hidden="true"></i> Eliminar vehículo</button>
             </div>
-            <div class="text-xs text-slate-400 mt-1" id="vehicle-hint">Seleccioná un vehículo para rellenar el formulario de abajo, o usá “+ Añadir vehículo”.</div>
+            <div class="text-xs text-muted-custom mt-1" id="vehicle-hint">Seleccioná un vehículo para rellenar el formulario de abajo, o usá “+ Añadir vehículo”.</div>
           </div>
 
           <!-- Información del Vehículo (form de edición / creación) -->
           <div class="space-y-3 mt-2">
-            <div class="font-medium text-slate-200">Información del Vehículo</div>
+            <div class="font-medium text-main">Información del Vehículo</div>
             <div class="grid md:grid-cols-2 gap-3">
               <label class="text-sm">
-                <span class="block mb-1 text-slate-300">Vehículo *</span>
-                <input id="vehiculo" placeholder="Marca y Modelo (ej: Fiat Palio)" class="w-full h-10 px-3 rounded bg-white/10 border border-white/10" />
+                <span class="block mb-1 text-muted-custom">Vehículo *</span>
+                <input id="vehiculo" placeholder="Marca y Modelo (ej: Fiat Palio)" class="w-full h-10 px-3 rounded surface border border-white/10 text-main" />
               </label>
               <label class="text-sm">
-                <span class="block mb-1 text-slate-300">Patente *</span>
-                <input id="patente" placeholder="Patente (ej: AAA111)" class="w-full h-10 px-3 rounded bg-white/10 border border-white/10" />
+                <span class="block mb-1 text-muted-custom">Patente *</span>
+                <input id="patente" placeholder="Patente (ej: AAA111)" class="w-full h-10 px-3 rounded surface border border-white/10 text-main" />
               </label>
             </div>
             <div class="grid md:grid-cols-2 gap-3">
               <label class="text-sm">
-                <span class="block mb-1 text-slate-300">Año del Modelo</span>
-                <input id="modelo" type="number" min="1900" max="2030" class="w-full h-10 px-3 rounded bg-white/10 border border-white/10" />
+                <span class="block mb-1 text-muted-custom">Año del Modelo</span>
+                <input id="modelo" type="number" min="1900" max="2030" class="w-full h-10 px-3 rounded surface border border-white/10 text-main" />
               </label>
               <label class="text-sm">
-                <span class="block mb-1 text-slate-300">Compañía de Seguro</span>
-                <input id="compania" class="w-full h-10 px-3 rounded bg-white/10 border border-white/10" />
+                <span class="block mb-1 text-muted-custom">Compañía de Seguro</span>
+                <input id="compania" class="w-full h-10 px-3 rounded surface border border-white/10 text-main" />
               </label>
             </div>
             <div class="grid md:grid-cols-2 gap-3">
               <label class="text-sm">
-                <span class="block mb-1 text-slate-300">Número de Chasis</span>
-                <input id="chasis" class="w-full h-10 px-3 rounded bg-white/10 border border-white/10" />
+                <span class="block mb-1 text-muted-custom">Número de Chasis</span>
+                <input id="chasis" class="w-full h-10 px-3 rounded surface border border-white/10 text-main" />
               </label>
               <label class="text-sm">
-                <span class="block mb-1 text-slate-300">Nro. Siniestro</span>
-                <input id="siniestro-input" class="w-full h-10 px-3 rounded bg-white/10 border border-white/10" placeholder="Opcional" />
+                <span class="block mb-1 text-muted-custom">Nro. Siniestro</span>
+                <input id="siniestro-input" class="w-full h-10 px-3 rounded surface border border-white/10 text-main" placeholder="Opcional" />
               </label>
             </div>
 
@@ -756,18 +725,18 @@ export default {
         </div>
 
         <!-- Modal: Añadir Item -->
-    <div id="add-item-modal"
+        <div id="add-item-modal"
              class="fixed inset-0 z-[1000] hidden flex items-center justify-center bg-black/60 p-4">
-          <div class="bg-slate-900 border border-white/10 rounded-xl w-[min(92vw,900px)] max-h-[90vh] overflow-y-auto p-4">
+          <div class="surface rounded-xl w-[min(92vw,900px)] max-h-[90vh] overflow-y-auto p-4">
             <div class="flex items-center justify-between">
-              <h2 class="text-lg font-semibold"><i class="fas fa-plus" aria-hidden="true"></i> Añadir Nuevo Ítem</h2>
-              <button class="close-modal px-2 py-1 rounded hover:bg-white/10"><i class="fas fa-times" aria-hidden="true"></i></button>
+              <h2 class="text-lg font-semibold text-main"><i class="fas fa-plus" aria-hidden="true"></i> Añadir Nuevo Ítem</h2>
+              <button class="close-modal px-2 py-1 rounded hover:bg-white/10 text-main"><i class="fas fa-times" aria-hidden="true"></i></button>
             </div>
               <div class="mt-4 space-y-5">
               <div class="grid md:grid-cols-2 gap-4">
                 <label class="text-sm block">
-                  <span class="block mb-1 text-slate-300">Piezas del Vehículo</span>
-                  <select id="part" class="w-full h-10 px-3 rounded bg-white/10 border border-white/10">
+                  <span class="block mb-1 text-muted-custom">Piezas del Vehículo</span>
+                  <select id="part" class="w-full h-10 px-3 rounded surface border border-white/10 text-main">
                     <option value="">Seleccionar pieza...</option>
                     <option>Paragolpes Delantero</option><option>Paragolpes Trasero</option>
                     <option>Puerta Delantera Izquierda</option><option>Puerta Delantera Derecha</option>
@@ -780,16 +749,16 @@ export default {
                   </select>
                   <div id="custom-part-container" class="mt-2 hidden">
                     <div class="flex gap-2">
-                      <input id="custom-part-input" class="flex-1 h-10 px-3 rounded bg-white/10 border border-white/10" placeholder="Escriba la pieza..." />
-                      <button id="add-custom-part" class="px-3 py-2 rounded bg-emerald-600/80 hover:bg-emerald-600"><i class="fas fa-plus" aria-hidden="true"></i> Agregar</button>
+                      <input id="custom-part-input" class="flex-1 h-10 px-3 rounded surface border border-white/10 text-main" placeholder="Escriba la pieza..." />
+                      <button id="add-custom-part" class="px-3 py-2 rounded bg-emerald-600/80 hover:bg-emerald-600 text-white"><i class="fas fa-plus" aria-hidden="true"></i> Agregar</button>
                     </div>
-                    <div id="custom-parts-list" class="mt-2 text-xs text-slate-400"></div>
+                    <div id="custom-parts-list" class="mt-2 text-xs text-muted-custom"></div>
                   </div>
                 </label>
 
                 <label class="text-sm block">
-                  <span class="block mb-1 text-slate-300">Tipo de Trabajo</span>
-                  <select id="work" class="w-full h-10 px-3 rounded bg-white/10 border border-white/10">
+                  <span class="block mb-1 text-muted-custom">Tipo de Trabajo</span>
+                  <select id="work" class="w-full h-10 px-3 rounded surface border border-white/10 text-main">
                     <option value="">Seleccionar trabajo...</option>
                     <option>Pintura Completa</option><option>Pintura Parcial</option>
                     <option>Chapa y Pintura</option><option>Desabolladura</option>
@@ -799,24 +768,24 @@ export default {
                   </select>
                   <div id="custom-work-container" class="mt-2 hidden">
                     <div class="flex gap-2">
-                      <input id="custom-work-input" class="flex-1 h-10 px-3 rounded bg-white/10 border border-white/10" placeholder="Escriba el trabajo..." />
-                      <button id="add-custom-work" class="px-3 py-2 rounded bg-emerald-600/80 hover:bg-emerald-600"><i class="fas fa-plus" aria-hidden="true"></i> Agregar</button>
+                      <input id="custom-work-input" class="flex-1 h-10 px-3 rounded surface border border-white/10 text-main" placeholder="Escriba el trabajo..." />
+                      <button id="add-custom-work" class="px-3 py-2 rounded bg-emerald-600/80 hover:bg-emerald-600 text-white"><i class="fas fa-plus" aria-hidden="true"></i> Agregar</button>
                     </div>
-                    <div id="custom-works-list" class="mt-2 text-xs text-slate-400"></div>
+                    <div id="custom-works-list" class="mt-2 text-xs text-muted-custom"></div>
                   </div>
                 </label>
               </div>
 
               <label class="text-sm block">
-                <span class="block mb-1 text-slate-300">Costo del Trabajo (ARS)</span>
-                <input id="work-cost" type="number" min="0" step="0.01" class="w-full h-10 px-3 rounded bg-white/10 border border-white/10" placeholder="0.00">
+                <span class="block mb-1 text-muted-custom">Costo del Trabajo (ARS)</span>
+                <input id="work-cost" type="number" min="0" step="0.01" class="w-full h-10 px-3 rounded surface border border-white/10 text-main" placeholder="0.00">
               </label>
 
               <div>
-                <div class="text-sm font-medium mb-1">Opciones</div>
+                <div class="text-sm font-medium mb-1 text-main">Opciones</div>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
                   ${["Cambiar Pieza", "Reparar", "Pintar", "Desabollar"].map(t => `
-                    <label class="flex items-center gap-2 bg-white/5 rounded px-3 py-2">
+                    <label class="flex items-center gap-2 surface rounded px-3 py-2 text-main border border-white/10">
                       <input type="checkbox" class="accent-indigo-500"><span>${t}</span>
                     </label>
                   `).join("")}
@@ -825,8 +794,8 @@ export default {
             </div>
 
               <div class="mt-4 flex justify-end gap-2">
-              <button class="btn-secondary close-modal px-3 py-2 rounded bg-white/10 hover:bg-white/20"><i class="fas fa-times" aria-hidden="true"></i> Cancelar</button>
-              <button id="confirm-add" class="btn-primary px-3 py-2 rounded bg-indigo-600/80 hover:bg-indigo-600"><i class="fas fa-plus" aria-hidden="true"></i> Añadir ítem</button>
+              <button class="btn-secondary close-modal px-3 py-2 rounded surface hover:bg-white/20 text-main"><i class="fas fa-times" aria-hidden="true"></i> Cancelar</button>
+              <button id="confirm-add" class="btn-primary px-3 py-2 rounded bg-indigo-600/80 hover:bg-indigo-600 text-white"><i class="fas fa-plus" aria-hidden="true"></i> Añadir ítem</button>
             </div>
           </div>
         </div>
@@ -834,16 +803,16 @@ export default {
         <!-- Modal: Otros Trabajos -->
         <div id="other-services-modal"
              class="fixed inset-0 z-[1000] hidden flex items-center justify-center bg-black/60 p-4">
-          <div class="bg-slate-900 border border-white/10 rounded-xl w-[min(92vw,980px)] max-h-[90vh] overflow-y-auto p-4">
+          <div class="surface rounded-xl w-[min(92vw,980px)] max-h-[90vh] overflow-y-auto p-4">
             <div class="flex items-center justify-between">
-              <h2 class="text-lg font-semibold"><i class="fas fa-tools" aria-hidden="true"></i> Otros Trabajos y Servicios</h2>
-              <button id="close-services-modal" class="px-2 py-1 rounded hover:bg-white/10"><i class="fas fa-times" aria-hidden="true"></i></button>
+              <h2 class="text-lg font-semibold text-main"><i class="fas fa-tools" aria-hidden="true"></i> Otros Trabajos y Servicios</h2>
+              <button id="close-services-modal" class="px-2 py-1 rounded hover:bg-white/10 text-main"><i class="fas fa-times" aria-hidden="true"></i></button>
             </div>
 
             <div class="mt-4 grid md:grid-cols-2 gap-4">
               <!-- Servicios disponibles -->
               <div class="glass rounded-lg p-3">
-                <h3 class="font-medium mb-2">Servicios Disponibles</h3>
+                <h3 class="font-medium mb-2 text-main">Servicios Disponibles</h3>
                 <div class="grid grid-cols-2 sm:grid-cols-3 gap-2" id="services-grid">
                   ${[
         ["desmontaje-montaje", "<i class=\"fas fa-wrench\" aria-hidden=\"true\"></i>", "Desmontaje/Montaje"],
@@ -856,7 +825,7 @@ export default {
         ["diagnostico", "<i class=\"fas fa-search\" aria-hidden=\"true\"></i>", "Diagnóstico"],
         ["otro-predef", "<i class=\"fas fa-plus\" aria-hidden=\"true\"></i>", "Otro (rápido)"]
       ].map(([key, icon, label]) => `
-                    <button class="service-item w-full text-left bg-white/5 hover:bg-white/10 rounded px-3 py-2" data-service="${key}">
+                    <button class="service-item w-full text-left bg-white/5 hover:bg-white/10 rounded px-3 py-2 text-main border border-white/5" data-service="${key}">
                       <div class="text-xl">${icon}</div>
                       <div class="text-sm">${label}</div>
                     </button>
@@ -864,38 +833,38 @@ export default {
                 </div>
 
                 <div class="mt-4">
-                  <h4 class="font-medium mb-1">Servicios Personalizados</h4>
+                  <h4 class="font-medium mb-1 text-main">Servicios Personalizados</h4>
                   <div class="flex gap-2">
-                    <input id="custom-service-name" class="flex-1 h-10 px-3 rounded bg-white/10 border border-white/10" placeholder="Nombre del servicio personalizado">
-                    <button id="add-custom-service" class="px-3 py-2 rounded bg-emerald-600/80 hover:bg-emerald-600"><i class="fas fa-plus" aria-hidden="true"></i> Agregar</button>
+                    <input id="custom-service-name" class="flex-1 h-10 px-3 rounded surface border border-white/10 text-main" placeholder="Nombre del servicio personalizado">
+                    <button id="add-custom-service" class="px-3 py-2 rounded bg-emerald-600/80 hover:bg-emerald-600 text-white"><i class="fas fa-plus" aria-hidden="true"></i> Agregar</button>
                   </div>
-                  <div id="custom-services-list" class="mt-2 grid sm:grid-cols-2 gap-2 text-sm"></div>
+                  <div id="custom-services-list" class="mt-2 grid sm:grid-cols-2 gap-2 text-sm text-main"></div>
                 </div>
               </div>
 
               <!-- Formulario del servicio elegido -->
               <div class="glass rounded-lg p-3">
-                <h3 class="font-medium mb-2">Detalles del Servicio</h3>
+                <h3 class="font-medium mb-2 text-main">Detalles del Servicio</h3>
                 <div class="grid grid-cols-2 gap-3">
                   <label class="text-sm block">
-                    <span class="block mb-1 text-slate-300">Cantidad</span>
-                    <input id="service-quantity" type="number" min="1" value="1" class="w-full h-10 px-3 rounded bg-white/10 border border-white/10">
+                    <span class="block mb-1 text-muted-custom">Cantidad</span>
+                    <input id="service-quantity" type="number" min="1" value="1" class="w-full h-10 px-3 rounded surface border border-white/10 text-main">
                   </label>
                   <label class="text-sm block">
-                    <span class="block mb-1 text-slate-300">Costo (ARS)</span>
-                    <input id="service-cost" type="number" min="0" step="0.01" class="w-full h-10 px-3 rounded bg-white/10 border border-white/10">
+                    <span class="block mb-1 text-muted-custom">Costo (ARS)</span>
+                    <input id="service-cost" type="number" min="0" step="0.01" class="w-full h-10 px-3 rounded surface border border-white/10 text-main">
                   </label>
                 </div>
                 <label class="text-sm block mt-3">
-                  <span class="block mb-1 text-slate-300">Descripción adicional (opcional)</span>
-                  <textarea id="service-description" rows="3" class="w-full px-3 py-2 rounded bg-white/10 border border-white/10" placeholder="Detalles extra..."></textarea>
+                  <span class="block mb-1 text-muted-custom">Descripción adicional (opcional)</span>
+                  <textarea id="service-description" rows="3" class="w-full px-3 py-2 rounded surface border border-white/10 text-main" placeholder="Detalles extra..."></textarea>
                 </label>
               </div>
             </div>
 
             <div class="mt-4 flex justify-end gap-2">
-              <button id="cancel-service" class="px-3 py-2 rounded bg-white/10 hover:bg-white/20"><i class="fas fa-times" aria-hidden="true"></i> Cancelar</button>
-              <button id="confirm-service" class="px-3 py-2 rounded bg-indigo-600/80 hover:bg-indigo-600" disabled><i class="fas fa-plus" aria-hidden="true"></i> Agregar al presupuesto</button>
+              <button id="cancel-service" class="px-3 py-2 rounded surface hover:bg-white/20 text-main"><i class="fas fa-times" aria-hidden="true"></i> Cancelar</button>
+              <button id="confirm-service" class="px-3 py-2 rounded bg-indigo-600/80 hover:bg-indigo-600 text-white" disabled><i class="fas fa-plus" aria-hidden="true"></i> Agregar al presupuesto</button>
             </div>
           </div>
         </div>
@@ -903,58 +872,58 @@ export default {
         <!-- Modal: Repuestos -->
         <div id="parts-modal"
              class="fixed inset-0 z-[1000] hidden flex items-center justify-center bg-black/60 p-4">
-          <div class="bg-slate-900 border border-white/10 rounded-xl w-[min(92vw,980px)] max-h-[90vh] overflow-y-auto p-4">
+          <div class="surface rounded-xl w-[min(92vw,980px)] max-h-[90vh] overflow-y-auto p-4">
             <div class="flex items-center justify-between">
-                    <h2 class="text-lg font-semibold"><i class="fas fa-cogs" aria-hidden="true"></i> Repuestos</h2>
-                    <button id="close-parts-modal" class="px-2 py-1 rounded hover:bg-white/10"><i class="fas fa-times" aria-hidden="true"></i></button>
+                    <h2 class="text-lg font-semibold text-main"><i class="fas fa-cogs" aria-hidden="true"></i> Repuestos</h2>
+                    <button id="close-parts-modal" class="px-2 py-1 rounded hover:bg-white/10 text-main"><i class="fas fa-times" aria-hidden="true"></i></button>
                   </div>
 
             <div class="mt-4 grid md:grid-cols-2 gap-4">
               <!-- Formulario -->
               <div class="glass rounded-lg p-3">
-                <h3 class="font-medium mb-2">Formulario</h3>
+                <h3 class="font-medium mb-2 text-main">Formulario</h3>
                 <label class="text-sm block">
-                  <span class="block mb-1 text-slate-300">Nombre del repuesto</span>
-                  <input id="part-name" class="w-full h-10 px-3 rounded bg-white/10 border border-white/10" placeholder="Ej: Farol delantero">
+                  <span class="block mb-1 text-muted-custom">Nombre del repuesto</span>
+                  <input id="part-name" class="w-full h-10 px-3 rounded surface border border-white/10 text-main" placeholder="Ej: Farol delantero">
                 </label>
                 <div class="grid grid-cols-2 gap-3 mt-3">
                   <label class="text-sm block">
-                    <span class="block mb-1 text-slate-300">Cantidad</span>
-                    <input id="part-quantity" type="number" min="1" value="1" class="w-full h-10 px-3 rounded bg-white/10 border border-white/10">
+                    <span class="block mb-1 text-muted-custom">Cantidad</span>
+                    <input id="part-quantity" type="number" min="1" value="1" class="w-full h-10 px-3 rounded surface border border-white/10 text-main">
                   </label>
                   <label class="text-sm block">
-                    <span class="block mb-1 text-slate-300">Precio (ARS)</span>
-                    <input id="part-price" type="number" min="0" step="0.01" class="w-full h-10 px-3 rounded bg-white/10 border border-white/10">
+                    <span class="block mb-1 text-muted-custom">Precio (ARS)</span>
+                    <input id="part-price" type="number" min="0" step="0.01" class="w-full h-10 px-3 rounded surface border border-white/10 text-main">
                   </label>
                 </div>
                 <label class="text-sm block mt-3">
-                  <span class="block mb-1 text-slate-300">Descripción adicional (opcional)</span>
-                  <textarea id="part-description" rows="2" class="w-full px-3 py-2 rounded bg-white/10 border border-white/10" placeholder="Detalles adicionales del repuesto"></textarea>
+                  <span class="block mb-1 text-muted-custom">Descripción adicional (opcional)</span>
+                  <textarea id="part-description" rows="2" class="w-full px-3 py-2 rounded surface border border-white/10 text-main" placeholder="Detalles adicionales del repuesto"></textarea>
                 </label>
                 <div class="flex items-center justify-between mt-3">
-                  <div class="text-sm">Total ítem: <span id="part-total" class="font-medium">$0.00</span></div>
+                  <div class="text-sm text-main">Total ítem: <span id="part-total" class="font-medium">$0.00</span></div>
                   <div class="flex gap-2">
-                    <button id="add-part" class="px-3 py-2 rounded bg-emerald-600/80 hover:bg-emerald-600" disabled><i class="fas fa-plus" aria-hidden="true"></i> Agregar repuesto</button>
-                    <button id="clear-part-form" class="px-3 py-2 rounded bg-white/10 hover:bg-white/20"><i class="fas fa-broom" aria-hidden="true"></i> Limpiar</button>
+                    <button id="add-part" class="px-3 py-2 rounded bg-emerald-600/80 hover:bg-emerald-600 text-white" disabled><i class="fas fa-plus" aria-hidden="true"></i> Agregar repuesto</button>
+                    <button id="clear-part-form" class="px-3 py-2 rounded surface hover:bg-white/20 text-main"><i class="fas fa-broom" aria-hidden="true"></i> Limpiar</button>
                   </div>
                 </div>
               </div>
 
               <!-- Vista previa -->
               <div class="glass rounded-lg p-3">
-                <h3 class="font-medium mb-2">Repuestos a agregar <span id="parts-count" class="text-slate-400">(0)</span></h3>
+                <h3 class="font-medium mb-2 text-main">Repuestos a agregar <span id="parts-count" class="text-muted-custom">(0)</span></h3>
                 <div id="parts-preview" class="space-y-2 text-sm">
-                  <div class="text-slate-400">No hay repuestos agregados aún</div>
+                  <div class="text-muted-custom">No hay repuestos agregados aún</div>
                 </div>
-                <div class="mt-3 text-right text-sm">
+                <div class="mt-3 text-right text-sm text-main">
                   Total de repuestos: <span id="parts-total-amount" class="font-medium">$0.00</span>
                 </div>
               </div>
             </div>
 
             <div class="mt-4 flex justify-end gap-2">
-                    <button id="cancel-parts" class="px-3 py-2 rounded bg-white/10 hover:bg-white/20"><i class="fas fa-times" aria-hidden="true"></i> Cancelar</button>
-                    <button id="confirm-parts" class="px-3 py-2 rounded bg-indigo-600/80 hover:bg-indigo-600"><i class="fas fa-plus" aria-hidden="true"></i> Agregar al presupuesto</button>
+                    <button id="cancel-parts" class="px-3 py-2 rounded surface hover:bg-white/20 text-main"><i class="fas fa-times" aria-hidden="true"></i> Cancelar</button>
+                    <button id="confirm-parts" class="px-3 py-2 rounded bg-indigo-600/80 hover:bg-indigo-600 text-white"><i class="fas fa-plus" aria-hidden="true"></i> Agregar al presupuesto</button>
                   </div>
           </div>
         </div>
@@ -962,17 +931,17 @@ export default {
         <!-- Modal: Firma digital -->
         <div id="signature-modal"
              class="fixed inset-0 z-[1000] hidden flex items-center justify-center bg-black/60 p-4">
-          <div class="bg-slate-900 border border-white/10 rounded-xl w-[min(92vw,720px)] max-h-[90vh] overflow-y-auto p-4">
+          <div class="surface border border-white/10 rounded-xl w-[min(92vw,720px)] max-h-[90vh] overflow-y-auto p-4">
             <div class="flex items-center justify-between">
-              <div class="font-medium">Firma Digital</div>
-              <button id="close-signature" class="px-2 py-1 rounded hover:bg-white/10"><i class="fas fa-times" aria-hidden="true"></i></button>
+              <div class="font-medium text-main">Firma Digital</div>
+              <button id="close-signature" class="px-2 py-1 rounded hover:bg-white/10 text-main"><i class="fas fa-times" aria-hidden="true"></i></button>
             </div>
             <div class="mt-3 glass rounded-lg p-2">
-              <canvas id="signature-canvas-modal" class="w-full h-60 bg-slate-950 rounded"></canvas>
+              <canvas id="signature-canvas-modal" class="w-full h-60 surface rounded"></canvas>
             </div>
             <div class="mt-3 flex justify-end gap-2">
-              <button id="clear-signature" class="px-3 py-2 rounded bg-white/10 hover:bg-white/20"><i class="fas fa-broom" aria-hidden="true"></i> Limpiar</button>
-              <button id="save-signature" class="px-3 py-2 rounded bg-indigo-600/80 hover:bg-indigo-600"><i class="fas fa-save" aria-hidden="true"></i> Guardar firma</button>
+              <button id="clear-signature" class="px-3 py-2 rounded surface hover:bg-white/20 text-main"><i class="fas fa-broom" aria-hidden="true"></i> Limpiar</button>
+              <button id="save-signature" class="px-3 py-2 rounded bg-indigo-600/80 hover:bg-indigo-600 text-white"><i class="fas fa-save" aria-hidden="true"></i> Guardar firma</button>
             </div>
           </div>
         </div>
@@ -980,13 +949,13 @@ export default {
         <!-- Modal: Confirmar eliminación de vehículo -->
         <div id="confirm-del-veh-modal"
              class="fixed inset-0 z-[1000] hidden flex items-center justify-center bg-black/60">
-          <div class="bg-slate-900 border border-white/10 rounded-xl w-[min(92vw,560px)] p-4">
-            <h2 class="text-lg font-semibold">Eliminar vehículo</h2>
-            <p class="mt-2 text-slate-300">¿Seguro que querés eliminar este vehículo? <strong>La acción no es reversible.</strong></p>
-            <div id="del-veh-summary" class="mt-2 text-sm text-slate-400"></div>
+          <div class="surface border border-white/10 rounded-xl w-[min(92vw,560px)] p-4">
+            <h2 class="text-lg font-semibold text-main">Eliminar vehículo</h2>
+            <p class="mt-2 text-muted-custom">¿Seguro que querés eliminar este vehículo? <strong>La acción no es reversible.</strong></p>
+            <div id="del-veh-summary" class="mt-2 text-sm text-muted-custom"></div>
             <div class="mt-4 flex justify-end gap-2">
-              <button id="cancel-del-veh" class="px-3 py-2 rounded bg-white/10 hover:bg-white/20"><i class="fas fa-times" aria-hidden="true"></i> Cancelar</button>
-              <button id="confirm-del-veh" class="px-3 py-2 rounded bg-rose-700/80 hover:bg-rose-700"><i class="fas fa-trash" aria-hidden="true"></i> Eliminar</button>
+              <button id="cancel-del-veh" class="px-3 py-2 rounded surface hover:bg-white/20 text-main"><i class="fas fa-times" aria-hidden="true"></i> Cancelar</button>
+              <button id="confirm-del-veh" class="px-3 py-2 rounded bg-rose-700/80 hover:bg-rose-700 text-white"><i class="fas fa-trash" aria-hidden="true"></i> Eliminar</button>
             </div>
           </div>
         </div>
@@ -994,13 +963,13 @@ export default {
         <!-- Modal: Confirmar eliminación de cliente -->
         <div id="confirm-del-cli-modal"
              class="fixed inset-0 z-[1000] hidden flex items-center justify-center bg-black/60">
-          <div class="bg-slate-900 border border-white/10 rounded-xl w-[min(92vw,560px)] p-4">
-            <h2 class="text-lg font-semibold">Eliminar cliente</h2>
-            <p class="mt-2 text-slate-300">¿Seguro que querés eliminar este cliente y <strong>todos sus vehículos</strong>? <strong>La acción no es irreversible.</strong></p>
-            <div id="del-cli-summary" class="mt-2 text-sm text-slate-400"></div>
+          <div class="surface border border-white/10 rounded-xl w-[min(92vw,560px)] p-4">
+            <h2 class="text-lg font-semibold text-main">Eliminar cliente</h2>
+            <p class="mt-2 text-muted-custom">¿Seguro que querés eliminar este cliente y <strong>todos sus vehículos</strong>? <strong>La acción no es irreversible.</strong></p>
+            <div id="del-cli-summary" class="mt-2 text-sm text-muted-custom"></div>
             <div class="mt-4 flex justify-end gap-2">
-              <button id="cancel-del-cli" class="px-3 py-2 rounded bg-white/10 hover:bg-white/20"><i class="fas fa-times" aria-hidden="true"></i> Cancelar</button>
-              <button id="confirm-del-cli" class="px-3 py-2 rounded bg-rose-700/80 hover:bg-rose-700"><i class="fas fa-trash" aria-hidden="true"></i> Eliminar cliente</button>
+              <button id="cancel-del-cli" class="px-3 py-2 rounded surface hover:bg-white/20 text-main"><i class="fas fa-times" aria-hidden="true"></i> Cancelar</button>
+              <button id="confirm-del-cli" class="px-3 py-2 rounded bg-rose-700/80 hover:bg-rose-700 text-white"><i class="fas fa-trash" aria-hidden="true"></i> Eliminar cliente</button>
             </div>
           </div>
         </div>
@@ -1949,6 +1918,19 @@ export default {
 
       // Guardar: si estamos en modo edición, pasar la key para actualizar; si no, crear nueva entrada
       const wasEditing = !!isEditing;
+
+      // Sync Status <-> Done
+      let finalStatus = selStatus?.value || "pendiente";
+      let finalDone = (budgetDone && budgetDone.checked) || false;
+
+      // Si el check "Hecho" está marcado, forzamos status "realizado" (para stats)
+      if (finalDone) {
+        finalStatus = "realizado";
+      } else if (finalStatus === "realizado") {
+        // Si el usuario eligió "Realizado" en el select, marcamos el check también
+        finalDone = true;
+      }
+
       // Asegurar que los presupuestos nuevos no reutilicen un número ya existente.
       try {
         const list = await budgetsService.list();
@@ -1962,6 +1944,10 @@ export default {
           }
         }
       } catch (e) { /* no crítico */ }
+
+      // Actualizar payload con status sincronizado
+      data.estado = finalStatus;
+      data.done = finalDone;
 
       const res = await budgetsService.save(data, wasEditing ? currentBudgetKey : null);
       const key = res.id || res.key; // API returns id
