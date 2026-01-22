@@ -55,18 +55,26 @@ window.generateBudgetPDF = async function (data) {
     }
 
     // Texto Empresa (Centro/Izquierda del header)
+    const textX = data.company?.logoData ? margin + 40 : margin + 5;
+
     doc.setTextColor(0);
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
     const brandName = (data.company?.brandName || "TALLER MECÁNICO").toUpperCase();
-    doc.text(brandName, margin + 40, y + 12);
+    doc.text(brandName, textX, y + 12);
 
     doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
+
+    // Construir bloque de dirección/contacto con mejor fallback
     const address = data.company?.address || "";
-    const contact = [data.company?.phone, data.company?.email].filter(Boolean).join(" | ");
-    doc.text(address, margin + 40, y + 18);
-    doc.text(contact, margin + 40, y + 23);
+    // Asegurar que no sea undefined
+    const emailInfo = data.company?.email || "";
+    const phoneInfo = data.company?.phone || "";
+    const contact = [phoneInfo, emailInfo].filter(Boolean).join(" | ");
+
+    doc.text(address, textX, y + 18);
+    doc.text(contact, textX, y + 23);
 
     // Título Documento (Derecha del header)
     doc.setFontSize(16);

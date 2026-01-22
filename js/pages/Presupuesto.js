@@ -986,6 +986,23 @@ export default {
     const numInput = root.querySelector("#budget-number");
     const dateInput = root.querySelector("#budget-date");
 
+    // --- Sync status/done UI immediately (moved to top)
+    if (selStatus && budgetDone) {
+      const syncStatus = () => {
+        if (budgetDone.checked) selStatus.value = "realizado";
+        else if (selStatus.value === "realizado") selStatus.value = "pendiente";
+      };
+      const syncCheck = () => {
+        // Si el usuario pone "realizado", marcamos "hecho".
+        // Si pone "pendiente", desmarcamos.
+        if (selStatus.value === "realizado") budgetDone.checked = true;
+        else budgetDone.checked = false;
+      };
+
+      budgetDone.addEventListener("change", syncStatus);
+      selStatus.addEventListener("change", syncCheck);
+    }
+
     // Cliente/vehículos
     const existingClientSel = root.querySelector("#existing-client");
     const newClientBtn = root.querySelector("#new-client-btn");
@@ -1584,17 +1601,7 @@ export default {
       const hasCost = parseFloat(serviceCost.value) > 0;
       confirmServiceBtn.disabled = !(hasService && hasCost);
     }
-    // Sync status/done UI immediately
-    if (selStatus && budgetDone) {
-      budgetDone.addEventListener("change", () => {
-        if (budgetDone.checked) selStatus.value = "realizado";
-        else if (selStatus.value === "realizado") selStatus.value = "pendiente";
-      });
-      selStatus.addEventListener("change", () => {
-        if (selStatus.value === "realizado") budgetDone.checked = true;
-        else budgetDone.checked = false;
-      });
-    }
+
 
     // Selección de servicios predefinidos
     ["input", "change"].forEach(ev => {
@@ -2044,11 +2051,10 @@ export default {
         // si no hay logoData en CFG_SETTINGS/company, intentar cargar desde assets según modo
         if (!data.company?.logoData) {
           const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || document.documentElement.classList.contains('dark');
-          // Intenta cargar el logo desde assets usando URL encodeada correctamente
-          // Prioriza "LOGO NUEVO" que es el que vimos en assets
+          // Intenta cargar el logo desde assets con varias rutas posibles
           const candidates = isDark
-            ? ['assets/LOGO%20NUEVO-BLANCO.png', 'assets/LOGO%20NUEVO.png']
-            : ['assets/LOGO%20NUEVO.png', 'assets/LOGO%20NUEVO-BLANCO.png'];
+            ? ['assets/LOGO%20NUEVO-BLANCO.png', '/assets/LOGO%20NUEVO-BLANCO.png', './assets/LOGO%20NUEVO-BLANCO.png', 'frontend/assets/LOGO%20NUEVO-BLANCO.png']
+            : ['assets/LOGO%20NUEVO.png', '/assets/LOGO%20NUEVO.png', './assets/LOGO%20NUEVO.png', 'frontend/assets/LOGO%20NUEVO.png'];
 
           for (const c of candidates) {
             try {
