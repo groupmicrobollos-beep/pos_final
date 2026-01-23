@@ -38,6 +38,14 @@ window.generateBudgetPDF = async function (data) {
     const headerH = 35;
     drawBox(margin, y, width - (margin * 2), headerH);
 
+    // Load default logo if missing
+    if (!data.company?.logoData) {
+        try {
+            if (!data.company) data.company = {};
+            data.company.logoData = await window.imageUrlToDataUrl('assets/LOGO NUEVO.png');
+        } catch (e) { console.warn("Default logo not found"); }
+    }
+
     // Logo (Simulado o Real)
     if (data.company?.logoData) {
         try {
@@ -60,7 +68,10 @@ window.generateBudgetPDF = async function (data) {
     doc.setTextColor(0);
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
-    const brandName = (data.company?.brandName || "TALLER MECÁNICO").toUpperCase();
+    const brandName = (data.company?.brandName && data.company?.brandName !== "Microbollos Group"
+        ? data.company.brandName
+        : "MICROBOLLOS GROUP DE JOSE HEREDIA").toUpperCase();
+
     doc.text(brandName, textX, y + 12);
 
     doc.setFontSize(8);
@@ -96,10 +107,16 @@ window.generateBudgetPDF = async function (data) {
     const boxW = (width - (margin * 2) - 9) / 4; // 3 gaps of 3mm
     const boxH = 15;
 
+    const fmtDate = (d) => {
+        if (!d) return "-";
+        try { return new Date(d).toLocaleDateString("es-AR"); } catch { return d; }
+    };
+
     const boxes = [
         { title: "NÚMERO", val: data.numero || "-" },
-        { title: "FECHA", val: data.fecha || "-" },
+        { title: "FECHA", val: fmtDate(data.fecha) },
         { title: "VÁLIDO HASTA", val: calculateValidDate(data.fecha) }, // Calcular 30 dias
+
         { title: "SUCURSAL", val: data.sucursalNombre || "-" }
     ];
 
