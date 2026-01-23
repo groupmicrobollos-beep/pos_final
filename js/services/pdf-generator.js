@@ -38,18 +38,19 @@ window.generateBudgetPDF = async function (data) {
     const headerH = 35;
     drawBox(margin, y, width - (margin * 2), headerH);
 
-    // Load default logo if missing
+    // Load default logo if missing (Critical Fix: encodeURI for spaces)
     if (!data.company?.logoData) {
         try {
             if (!data.company) data.company = {};
-            data.company.logoData = await window.imageUrlToDataUrl('assets/LOGO NUEVO.png');
-        } catch (e) { console.warn("Default logo not found"); }
+            data.company.logoData = await window.imageUrlToDataUrl('assets/LOGO%20NUEVO.png');
+        } catch (e) { }
     }
 
-    // Logo (Simulado o Real)
+    // Logo drawing
+    let hasLogo = false;
     if (data.company?.logoData) {
         try {
-            const logoW = 30; // Max width
+            const logoW = 30;
             const logoMaxH = 25;
             const props = doc.getImageProperties(data.company.logoData);
             let h = (props.height * logoW) / props.width;
@@ -59,47 +60,53 @@ window.generateBudgetPDF = async function (data) {
                 w = (props.width * h) / props.height;
             }
             doc.addImage(data.company.logoData, 'PNG', margin + 5, y + 5, w, h);
+            hasLogo = true;
         } catch (e) { }
     }
 
-    // Texto Empresa (Centro/Izquierda del header)
-    const textX = data.company?.logoData ? margin + 40 : margin + 5;
+    // Text Positioning
+    // Text Positioning
+    const textX = hasLogo ? margin + 40 : margin + 5;
 
+    // 2-Line Branding forced for consistency ("MICROBOLLOS GROUP" / "DE JOSE HEREDIA")
+    // Regardless of config, we enforce this structure as requested.
     doc.setTextColor(0);
-    doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
-    const brandName = (data.company?.brandName && data.company?.brandName !== "Microbollos Group"
-        ? data.company.brandName
-        : "MICROBOLLOS GROUP DE JOSE HEREDIA").toUpperCase();
 
-    doc.text(brandName, textX, y + 12);
+    // Line 1
+    doc.setFontSize(14);
+    doc.text("MICROBOLLOS GROUP", textX, y + 10);
 
+    // Line 2
+    doc.setFontSize(10);
+    doc.text("DE JOSE HEREDIA", textX, y + 15);
+
+    // Contact Info (moved down)
     doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
 
-    // Construir bloque de dirección/contacto con mejor fallback
     const address = data.company?.address || "";
-    // Asegurar que no sea undefined
     const emailInfo = data.company?.email || "";
     const phoneInfo = data.company?.phone || "José Heredia: 351 652-1795 | Federico Heredia: 351 372-0630";
-    const cuitInfo = data.company?.cuit || data.sucursalCuit || "20-21581927-3"; // Hardcoded fallback requested by user
+    const cuitInfo = data.company?.cuit || data.sucursalCuit || "20-21581927-3";
     const contact = [emailInfo, phoneInfo].filter(Boolean).join(" | ");
 
-    doc.text(address, textX, y + 18);
-    doc.text(contact, textX, y + 23);
+    doc.text(address, textX, y + 21);
+    doc.text(contact, textX, y + 25);
     doc.setFont("helvetica", "bold");
-    doc.text(`CUIT: ${cuitInfo}`, textX, y + 28);
+    doc.text(`CUIT: ${cuitInfo}`, textX, y + 29);
     doc.setFont("helvetica", "normal");
 
-    // Título Documento (Derecha del header)
+    // Title Block (Right aligned)
+    // Align "PRESUPUESTO" with Line 1 ("MICROBOLLOS GROUP") at y+10
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
-    doc.text("PRESUPUESTO", width - margin - 5, y + 12, { align: "right" });
+    doc.text("PRESUPUESTO", width - margin - 5, y + 10, { align: "right" });
 
-    doc.setFontSize(8);
+    doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(100);
-    doc.text("DOCUMENTO NO VÁLIDO COMO FACTURA", width - margin - 5, y + 20, { align: "right" });
+    doc.text("DOCUMENTO NO VÁLIDO COMO FACTURA", width - margin - 5, y + 16, { align: "right" });
 
     y += headerH + 5;
 
