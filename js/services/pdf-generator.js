@@ -42,8 +42,8 @@ window.generateBudgetPDF = async function (data) {
     if (!data.company?.logoData) {
         try {
             if (!data.company) data.company = {};
-            // Simplified filename to avoid encoding issues
-            data.company.logoData = await window.imageUrlToDataUrl('assets/logo.png');
+            // Correct filename as verified on disk
+            data.company.logoData = await window.imageUrlToDataUrl('assets/microbolloslogo.png');
         } catch (e) { console.warn("Fallback logo not found"); }
     }
 
@@ -66,19 +66,15 @@ window.generateBudgetPDF = async function (data) {
     }
 
     // Text Positioning
-    // Text Positioning
     const textX = hasLogo ? margin + 40 : margin + 5;
 
-    // 2-Line Branding forced for consistency ("MICROBOLLOS GROUP" / "DE JOSE HEREDIA")
-    // Regardless of config, we enforce this structure as requested.
+    // Line 1: MICROBOLLOS GROUP
     doc.setTextColor(0);
     doc.setFont("helvetica", "bold");
-
-    // Line 1
     doc.setFontSize(14);
     doc.text("MICROBOLLOS GROUP", textX, y + 10);
 
-    // Line 2
+    // Line 2: DE JOSE HEREDIA (Smaller)
     doc.setFontSize(10);
     doc.text("DE JOSE HEREDIA", textX, y + 15);
 
@@ -99,7 +95,6 @@ window.generateBudgetPDF = async function (data) {
     doc.setFont("helvetica", "normal");
 
     // Title Block (Right aligned)
-    // Align "PRESUPUESTO" with Line 1 ("MICROBOLLOS GROUP") at y+10
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
     doc.text("PRESUPUESTO", width - margin - 5, y + 10, { align: "right" });
@@ -123,7 +118,7 @@ window.generateBudgetPDF = async function (data) {
     const boxes = [
         { title: "NÚMERO", val: data.numero || "-" },
         { title: "FECHA", val: fmtDate(data.fecha) },
-        { title: "VÁLIDO HASTA", val: calculateValidDate(data.fecha) }, // Calcular 30 dias
+        { title: "VÁLIDO HASTA", val: calculateValidDate(data.fecha) },
 
         { title: "SUCURSAL", val: data.sucursalNombre || "-" }
     ];
@@ -151,8 +146,7 @@ window.generateBudgetPDF = async function (data) {
     y += clientHeaderH;
 
     const clientBoxH = 25;
-    drawBox(margin, y, width - (margin * 2), clientBoxH); // Solo borde inferior/lados realmente
-    // Rectificar borde superior (ya dibujado por header) - visualmente OK
+    drawBox(margin, y, width - (margin * 2), clientBoxH);
 
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
@@ -160,20 +154,18 @@ window.generateBudgetPDF = async function (data) {
     const cLabels = [
         { l: "NOMBRE:", v: (data.cliente?.nombre || "-").toUpperCase(), x: 5, y: 8 },
         { l: "VEHÍCULO:", v: (data.cliente?.vehiculo || "-").toUpperCase(), x: 5, y: 16 },
-        { l: "MODELO:", v: (data.cliente?.modelo || "-").toUpperCase(), x: 5, y: 24 }, // Nueva linea para modelo, avoid squeeze
+        { l: "MODELO:", v: (data.cliente?.modelo || "-").toUpperCase(), x: 5, y: 24 },
 
         { l: "TELÉFONO:", v: data.cliente?.telefono || "-", x: 100, y: 8 },
         { l: "PATENTE:", v: (data.cliente?.patente || "-").toUpperCase(), x: 100, y: 16 },
-        { l: "COMPAÑÍA:", v: (data.cliente?.compania || "-").toUpperCase(), x: 100, y: 24 }, // Nueva linea
+        { l: "COMPAÑÍA:", v: (data.cliente?.compania || "-").toUpperCase(), x: 100, y: 24 },
     ];
 
-    // Chasis si hay
-    if (data.cliente?.chasis) {
-        cLabels.push({ l: "CHASIS:", v: data.cliente.chasis, x: 100, y: 24 }); // Puede solapar Compania, adjust if needed
-        // Fix: Mover compañia a izq o nueva linea?
-        // Layout simple:
-        // Col1: Nombre, Vehiculo, Modelo
-        // Col2: Tel, Patente, Compania (Chasis?)
+    // Siniestro Priority
+    if (data.cliente?.siniestro) {
+        cLabels.push({ l: "SINIESTRO:", v: data.cliente.siniestro, x: 100, y: 24 });
+    } else if (data.cliente?.chasis) {
+        cLabels.push({ l: "CHASIS:", v: data.cliente.chasis, x: 100, y: 24 });
     }
 
     cLabels.forEach(f => {
