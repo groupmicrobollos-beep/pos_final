@@ -53,16 +53,30 @@ window.generateBudgetPDF = async function (data) {
         try {
             const logoW = 30;
             const logoMaxH = 25;
-            const props = doc.getImageProperties(data.company.logoData);
-            let h = (props.height * logoW) / props.width;
+
+            // Handle both DataURL (string) and HTMLImageElement (object)
+            let imgW, imgH;
+            if (typeof data.company.logoData === 'string') {
+                const props = doc.getImageProperties(data.company.logoData);
+                imgW = props.width;
+                imgH = props.height;
+            } else {
+                // HTMLImageElement fallback
+                imgW = data.company.logoData.width;
+                imgH = data.company.logoData.height;
+            }
+
+            let h = (imgH * logoW) / imgW;
             let w = logoW;
             if (h > logoMaxH) {
                 h = logoMaxH;
-                w = (props.width * h) / props.height;
+                w = (imgW * h) / imgH;
             }
             doc.addImage(data.company.logoData, 'PNG', margin + 5, y + 5, w, h);
             hasLogo = true;
-        } catch (e) { }
+        } catch (e) {
+            console.error("Error drawing logo:", e);
+        }
     }
 
     // Text Positioning
@@ -314,16 +328,25 @@ window.ensurePdfLoaded = async function () {
 window.imageUrlToDataUrl = async function (url) {
     return new Promise((resolve, reject) => {
         const img = new Image();
-        img.crossOrigin = "Anonymous";
+        // Removed crossOrigin to prevent immediate CORS failures on file:// protocol
         img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0);
-            resolve(canvas.toDataURL('image/png'));
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                resolve(canvas.toDataURL('image/png'));
+            } catch (e) {
+                // Return image element if canvas is tainted (fallback for file://)
+                console.warn("Canvas tainted, returning IMG element", e);
+                resolve(img);
+            }
         };
-        img.onerror = reject;
+        img.onerror = () => {
+            console.error("Image load error for", url);
+            reject(new Error(`Failed to load image: ${url}`));
+        };
         img.src = url;
     });
 };
