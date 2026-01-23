@@ -74,16 +74,18 @@ function logAudit(action, details = {}) {
 }
 
 // ====== Ajustes por defecto ======
+// ====== Ajustes por defecto ======
 function defaultSettings() {
   return {
     brandName: "Microbollos Group",
     companyName: "José Heredia",
-    address: "Av. Ejemplo 123",
-    phone: "351-1234567",
-    email: "contacto@microbollos.com",
+    address: "Córdoba, Argentina",
+    phone: "José Heredia: 351 652-1795 | Federico Heredia: 351 372-0630",
+    email: "microbollos@gmail.com",
     taxRate: 21,
     invoiceType: "B",
-    logoData: null, // base64
+    logoData: null, // base64 placeholder logic handled in UI if null
+    cuit: "20-21581927-3"
   };
 }
 

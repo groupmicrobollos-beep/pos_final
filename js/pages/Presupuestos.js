@@ -81,9 +81,9 @@ export default {
 <section data-page="saved-budgets" class="space-y-4">
   <style>
     /* Onda dark sobria + legibilidad de selects al desplegar */
-  [data-page="saved-budgets"] .glass{ background:var(--bg-glass); backdrop-filter:var(--glass-blur); }
-  [data-page="saved-budgets"] .stat{ position:relative; overflow:hidden; border:1px solid var(--border-main); }
-  [data-page="saved-budgets"] .stat .k{ font-size:.80rem; color:var(--text-secondary) }
+    /* .glass se hereda de globales (input.css/index.html) */
+    [data-page="saved-budgets"] .stat{ position:relative; overflow:hidden; border:1px solid var(--border-main); }
+    [data-page="saved-budgets"] .stat .k{ font-size:.80rem; color:var(--text-secondary) }
     [data-page="saved-budgets"] .stat .v{ font-size:1.25rem; font-weight:700 }
     /* Gradientes sobrios */
     [data-page="saved-budgets"] .g-purple{ background:linear-gradient(135deg,rgba(99,102,241,.18),rgba(99,102,241,.08)); }
@@ -91,15 +91,13 @@ export default {
     [data-page="saved-budgets"] .g-pink  { background:linear-gradient(135deg,rgba(236,72,153,.18),rgba(236,72,153,.08)); }
     [data-page="saved-budgets"] .g-cyan  { background:linear-gradient(135deg,rgba(6,182,212,.18),rgba(6,182,212,.08)); }
     /* Tabla */
-  [data-page="saved-budgets"] .table-wrap{ border:1px solid var(--border-main); overflow-x: auto; }
+    [data-page="saved-budgets"] .table-wrap{ border:1px solid var(--border-main); overflow-x: auto; }
     [data-page="saved-budgets"] .table th{ font-weight:600; color:#cbd5e1; white-space:nowrap; }
     [data-page="saved-budgets"] .table td, .table th{ padding:.6rem .75rem; border-bottom:1px solid rgba(255,255,255,.06) }
     /* Badges estado */
     [data-page="saved-budgets"] .badge{ font-size:.72rem; padding:.20rem .5rem; border-radius:.5rem }
-        const res = budgetsService.save(data, wasEditing ? currentBudgetKey : null, { update: !!wasEditing });
     [data-page="saved-budgets"] .status-expired{ background:#dc262633; color:#fca5a5 }
-    /* Modal */
-    [data-page="saved-budgets"] .modal{ background:rgba(0,0,0,.6) }
+    /* Modal: Usamos estilos globales */
     /* Fix: opciones de <select> no se veían */
     [data-page="saved-budgets"] select option{
       color:#e2e8f0;                 /* slate-200 */

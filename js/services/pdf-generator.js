@@ -70,9 +70,9 @@ window.generateBudgetPDF = async function (data) {
     const address = data.company?.address || "";
     // Asegurar que no sea undefined
     const emailInfo = data.company?.email || "";
-    const phoneInfo = data.company?.phone || "";
+    const phoneInfo = data.company?.phone || "José Heredia: 351 652-1795 | Federico Heredia: 351 372-0630";
     const cuitInfo = data.company?.cuit || data.sucursalCuit || "20-21581927-3"; // Hardcoded fallback requested by user
-    const contact = [phoneInfo, emailInfo].filter(Boolean).join(" | ");
+    const contact = [emailInfo, phoneInfo].filter(Boolean).join(" | ");
 
     doc.text(address, textX, y + 18);
     doc.text(contact, textX, y + 23);

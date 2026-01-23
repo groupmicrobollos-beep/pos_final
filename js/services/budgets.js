@@ -82,6 +82,9 @@ async function save(data, key = null, options = {}) {
     branch_id: data.sucursal,
     siniestro: data.siniestro, // New field support
     signature: data.firmaDataUrl, // New field support
+    // Sync status/done
+    status: (data.status === "realizado" || data.done === true || data.done === 1) ? "realizado" : (data.status || "pendiente"),
+    done: (data.status === "realizado" || data.done === true || data.done === 1) ? true : false,
     // si key existe es update
     id: key
   };
