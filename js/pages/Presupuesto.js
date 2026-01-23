@@ -1569,6 +1569,7 @@ export default {
           modelo: modelo.value || "",
           compania: compania.value || "",
           chasis: chasis.value || "",
+          siniestro: siniestroInput ? siniestroInput.value : "",
           idVehiculo: selectedVehicleId
         },
         items,

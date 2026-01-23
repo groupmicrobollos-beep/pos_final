@@ -38,12 +38,13 @@ window.generateBudgetPDF = async function (data) {
     const headerH = 35;
     drawBox(margin, y, width - (margin * 2), headerH);
 
-    // Load default logo if missing (Critical Fix: encodeURI for spaces)
+    // Load default logo if missing
     if (!data.company?.logoData) {
         try {
             if (!data.company) data.company = {};
-            data.company.logoData = await window.imageUrlToDataUrl('assets/LOGO%20NUEVO.png');
-        } catch (e) { }
+            // Simplified filename to avoid encoding issues
+            data.company.logoData = await window.imageUrlToDataUrl('assets/logo.png');
+        } catch (e) { console.warn("Fallback logo not found"); }
     }
 
     // Logo drawing
