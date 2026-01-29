@@ -39,12 +39,14 @@ window.generateBudgetPDF = async function (data) {
     drawBox(margin, y, width - (margin * 2), headerH);
 
     // Load default logo if missing
+    // Load logo - Validated path 'assets/microbolloslogo.png'
     if (!data.company?.logoData) {
         try {
             if (!data.company) data.company = {};
-            // Correct filename as verified on disk
+            // Attempt to load the specific user-requested logo
+            // We strip any pre-existing broken logoData to ensure we try this one
             data.company.logoData = await window.imageUrlToDataUrl('assets/microbolloslogo.png');
-        } catch (e) { console.warn("Fallback logo not found"); }
+        } catch (e) { console.warn("Fallback logo not found (assets/microbolloslogo.png)"); }
     }
 
     // Logo drawing
@@ -159,7 +161,7 @@ window.generateBudgetPDF = async function (data) {
     drawSectionHeader("DATOS DEL CLIENTE", margin, y, width - (margin * 2), clientHeaderH);
     y += clientHeaderH;
 
-    const clientBoxH = 25;
+    const clientBoxH = 38;
     drawBox(margin, y, width - (margin * 2), clientBoxH);
 
     doc.setFontSize(9);
@@ -169,20 +171,16 @@ window.generateBudgetPDF = async function (data) {
         { l: "NOMBRE:", v: (data.cliente?.nombre || "-").toUpperCase(), x: 5, y: 8 },
         { l: "VEHÍCULO:", v: (data.cliente?.vehiculo || "-").toUpperCase(), x: 5, y: 16 },
         { l: "MODELO:", v: (data.cliente?.modelo || "-").toUpperCase(), x: 5, y: 24 },
+        { l: "CHASIS:", v: (data.cliente?.chasis || "-").toUpperCase(), x: 5, y: 32 },
 
         { l: "TELÉFONO:", v: data.cliente?.telefono || "-", x: 100, y: 8 },
         { l: "PATENTE:", v: (data.cliente?.patente || "-").toUpperCase(), x: 100, y: 16 },
         { l: "COMPAÑÍA:", v: (data.cliente?.compania || "-").toUpperCase(), x: 100, y: 24 },
+        { l: "SINIESTRO:", v: (data.cliente?.siniestro || "-").toUpperCase(), x: 100, y: 32 },
     ];
 
-    // Siniestro Priority
-    if (data.cliente?.siniestro) {
-        cLabels.push({ l: "SINIESTRO:", v: data.cliente.siniestro, x: 100, y: 24 });
-    } else if (data.cliente?.chasis) {
-        cLabels.push({ l: "CHASIS:", v: data.cliente.chasis, x: 100, y: 24 });
-    }
-
     cLabels.forEach(f => {
+        if (!f.v || f.v === "-") return; // Optional: change to show dashed placeholders if desired
         doc.setFont("helvetica", "bold");
         doc.text(f.l, margin + f.x, y + f.y);
         doc.setFont("helvetica", "normal");

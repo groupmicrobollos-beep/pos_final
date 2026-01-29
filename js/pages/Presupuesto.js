@@ -236,8 +236,8 @@ export default {
               IVA (<input id="tax-rate" type="number" min="0" max="100" step="0.1" value="21" style="width:56px; display:inline-block; vertical-align:middle;">%) 
               <select id="vat-policy" class="bg-slate-900 border border-white/10 rounded px-1 ml-1 text-xs text-slate-300 h-6">
                 <option value="all">Todo</option>
-                <option value="services">Solo Serv.</option>
-                <option value="parts">Solo Rep.</option>
+                <option value="services">Mano de Obra / Trabajos</option>
+                <option value="parts">Solo Repuestos</option>
               </select> : <span id="tax-amount">$0.00</span> &nbsp;&nbsp;
               <strong>Total (con IVA): <span id="total">$0.00</span></strong>
             </span>
@@ -1590,23 +1590,8 @@ export default {
     pdfBtn.addEventListener("click", async () => {
       let data = collectBudgetDataForPdf();
       try {
-        // si no hay logoData en CFG_SETTINGS/company, intentar cargar desde assets según modo
-        if (!data.company?.logoData) {
-          const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || document.documentElement.classList.contains('dark');
-          // Intenta cargar el logo desde assets con varias rutas posibles
-          const candidates = isDark
-            ? ['assets/LOGO%20NUEVO-BLANCO.png', '/assets/LOGO%20NUEVO-BLANCO.png', './assets/LOGO%20NUEVO-BLANCO.png', 'frontend/assets/LOGO%20NUEVO-BLANCO.png']
-            : ['assets/LOGO%20NUEVO.png', '/assets/LOGO%20NUEVO.png', './assets/LOGO%20NUEVO.png', 'frontend/assets/LOGO%20NUEVO.png'];
-
-          for (const c of candidates) {
-            try {
-              const urlData = await imageUrlToDataUrl(c);
-              if (urlData) { data.company.logoData = urlData; break; }
-            } catch (e) { console.warn("Logo not found:", c); }
-          }
-        }
-        await ensurePdfLoaded();
-        const pdf = await generateBudgetPDF(data);
+        await window.ensurePdfLoaded();
+        const pdf = await window.generateBudgetPDF(data);
         const cleanNum = (data.numero || "SIN").replace(/[^\w\d]/g, "-");
         pdf.save(`Presupuesto-${cleanNum}.pdf`);
       } catch (e) {
@@ -1629,15 +1614,7 @@ export default {
           // 1. Generate PDF
           let data = collectBudgetDataForPdf();
           if (!data.company?.logoData) {
-            // Try to load logo if missing
-            try {
-              const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-              const candidates = isDark ? ['assets/LOGO%20NUEVO-BLANCO.png'] : ['assets/LOGO%20NUEVO.png'];
-              for (const c of candidates) {
-                const urlData = await imageUrlToDataUrl(c);
-                if (urlData) { data.company.logoData = urlData; break; }
-              }
-            } catch (e) { }
+            // pdf-generator.js handles the fallback to microbolloslogo.png
           }
           await ensurePdfLoaded();
           const pdf = await generateBudgetPDF(data);
