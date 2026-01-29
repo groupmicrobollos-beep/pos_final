@@ -43,10 +43,16 @@ window.generateBudgetPDF = async function (data) {
     if (!data.company?.logoData) {
         try {
             if (!data.company) data.company = {};
-            // Attempt to load the specific user-requested logo
+            // Attempt to load the specific user-requested logo with multiple path candidates
             // We strip any pre-existing broken logoData to ensure we try this one
-            data.company.logoData = await window.imageUrlToDataUrl('assets/microbolloslogo.png');
-        } catch (e) { console.warn("Fallback logo not found (assets/microbolloslogo.png)"); }
+            const candidates = ['assets/microbolloslogo.png', './assets/microbolloslogo.png', '../assets/microbolloslogo.png'];
+            for (const src of candidates) {
+                try {
+                    data.company.logoData = await window.imageUrlToDataUrl(src);
+                    if (data.company.logoData) break;
+                } catch (e) { }
+            }
+        } catch (e) { console.warn("Fallback logo not found"); }
     }
 
     // Logo drawing
@@ -180,7 +186,8 @@ window.generateBudgetPDF = async function (data) {
     ];
 
     cLabels.forEach(f => {
-        if (!f.v || f.v === "-") return; // Optional: change to show dashed placeholders if desired
+        // REMOVED FILTER to show fields even if empty (as "-")
+        // if (!f.v || f.v === "-") return; 
         doc.setFont("helvetica", "bold");
         doc.text(f.l, margin + f.x, y + f.y);
         doc.setFont("helvetica", "normal");
