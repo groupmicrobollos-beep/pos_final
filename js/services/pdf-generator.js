@@ -44,24 +44,22 @@ window.generateBudgetPDF = async function (data) {
             if (!data.company) data.company = {};
             // Use EMBEDDED LOGO if available (guaranteed fix)
             if (window.MICROBOLLOS_LOGO_B64) {
+                console.info('Using embedded MICROBOLLOS_LOGO_B64 as fallback logo');
                 data.company.logoData = window.MICROBOLLOS_LOGO_B64;
             } else {
-                // Fallback to absolute-style path
-                const src = '/assets/microbolloslogo.png';
-                try {
-                    data.company.logoData = await window.imageUrlToDataUrl(src);
-                } catch (e) {
-                    console.warn("Fallback logo failed, checking subfolders");
-                    const candidates = ['./assets/microbolloslogo.png', '../assets/microbolloslogo.png'];
-                    for (const fallbackSrc of candidates) {
-                        try {
-                            data.company.logoData = await window.imageUrlToDataUrl(fallbackSrc);
-                            if (data.company.logoData) break;
-                        } catch (err) { }
-                    }
+                // Fallback to absolute-style path (try multiple asset names, prefer visible colored logo)
+                const candidates = ['/assets/LOGO%20NUEVO.png', '/assets/LOGO NUEVO.png', '/assets/microbolloslogo.png', './assets/microbolloslogo.png', '../assets/microbolloslogo.png', 'assets/LOGO NUEVO.png'];
+                for (const src of candidates) {
+                    try {
+                        console.info('Attempting to load logo from', src);
+                        data.company.logoData = await window.imageUrlToDataUrl(src);
+                        if (data.company.logoData) { console.info('Logo loaded from', src); break; }
+                    } catch (e) { console.warn('Logo candidate failed:', src); }
                 }
             }
-        } catch (e) { console.warn("Fallback logo not found"); }
+        } catch (e) { console.warn("Fallback logo not found", e); }
+    } else {
+        console.info('Logo data provided by caller (string).');
     }
 
     // Logo drawing
@@ -74,9 +72,18 @@ window.generateBudgetPDF = async function (data) {
             // Handle both DataURL (string) and HTMLImageElement (object)
             let imgW, imgH;
             if (typeof data.company.logoData === 'string') {
-                const props = doc.getImageProperties(data.company.logoData);
-                imgW = props.width;
-                imgH = props.height;
+                try {
+                    const props = doc.getImageProperties(data.company.logoData);
+                    imgW = props.width;
+                    imgH = props.height;
+                } catch (errProps) {
+                    // getImageProperties can fail for some data URI variants - fallback to creating an Image element
+                    console.warn('getImageProperties failed, creating Image to measure', errProps && errProps.message);
+                    const tmpImg = new Image();
+                    tmpImg.src = data.company.logoData;
+                    await new Promise((r, rej) => { tmpImg.onload = r; tmpImg.onerror = () => rej(new Error('tmpImg load failed')); });
+                    imgW = tmpImg.width; imgH = tmpImg.height;
+                }
             } else {
                 // HTMLImageElement fallback
                 imgW = data.company.logoData.width;
@@ -89,9 +96,54 @@ window.generateBudgetPDF = async function (data) {
                 h = logoMaxH;
                 w = (imgW * h) / imgH;
             }
-            // Logo shifted more to the left (margin + 2 instead of + 5)
-            doc.addImage(data.company.logoData, 'PNG', margin + 2, y + 5, w, h);
-            hasLogo = true;
+
+            // Try adding image, with fallbacks
+            let drawn = false;
+            const tryAdd = (imgData, fmt) => {
+                try {
+                    doc.addImage(imgData, fmt, margin + 2, y + 5, w, h);
+                    drawn = true;
+                    console.info('Logo drawn using format', fmt);
+                } catch (errAdd) {
+                    console.warn('addImage failed for format', fmt, errAdd && errAdd.message);
+                }
+            };
+
+            if (typeof data.company.logoData === 'string') {
+                // Prefer PNG, but try JPEG if PNG fails
+                tryAdd(data.company.logoData, 'PNG');
+                if (!drawn) tryAdd(data.company.logoData, 'JPEG');
+
+                // If still not drawn and it looks like a URL (not data:), try to fetch and convert to dataUrl
+                if (!drawn && !data.company.logoData.startsWith('data:image')) {
+                    try {
+                        const converted = await window.imageUrlToDataUrl(data.company.logoData);
+                        if (converted) {
+                            tryAdd(converted, 'PNG');
+                            if (!drawn) tryAdd(converted, 'JPEG');
+                        }
+                    } catch (eConv) { console.warn('Conversion from URL to dataUrl failed', eConv); }
+                }
+
+                // As ultimate fallback, create an Image and draw to canvas then add
+                if (!drawn) {
+                    try {
+                        const tmp = new Image(); tmp.src = data.company.logoData;
+                        await new Promise((r, rej) => { tmp.onload = r; tmp.onerror = rej; });
+                        const canvas = document.createElement('canvas'); canvas.width = tmp.width; canvas.height = tmp.height;
+                        const ctx = canvas.getContext('2d'); ctx.drawImage(tmp, 0, 0);
+                        const dto = canvas.toDataURL('image/png');
+                        tryAdd(dto, 'PNG');
+                    } catch (eTmp) { console.warn('Final fallback to canvas failed', eTmp); }
+                }
+            } else {
+                // HTMLImageElement
+                tryAdd(data.company.logoData, 'PNG');
+                if (!drawn) tryAdd(data.company.logoData, 'JPEG');
+            }
+
+            if (drawn) hasLogo = true;
+            else console.error('Logo could not be drawn into PDF');
         } catch (e) {
             console.error("Error drawing logo:", e);
         }

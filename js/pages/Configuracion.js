@@ -399,7 +399,10 @@ export default {
       $("#cfg-email").value = cfg.email || "";
       $("#cfg-tax").value = cfg.taxRate || 21;
       $("#cfg-inv").value = cfg.invoiceType || "B";
-      if (previewLogo) previewLogo.src = cfg.logoData || "assets/microbolloslogo.png";
+      if (previewLogo) {
+        previewLogo.src = cfg.logoData || "assets/microbolloslogo.png";
+        previewLogo.title = cfg.logoData ? 'Logo configurado (personalizado)' : 'Usando logo por defecto (fallback)';
+      }
     };
 
     window.mount.saveSettings = () => {

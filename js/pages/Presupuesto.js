@@ -1470,6 +1470,7 @@ export default {
       const items = collectItems();
       const sucName = (CFG_BRANCHES.find(b => b.id === suc)?.name) || "";
 
+      const wasEditing = !!isEditing; // moved the check up to avoid ReferenceError
       let totals;
       if (wasEditing && !itemsDirty && originalTotals) {
         totals = { subtotal: originalTotals.subtotal, taxAmount: originalTotals.taxAmount, totalWithTax: originalTotals.total, rate: originalTotals.rate, vatPolicy: originalTotals.vatPolicy };
@@ -1496,7 +1497,6 @@ export default {
       };
 
       // Guardar: si estamos en modo edición, pasar la key para actualizar; si no, crear nueva entrada
-      const wasEditing = !!isEditing;
 
       // Sync Status <-> Done
       let finalStatus = selStatus?.value || "pendiente";
@@ -1528,22 +1528,30 @@ export default {
       data.estado = finalStatus;
       data.done = finalDone;
 
-      const res = await budgetsService.save(data, wasEditing ? currentBudgetKey : null);
-      const key = res.id || res.key; // API returns id
+      console.info('Saving budget payload:', data);
+      try {
+        const res = await budgetsService.save(data, wasEditing ? currentBudgetKey : null);
+        console.info('Save response:', res);
+        const key = res.id || res.key; // API returns id
 
-      // Si veníamos editando, mantener el modo edición sobre ese key; si no, limpiar el estado de edición
-      if (wasEditing) {
-        isEditing = true;
-        currentBudgetKey = key;
-      } else {
-        isEditing = false;
-        currentBudgetKey = null;
-      }
+        // Si veníamos editando, mantener el modo edición sobre ese key; si no, limpiar el estado de edición
+        if (wasEditing) {
+          isEditing = true;
+          currentBudgetKey = key;
+        } else {
+          isEditing = false;
+          currentBudgetKey = null;
+        }
 
-      toast(`Presupuesto ${num} ${wasEditing ? "actualizado" : "guardado"} ✅`, "success");
-      if (!wasEditing) {
-        // Actualizar vista previa del próximo número para la misma sucursal
-        numInput.value = await budgetsService.previewNextNumber(suc);
+        toast(`Presupuesto ${num} ${wasEditing ? "actualizado" : "guardado"} ✅`, "success");
+        if (finalDone) toast('Presupuesto marcado como REALIZADO ✅', 'success');
+        if (!wasEditing) {
+          // Actualizar vista previa del próximo número para la misma sucursal
+          numInput.value = await budgetsService.previewNextNumber(suc);
+        }
+      } catch (err) {
+        console.error('Error saving budget:', err);
+        toast('Error guardando presupuesto: ' + (err.message || err), 'error');
       }
     }
     saveBtn.addEventListener("click", saveBudget);
