@@ -383,11 +383,43 @@ export default {
         const file = e.target.files[0];
         if (file) {
           const reader = new FileReader();
-          reader.onload = (ev) => { previewLogo.src = ev.target.result; };
+          reader.onload = (ev) => {
+            previewLogo.src = ev.target.result;
+            checkPreviewLogo();
+          };
           reader.readAsDataURL(file);
         }
       });
     }
+
+    // Show warning if the logo is mostly light/white (may be invisible in PDF)
+    const logoWarningEl = document.createElement('div');
+    logoWarningEl.id = 'logo-warning';
+    logoWarningEl.className = 'text-xs mt-2';
+    logoWarningEl.style.color = '#b45309'; // amber-700
+    previewLogo.parentNode.parentNode.appendChild(logoWarningEl);
+
+    async function checkPreviewLogo() {
+      try {
+        const src = previewLogo.src;
+        if (!src) { logoWarningEl.textContent = ''; return; }
+        const img = new Image(); img.crossOrigin = 'anonymous'; img.src = src;
+        await new Promise((r, rej) => { img.onload = r; img.onerror = rej; });
+        const c = document.createElement('canvas'); c.width = Math.min(200, img.width); c.height = Math.min(200, img.height);
+        const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0, c.width, c.height);
+        const d = ctx.getImageData(0, 0, c.width, c.height).data;
+        let total = 0, cnt = 0; for (let i = 0; i < d.length; i += 4) { const r = d[i], g = d[i+1], b = d[i+2]; total += (0.299*r + 0.587*g + 0.114*b)/255; cnt++; }
+        const avg = total / cnt;
+        if (avg > 0.92) {
+          logoWarningEl.textContent = 'Advertencia: el logo es muy claro y puede no verse en el PDF. Se recomienda subir una versión oscura.';
+        } else {
+          logoWarningEl.textContent = '';
+        }
+      } catch (e) { logoWarningEl.textContent = ''; }
+    }
+
+    // Run check initially
+    checkPreviewLogo();
 
     const fillSettingsForm = () => {
       const cfg = load(CFG_SETTINGS_KEY, defaultSettings());
@@ -421,6 +453,9 @@ export default {
       }
 
       save(CFG_SETTINGS_KEY, cfg);
+      // Notify other modules that settings changed (logoData included)
+      document.dispatchEvent(new CustomEvent('cfg:settings-updated', { detail: { settings: cfg } }));
+
       toast("Configuración guardada", "success");
       logAudit("SAVE_SETTINGS");
     };

@@ -596,6 +596,34 @@ export default {
     const saveBtn = root.querySelector("#save-budget");
     const pdfBtn = root.querySelector("#download-pdf-direct");
 
+    // Logo status badge (visible on the editor) — updated by updateLogoBadge()
+    let logoBadge = null;
+    if (pdfBtn) {
+      logoBadge = document.createElement('span');
+      logoBadge.id = 'logo-status-badge';
+      logoBadge.className = 'ml-3 inline-block px-2 py-1 text-xs font-semibold rounded text-white bg-slate-500';
+      logoBadge.style.verticalAlign = 'middle';
+      pdfBtn.parentNode.insertBefore(logoBadge, pdfBtn.nextSibling);
+    }
+
+    function updateLogoBadge() {
+      if (!logoBadge) return;
+      const cfgLogo = CFG_SETTINGS?.logoData ? true : false;
+      const fallback = window.MICROBOLLOS_LOGO_B64 ? true : false;
+      if (cfgLogo) { logoBadge.textContent = 'Logo: personalizado'; logoBadge.className = 'ml-3 inline-block px-2 py-1 text-xs font-semibold rounded text-white bg-green-600'; logoBadge.title = 'Se usará el logo configurado en Ajustes'; }
+      else if (fallback) { logoBadge.textContent = 'Logo: fallback'; logoBadge.className = 'ml-3 inline-block px-2 py-1 text-xs font-semibold rounded text-white bg-amber-600'; logoBadge.title = 'Se usará logo por defecto embebido'; }
+      else { logoBadge.textContent = 'Logo: no disponible'; logoBadge.className = 'ml-3 inline-block px-2 py-1 text-xs font-semibold rounded text-white bg-rose-600'; logoBadge.title = 'No se encontró logo'; }
+    }
+
+    // Refresh badge when settings update
+    document.addEventListener('cfg:settings-updated', (e) => {
+      CFG_SETTINGS = e.detail?.settings || CFG_SETTINGS;
+      updateLogoBadge();
+    });
+
+    // Initial badge update
+    updateLogoBadge();
+
     // Modal Add Item
     const addItemModal = root.querySelector("#add-item-modal");
     const closeAddItem = addItemModal.querySelectorAll(".close-modal");
@@ -1620,6 +1648,11 @@ export default {
         const pdf = await window.generateBudgetPDF(data);
         const cleanNum = (data.numero || "SIN").replace(/[^\w\d]/g, "-");
         pdf.save(`Presupuesto-${cleanNum}.pdf`);
+        // Show which logo was used
+        const logoSrc = window.LAST_PDF_LOGO_SOURCE || 'none';
+        const logoDrawn = window.LAST_PDF_LOGO_DRAWN ? 'dibujado' : 'no dibujado';
+        toast(`Logo usado: ${logoSrc} (${logoDrawn})`, 'info');
+        console.info('PDF logo status:', logoSrc, logoDrawn);
       } catch (e) {
         console.error("PDF error:", e);
         window.print();
@@ -1648,6 +1681,12 @@ export default {
           const filename = `Presupuesto-${cleanNum}.pdf`;
           const pdfBlob = pdf.output("blob");
           const pdfFile = new File([pdfBlob], filename, { type: "application/pdf" });
+
+          // Show which logo was used when sharing
+          const logoSrc = window.LAST_PDF_LOGO_SOURCE || 'none';
+          const logoDrawn = window.LAST_PDF_LOGO_DRAWN ? 'dibujado' : 'no dibujado';
+          toast(`Logo usado: ${logoSrc} (${logoDrawn})`, 'info');
+          console.info('PDF logo status (share):', logoSrc, logoDrawn);
 
           // 2. Try Web Share API (Mobile)
           if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {

@@ -39,6 +39,10 @@ window.generateBudgetPDF = async function (data) {
     drawBox(margin, y, width - (margin * 2), headerH);
 
     // Load default logo if missing
+    // Clear last-run flags
+    window.LAST_PDF_LOGO_SOURCE = null;
+    window.LAST_PDF_LOGO_DRAWN = false;
+
     if (!data.company?.logoData || typeof data.company.logoData !== 'string' || !data.company.logoData.startsWith('data:image')) {
         try {
             if (!data.company) data.company = {};
@@ -46,6 +50,7 @@ window.generateBudgetPDF = async function (data) {
             if (window.MICROBOLLOS_LOGO_B64) {
                 console.info('Using embedded MICROBOLLOS_LOGO_B64 as fallback logo');
                 data.company.logoData = window.MICROBOLLOS_LOGO_B64;
+                window.LAST_PDF_LOGO_SOURCE = 'embedded:MICROBOLLOS_LOGO_B64';
             } else {
                 // Fallback to absolute-style path (try multiple asset names, prefer visible colored logo)
                 const candidates = ['/assets/LOGO%20NUEVO.png', '/assets/LOGO NUEVO.png', '/assets/microbolloslogo.png', './assets/microbolloslogo.png', '../assets/microbolloslogo.png', 'assets/LOGO NUEVO.png'];
@@ -53,19 +58,70 @@ window.generateBudgetPDF = async function (data) {
                     try {
                         console.info('Attempting to load logo from', src);
                         data.company.logoData = await window.imageUrlToDataUrl(src);
-                        if (data.company.logoData) { console.info('Logo loaded from', src); break; }
+                        if (data.company.logoData) { console.info('Logo loaded from', src); window.LAST_PDF_LOGO_SOURCE = `file:${src}`; break; }
                     } catch (e) { console.warn('Logo candidate failed:', src); }
                 }
             }
         } catch (e) { console.warn("Fallback logo not found", e); }
     } else {
         console.info('Logo data provided by caller (string).');
+        window.LAST_PDF_LOGO_SOURCE = 'settings.logoData';
     }
+
+    if (!window.LAST_PDF_LOGO_SOURCE) window.LAST_PDF_LOGO_SOURCE = 'none';
 
     // Logo drawing
     let hasLogo = false;
+
+    // Helper: detect if image is mostly light (likely invisible on white background)
+    async function isMostlyLightImage(src) {
+        try {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.src = src;
+            await new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
+            const canvas = document.createElement('canvas');
+            const cw = Math.min(200, img.width);
+            const ch = Math.min(200, img.height);
+            canvas.width = cw; canvas.height = ch;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, cw, ch);
+            const data = ctx.getImageData(0, 0, cw, ch).data;
+            let total = 0; let count = 0;
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i], g = data[i+1], b = data[i+2];
+                // luminance
+                const lum = (0.299*r + 0.587*g + 0.114*b) / 255;
+                total += lum; count++;
+            }
+            const avg = total / count;
+            console.info('Logo avg luminance:', avg.toFixed(3));
+            return avg > 0.92; // mostly light
+        } catch (e) { console.warn('isMostlyLightImage failed', e && e.message); return false; }
+    }
+
     if (data.company?.logoData) {
         try {
+            // If the provided logo is a string dataURL/URL, check its brightness and prefer dark fallback if needed
+            if (typeof data.company.logoData === 'string') {
+                try {
+                    const likelyLight = await isMostlyLightImage(data.company.logoData);
+                    if (likelyLight) {
+                        console.warn('Provided logo is mostly light; attempting dark fallback: /assets/microbolloslogo.png');
+                        try {
+                            const fb = await window.imageUrlToDataUrl('/assets/microbolloslogo.png');
+                            if (fb) {
+                                console.info('Dark fallback loaded, using it instead');
+                                data.company.logoData = fb;
+                                window.LAST_PDF_LOGO_SOURCE = 'fallback:microbolloslogo.png';
+                            }
+                        } catch (e) { console.warn('Dark fallback failed', e && e.message); }
+                    } else {
+                        window.LAST_PDF_LOGO_SOURCE = window.LAST_PDF_LOGO_SOURCE || 'settings.logoData';
+                    }
+                } catch (ic) { console.warn('Brightness check failed', ic && ic.message); }
+            }
+
             const logoW = 30;
             const logoMaxH = 25;
 
@@ -142,8 +198,13 @@ window.generateBudgetPDF = async function (data) {
                 if (!drawn) tryAdd(data.company.logoData, 'JPEG');
             }
 
-            if (drawn) hasLogo = true;
-            else console.error('Logo could not be drawn into PDF');
+            if (drawn) {
+                hasLogo = true;
+                window.LAST_PDF_LOGO_DRAWN = true;
+                if (!window.LAST_PDF_LOGO_SOURCE) window.LAST_PDF_LOGO_SOURCE = 'drawn:unknown';
+            } else {
+                console.error('Logo could not be drawn into PDF');
+            }
         } catch (e) {
             console.error("Error drawing logo:", e);
         }

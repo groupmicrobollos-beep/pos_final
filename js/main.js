@@ -19,8 +19,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Preload default company logo into CFG_SETTINGS & global fallback so PDFs always include it
     (async function preloadLogo() {
         try {
-            // Try multiple possible asset names (including new colored logo variants)
-            const candidates = ['/assets/LOGO%20NUEVO.png', '/assets/LOGO NUEVO.png', '/assets/microbolloslogo.png', 'assets/microbolloslogo.png', './assets/microbolloslogo.png'];
+            // Prefer the classic microbollos logo first (dark), then fallbacks
+            const candidates = ['/assets/microbolloslogo.png', '/assets/LOGO%20NUEVO.png', '/assets/LOGO NUEVO.png', 'assets/microbolloslogo.png', './assets/microbolloslogo.png'];
             let dataUrl = null;
             for (const c of candidates) {
                 try { dataUrl = await window.imageUrlToDataUrl(c); if (dataUrl) { console.info('Logo loaded from', c); break; } } catch (e) { console.warn('Logo candidate failed:', c); }
