@@ -399,7 +399,7 @@ export default {
       $("#cfg-email").value = cfg.email || "";
       $("#cfg-tax").value = cfg.taxRate || 21;
       $("#cfg-inv").value = cfg.invoiceType || "B";
-      if (previewLogo) previewLogo.src = cfg.logoData || "assets/logo-placeholder.png";
+      if (previewLogo) previewLogo.src = cfg.logoData || "assets/microbolloslogo.png";
     };
 
     window.mount.saveSettings = () => {

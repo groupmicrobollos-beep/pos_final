@@ -15,4 +15,28 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     router.init(root);
+
+    // Preload default company logo into CFG_SETTINGS & global fallback so PDFs always include it
+    (async function preloadLogo() {
+        try {
+            const candidates = ['/assets/microbolloslogo.png', 'assets/microbolloslogo.png', './assets/microbolloslogo.png'];
+            let dataUrl = null;
+            for (const c of candidates) {
+                try { dataUrl = await window.imageUrlToDataUrl(c); if (dataUrl) break; } catch (e) { }
+            }
+            if (dataUrl) {
+                window.MICROBOLLOS_LOGO_B64 = dataUrl;
+                const key = 'cfg_settings';
+                let cfg = {};
+                try { cfg = JSON.parse(localStorage.getItem(key) || '{}'); } catch {}
+                if (!cfg.logoData) {
+                    cfg.logoData = dataUrl;
+                    localStorage.setItem(key, JSON.stringify(cfg));
+                    window.dispatchEvent(new CustomEvent('cfg:settings-updated', { detail: { settings: cfg } }));
+                    console.info('Default logo preloaded into settings');
+                }
+            }
+        } catch (e) { console.warn('Logo preload failed', e); }
+    })();
+
 });

@@ -716,6 +716,17 @@ export default {
     // Estado de edición
     let currentBudgetKey = null;
     let isEditing = false;
+    // Control para evitar que cambios de estado 'hecho' recalcule montos accidentalmente
+    let loadingItems = false; // true while we populate existing items from server
+    let itemsDirty = false; // true si usuario modificó items o tasas
+    let originalTotals = null; // { subtotal, taxAmount, total, rate, vatPolicy }
+    // Helper local para parsear montos (robusto para distintos formatos con separadores)
+    const _parseMoney = (t) => {
+      if (typeof t === 'number') return t;
+      const s = String(t || '').replace(/[^0-9,.-]/g, '');
+      const normalized = s.replace(/\./g, '').replace(/,/g, '.');
+      return parseFloat(normalized) || 0;
+    };
 
     // Vista previa al elegir sucursal (no persiste nada)
     selSucursal.addEventListener("change", async () => {
@@ -1044,8 +1055,8 @@ export default {
       totalEl.textContent = money(totalWithTax);
       return { subtotal, taxAmount, totalWithTax, rate, vatPolicy: policy };
     }
-    if (vatPolicySel) vatPolicySel.addEventListener("change", updateTotals);
-    if (taxRateEl) taxRateEl.addEventListener("input", updateTotals);
+    if (vatPolicySel) vatPolicySel.addEventListener("change", () => { itemsDirty = true; updateTotals(); });
+    if (taxRateEl) taxRateEl.addEventListener("input", () => { itemsDirty = true; updateTotals(); });
     function appendRow({ cantidad = 1, descripcion, unit, total }) {
       const tr = document.createElement("tr");
       tr.innerHTML = `
@@ -1058,10 +1069,12 @@ export default {
         </td>`;
       tr.querySelector(".delete-item").addEventListener("click", () => {
         tr.remove();
+        itemsDirty = true;
         updateTotals();
       });
       itemsBody.appendChild(tr);
       updateTotals();
+      if (!loadingItems) itemsDirty = true;
     }
     function collectItemsForPdf() {
       const arr = [];
@@ -1457,7 +1470,12 @@ export default {
       const items = collectItems();
       const sucName = (CFG_BRANCHES.find(b => b.id === suc)?.name) || "";
 
-      const totals = updateTotals();
+      let totals;
+      if (wasEditing && !itemsDirty && originalTotals) {
+        totals = { subtotal: originalTotals.subtotal, taxAmount: originalTotals.taxAmount, totalWithTax: originalTotals.total, rate: originalTotals.rate, vatPolicy: originalTotals.vatPolicy };
+      } else {
+        totals = updateTotals();
+      }
       const data = {
         numero: num,
         sucursal: suc,
@@ -1696,6 +1714,7 @@ export default {
 
       // Ítems
       itemsBody.innerHTML = "";
+      loadingItems = true;
       (b.items || []).forEach(it => {
         const cantidad = parseFloat(String(it.cantidad || "1").replace(",", ".")) || 1;
         const unit = typeof it.unit === "number"
@@ -1711,8 +1730,21 @@ export default {
           total: isNaN(total) ? cantidad * (isNaN(unit) ? 0 : unit) : total
         });
       });
+      loadingItems = false;
 
+      // After populating items, capture original totals so status-only saves don't change amounts
+      originalTotals = {
+        subtotal: _parseMoney(b.subtotal || subtotalEl.textContent || 0),
+        taxAmount: _parseMoney(b.taxAmount || (taxAmountEl ? taxAmountEl.textContent : 0) || 0),
+        total: _parseMoney(b.total || totalEl.textContent || 0),
+        rate: Number(b.taxRate || Number(localStorage.getItem('tax_rate')) || 0),
+        vatPolicy: b.vatPolicy || (vatPolicySel ? vatPolicySel.value : 'all')
+      };
+
+      // Ensure display is consistent
       updateTotals();
+      itemsDirty = false;
+
       toast(`Editando ${b.numero}`, "info");
     })();
   }
