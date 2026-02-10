@@ -144,7 +144,13 @@ export const auth = {
     async login(identifier, password) {
         // Debug: log attempt (avoid logging password in plaintext)
         console.debug('[auth] login attempt:', { identifier });
-        const res = await api('/auth/login', 'POST', { identifier, password });
+        // To be compatible with different backend expectations, include multiple keys
+        // (identifier, username and email) so servers expecting any of those fields succeed.
+        const maybeEmail = (identifier || '').includes('@') ? identifier : null;
+        const maybeUsername = maybeEmail ? null : identifier;
+        const payload = { identifier, password, username: maybeUsername, email: maybeEmail };
+        console.debug('[auth] login payload prepared:', { ...payload, password: '••••' });
+        const res = await api('/auth/login', 'POST', payload);
         console.debug('[auth] login response:', res);
         return res;
     },
