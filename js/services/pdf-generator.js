@@ -39,21 +39,26 @@ window.generateBudgetPDF = async function (data) {
     drawBox(margin, y, width - (margin * 2), headerH);
 
     // Load default logo if missing
-    // Load logo - Validated path 'assets/microbolloslogo.png'
-    if (!data.company?.logoData) {
+    if (!data.company?.logoData || typeof data.company.logoData !== 'string' || !data.company.logoData.startsWith('data:image')) {
         try {
             if (!data.company) data.company = {};
             // Use EMBEDDED LOGO if available (guaranteed fix)
             if (window.MICROBOLLOS_LOGO_B64) {
                 data.company.logoData = window.MICROBOLLOS_LOGO_B64;
             } else {
-                // Fallback to candidates if script didn't run (should not happen)
-                const candidates = ['assets/microbolloslogo.png', './assets/microbolloslogo.png', '../assets/microbolloslogo.png'];
-                for (const src of candidates) {
-                    try {
-                        data.company.logoData = await window.imageUrlToDataUrl(src);
-                        if (data.company.logoData) break;
-                    } catch (e) { }
+                // Fallback to absolute-style path
+                const src = '/assets/microbolloslogo.png';
+                try {
+                    data.company.logoData = await window.imageUrlToDataUrl(src);
+                } catch (e) {
+                    console.warn("Fallback logo failed, checking subfolders");
+                    const candidates = ['./assets/microbolloslogo.png', '../assets/microbolloslogo.png'];
+                    for (const fallbackSrc of candidates) {
+                        try {
+                            data.company.logoData = await window.imageUrlToDataUrl(fallbackSrc);
+                            if (data.company.logoData) break;
+                        } catch (err) { }
+                    }
                 }
             }
         } catch (e) { console.warn("Fallback logo not found"); }

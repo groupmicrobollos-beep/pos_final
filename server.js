@@ -10,6 +10,14 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Render Keep-Awake & Health Check
+if (process.env.RENDER) {
+    const { checkHealth } = require('./render_health');
+    checkHealth().then(ok => {
+        if (!ok) console.warn("WARNING: Health check failed. Server will attempt to continue but DB operations might fail.");
+    });
+}
+
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
