@@ -433,7 +433,9 @@ export default {
       $("#cfg-inv").value = cfg.invoiceType || "B";
       if (previewLogo) {
         previewLogo.src = cfg.logoData || "assets/microbolloslogo.png";
+        previewLogo.style.maxHeight = '72px';
         previewLogo.title = cfg.logoData ? 'Logo configurado (personalizado)' : 'Usando logo por defecto (fallback)';
+        try { if (typeof checkPreviewLogo === 'function') checkPreviewLogo(); } catch (e) { }
       }
     };
 

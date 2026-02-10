@@ -19,11 +19,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Preload default company logo into CFG_SETTINGS & global fallback so PDFs always include it
     (async function preloadLogo() {
         try {
-            // Prefer the classic microbollos logo first (dark), then fallbacks
-            const candidates = ['/assets/microbolloslogo.png', '/assets/LOGO%20NUEVO.png', '/assets/LOGO NUEVO.png', 'assets/microbolloslogo.png', './assets/microbolloslogo.png'];
+            // Prefer an explicit final JPG logo if present, then fallbacks
+            const candidates = ['/assets/Logo-Final.jpg', '/assets/logo-final.jpg', '/assets/Logo-Final.JPG', '/assets/microbolloslogo.png', '/assets/LOGO%20NUEVO.png', '/assets/LOGO NUEVO.png', 'assets/microbolloslogo.png', './assets/microbolloslogo.png'];
             let dataUrl = null;
             for (const c of candidates) {
-                try { dataUrl = await window.imageUrlToDataUrl(c); if (dataUrl) { console.info('Logo loaded from', c); break; } } catch (e) { console.warn('Logo candidate failed:', c); }
+                try {
+                    // If candidate looks like JPG, ask for JPEG data directly
+                    const isJpg = /\.jpe?g$/i.test(c);
+                    dataUrl = isJpg ? await window.imageUrlToDataUrl(c, 'image/jpeg') : await window.imageUrlToDataUrl(c);
+                    if (dataUrl) { console.info('Logo loaded from', c); break; }
+                } catch (e) { console.warn('Logo candidate failed:', c); }
             }
             if (dataUrl) {
                 // Always expose a global embedded fallback for PDF generator
@@ -31,16 +36,15 @@ document.addEventListener("DOMContentLoaded", async () => {
                 const key = 'cfg_settings';
                 let cfg = {};
                 try { cfg = JSON.parse(localStorage.getItem(key) || '{}'); } catch {}
-                if (!cfg.logoData) {
-                    cfg.logoData = dataUrl;
+                // FORCE the logoData to the final JPG so the app uses it consistently
+                cfg.logoData = dataUrl;
+                try {
                     localStorage.setItem(key, JSON.stringify(cfg));
                     // Notify modules via document event (they listen on document)
                     document.dispatchEvent(new CustomEvent('cfg:settings-updated', { detail: { settings: cfg } }));
-                    console.info('Default logo preloaded into settings');
-                } else {
-                    // If a logo is already configured, still ensure global fallback is available
-                    console.info('Settings already had logoData, global fallback set');
-                }
+                    console.info('Default logo set and saved to settings (Logo-Final.jpg)');
+                    if (window.toast) window.toast('Logo por defecto activado: Logo-Final.jpg', 'success');
+                } catch (eSave) { console.warn('Failed to persist default logo', eSave); }
             }
         } catch (e) { console.warn('Logo preload failed', e); }
     })();

@@ -52,12 +52,13 @@ window.generateBudgetPDF = async function (data) {
                 data.company.logoData = window.MICROBOLLOS_LOGO_B64;
                 window.LAST_PDF_LOGO_SOURCE = 'embedded:MICROBOLLOS_LOGO_B64';
             } else {
-                // Fallback to absolute-style path (try multiple asset names, prefer visible colored logo)
-                const candidates = ['/assets/LOGO%20NUEVO.png', '/assets/LOGO NUEVO.png', '/assets/microbolloslogo.png', './assets/microbolloslogo.png', '../assets/microbolloslogo.png', 'assets/LOGO NUEVO.png'];
+                // Fallback to absolute-style path (try multiple asset names, prefer final JPG and visible colored logo)
+                const candidates = ['/assets/Logo-Final.jpg', '/assets/logo-final.jpg', '/assets/Logo-Final.JPG', '/assets/microbolloslogo.png', '/assets/LOGO%20NUEVO.png', '/assets/LOGO NUEVO.png', './assets/microbolloslogo.png', '../assets/microbolloslogo.png'];
                 for (const src of candidates) {
                     try {
                         console.info('Attempting to load logo from', src);
-                        data.company.logoData = await window.imageUrlToDataUrl(src);
+                        const isJpg = /\.jpe?g$/i.test(src);
+                        data.company.logoData = isJpg ? await window.imageUrlToDataUrl(src, 'image/jpeg') : await window.imageUrlToDataUrl(src);
                         if (data.company.logoData) { console.info('Logo loaded from', src); window.LAST_PDF_LOGO_SOURCE = `file:${src}`; break; }
                     } catch (e) { console.warn('Logo candidate failed:', src); }
                 }
@@ -122,8 +123,9 @@ window.generateBudgetPDF = async function (data) {
                 } catch (ic) { console.warn('Brightness check failed', ic && ic.message); }
             }
 
-            const logoW = 30;
-            const logoMaxH = 25;
+            // Slightly larger but safe size for the final logo
+            const logoW = 36;
+            const logoMaxH = 28;
 
             // Handle both DataURL (string) and HTMLImageElement (object)
             let imgW, imgH;
@@ -155,20 +157,25 @@ window.generateBudgetPDF = async function (data) {
 
             // Try adding image, with fallbacks
             let drawn = false;
+            let pngFailed = false;
             const tryAdd = (imgData, fmt) => {
                 try {
                     doc.addImage(imgData, fmt, margin + 2, y + 5, w, h);
                     drawn = true;
                     console.info('Logo drawn using format', fmt);
+                    return true;
                 } catch (errAdd) {
                     console.warn('addImage failed for format', fmt, errAdd && errAdd.message);
+                    if (fmt === 'PNG') pngFailed = true;
+                    return false;
                 }
             };
 
             if (typeof data.company.logoData === 'string') {
-                // Prefer PNG, but try JPEG if PNG fails
-                tryAdd(data.company.logoData, 'PNG');
-                if (!drawn) tryAdd(data.company.logoData, 'JPEG');
+                // If the data URL is JPEG prefer JPEG first; else try PNG then JPEG
+                const isJpegData = data.company.logoData.startsWith('data:image/jpeg') || data.company.logoData.startsWith('data:image/jpg') || (window.LAST_PDF_LOGO_SOURCE && /\.jpe?g$/i.test(window.LAST_PDF_LOGO_SOURCE));
+                if (isJpegData) { tryAdd(data.company.logoData, 'JPEG'); if (!drawn) tryAdd(data.company.logoData, 'PNG'); }
+                else { tryAdd(data.company.logoData, 'PNG'); if (!drawn) tryAdd(data.company.logoData, 'JPEG'); }
 
                 // If still not drawn and it looks like a URL (not data:), try to fetch and convert to dataUrl
                 if (!drawn && !data.company.logoData.startsWith('data:image')) {
@@ -202,6 +209,33 @@ window.generateBudgetPDF = async function (data) {
                 hasLogo = true;
                 window.LAST_PDF_LOGO_DRAWN = true;
                 if (!window.LAST_PDF_LOGO_SOURCE) window.LAST_PDF_LOGO_SOURCE = 'drawn:unknown';
+
+                // If PNG failed but we successfully used JPEG and the source was from settings,
+                // create a compatible JPEG data URL and save it to cfg_settings to avoid future failures.
+                try {
+                    if (pngFailed && window.LAST_PDF_LOGO_SOURCE === 'settings.logoData' && typeof data.company.logoData === 'string') {
+                        try {
+                            const tmp = new Image(); tmp.crossOrigin = 'anonymous'; tmp.src = data.company.logoData;
+                            await new Promise((r, rej) => { tmp.onload = r; tmp.onerror = rej; });
+                            const canvas = document.createElement('canvas'); canvas.width = tmp.width; canvas.height = tmp.height;
+                            const ctx = canvas.getContext('2d'); ctx.drawImage(tmp, 0, 0);
+                            const jpegData = canvas.toDataURL('image/jpeg', 0.9);
+                            // Persist into cfg_settings safely
+                            try {
+                                const key = 'cfg_settings';
+                                const cfg = JSON.parse(localStorage.getItem(key) || '{}');
+                                cfg.logoData = jpegData;
+                                localStorage.setItem(key, JSON.stringify(cfg));
+                                // Notify app to refresh previews/badges
+                                document.dispatchEvent(new CustomEvent('cfg:settings-updated', { detail: { settings: cfg } }));
+                                window.LAST_PDF_LOGO_SOURCE = 'settings.logoData (auto-fixed JPEG)';
+                                console.info('Converted problematic PNG logo to JPEG and saved into cfg_settings to avoid future PDF issues.');
+                                if (window.toast) window.toast('Logo guardado como JPG para compatibilidad ✅', 'success');
+                            } catch (eSave) { console.warn('Failed to persist fixed logo to cfg_settings', eSave); }
+                        } catch (eConv) { console.warn('Failed to convert logo to JPEG for persistence', eConv); }
+                    }
+                } catch (ef) { console.warn('Auto-fix flow failed', ef); }
+
             } else {
                 console.error('Logo could not be drawn into PDF');
             }
@@ -453,10 +487,11 @@ window.ensurePdfLoaded = async function () {
     });
 };
 
-window.imageUrlToDataUrl = async function (url) {
+window.imageUrlToDataUrl = async function (url, mime = 'image/png') {
     return new Promise((resolve, reject) => {
         const img = new Image();
-        // Removed crossOrigin to prevent immediate CORS failures on file:// protocol
+        // Attempt CORS anonymous to allow canvas extraction when served properly
+        img.crossOrigin = 'anonymous';
         img.onload = () => {
             try {
                 const canvas = document.createElement('canvas');
@@ -464,10 +499,11 @@ window.imageUrlToDataUrl = async function (url) {
                 canvas.height = img.height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0);
-                resolve(canvas.toDataURL('image/png'));
+                // mime can be 'image/png' or 'image/jpeg'
+                resolve(canvas.toDataURL(mime));
             } catch (e) {
                 // Return image element if canvas is tainted (fallback for file://)
-                console.warn("Canvas tainted, returning IMG element", e);
+                console.warn("Canvas tainted or conversion failed, returning IMG element", e);
                 resolve(img);
             }
         };
