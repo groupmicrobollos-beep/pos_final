@@ -6,15 +6,28 @@ async function api(path, method = 'GET', body = null) {
     const token = state.auth.token; // Changed to use token from state directly or localStorage if managed there
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    const opts = { method, headers };
-    if (body) opts.body = JSON.stringify(body);
+    // Include credentials to allow cookies (session sid) to be set/read across origins
+    const opts = { method, headers, credentials: 'include' };
+    if (body) {
+        opts.body = JSON.stringify(body);
+        // Helpful debug when diagnosing login issues
+        if (path === '/auth/login') console.debug('[api] login payload', body);
+    }
 
     const res = await fetch(`/api${path}`, opts);
     if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || res.statusText);
+        // Try to capture response body (JSON or text) for clearer diagnostics
+        const text = await res.text().catch(() => "");
+        let parsed = null;
+        try { parsed = JSON.parse(text); } catch (e) { /* not JSON */ }
+        console.warn(`[api] Request failed: ${method} /api${path} status=${res.status} statusText=${res.statusText} body=${text}`);
+        throw new Error(parsed?.error || parsed?.message || `${res.status} ${res.statusText}` || 'API Error');
     }
-    return res.json();
+
+    // Return sensible type based on Content-Type
+    const contentType = (res.headers.get('Content-Type') || '').toLowerCase();
+    if (contentType.includes('application/json')) return res.json();
+    return res.text();
 }
 
 const state = {
@@ -129,10 +142,10 @@ export const quotes = {
 export const auth = {
     async init() { return state.auth.user; },
     async login(identifier, password) {
-        // Send 'identifier' to match server expectations (identifier or email)
+        // Debug: log attempt (avoid logging password in plaintext)
+        console.debug('[auth] login attempt:', { identifier });
         const res = await api('/auth/login', 'POST', { identifier, password });
-        // API returns the user object directly. Leave cookie handling to the server
-        // and let the caller call setAuth with a token or cookie marker if desired.
+        console.debug('[auth] login response:', res);
         return res;
     },
     async logout() { logout(); },
