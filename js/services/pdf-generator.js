@@ -89,15 +89,16 @@ window.generateBudgetPDF = async function (data) {
                 h = logoMaxH;
                 w = (imgW * h) / imgH;
             }
-            doc.addImage(data.company.logoData, 'PNG', margin + 5, y + 5, w, h);
+            // Logo shifted more to the left (margin + 2 instead of + 5)
+            doc.addImage(data.company.logoData, 'PNG', margin + 2, y + 5, w, h);
             hasLogo = true;
         } catch (e) {
             console.error("Error drawing logo:", e);
         }
     }
 
-    // Text Positioning
-    const textX = hasLogo ? margin + 40 : margin + 5;
+    // Text Positioning - "Mas al centro" as requested
+    const textX = hasLogo ? margin + 55 : margin + 15;
 
     // Line 1: MICROBOLLOS GROUP
     doc.setTextColor(0);
