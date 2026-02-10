@@ -90,7 +90,10 @@ async function save(data, key = null, options = {}) {
   };
 
   let result;
-  if (key && options.update) {
+  // If a key is provided, perform an update. Previously this required options.update=true
+  // which caused edits to create duplicate budgets instead of updating. Use key presence
+  // as the signal to update by default.
+  if (key) {
     await store.quotes.update(key, payload);
     result = { id: key };
   } else {

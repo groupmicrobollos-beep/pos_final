@@ -128,10 +128,12 @@ export const quotes = {
 // Auth
 export const auth = {
     async init() { return state.auth.user; },
-    async login(username, password) {
-        const res = await api('/auth/login', 'POST', { username, password });
-        setAuth(res);
-        return res.user;
+    async login(identifier, password) {
+        // Send 'identifier' to match server expectations (identifier or email)
+        const res = await api('/auth/login', 'POST', { identifier, password });
+        // API returns the user object directly. Leave cookie handling to the server
+        // and let the caller call setAuth with a token or cookie marker if desired.
+        return res;
     },
     async logout() { logout(); },
     async forgotPassword(email) {
