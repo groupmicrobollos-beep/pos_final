@@ -105,16 +105,16 @@ export function currentUser() {
 
 export function hasPerm(perm) {
     const u = currentUser(); 
-    if (!u) {
-        console.log('[store] hasPerm check failed: no user', perm);
-        return false;
-    }
-    const p = u.perms || {}; 
-    const hasAll = !!p.all;
-    const hasPerm = !!p[perm];
-    const result = hasAll || hasPerm;
-    console.log('[store] hasPerm check:', { perm, perms: p, hasAll, hasPerm, result });
-    return result;
+        if (!u) {
+            console.log('[store] hasPerm check failed: no user for perm:', perm);
+            return false;
+        }
+        const p = u.perms || {}; 
+        const hasAll = !!p.all;
+        const hasPerm = !!p[perm];
+        const result = hasAll || hasPerm;
+        console.log(`[store] hasPerm("${perm}"):`, { userPerms: p, hasAll, hasThis: hasPerm, result: result });
+        return result;
 }
 
 export function hasAnyPerm(perms = []) {

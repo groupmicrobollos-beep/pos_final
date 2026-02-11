@@ -7,13 +7,13 @@ import { Shell } from "./components/Shell.js";
 // requireAny: requiere AL MENOS uno de esos permisos
 const ROUTES = {
     "/login": { public: true, loader: () => import("./pages/Login.js") },
-    "/dashboard": { public: false, loader: () => import("./pages/Dashboard.js") },
-    "/presupuesto": { public: false, loader: () => import("./pages/Presupuesto.js"), requireAny: ["pos", "quotes"] },
-    "/presupuestos": { public: false, loader: () => import("./pages/Presupuestos.js"), requireAny: ["quotes"] },
-    "/reportes": { public: false, loader: () => import("./pages/Reportes.js"), requireAny: ["reports"] },
-    "/inventario": { public: false, loader: () => import("./pages/Inventario.js"), requireAny: ["inventory", "suppliers"] },
-    "/clientes": { public: false, loader: () => import("./pages/Clientes.js"), requireAny: ["quotes", "pos"] },
-    "/configuracion": { public: false, loader: () => import("./pages/Configuracion.js"), requireAny: ["settings"] },
+        "/dashboard": { path: "/dashboard", public: false, loader: () => import("./pages/Dashboard.js") },
+        "/presupuesto": { path: "/presupuesto", public: false, loader: () => import("./pages/Presupuesto.js"), requireAny: ["pos", "quotes"] },
+        "/presupuestos": { path: "/presupuestos", public: false, loader: () => import("./pages/Presupuestos.js"), requireAny: ["quotes"] },
+        "/reportes": { path: "/reportes", public: false, loader: () => import("./pages/Reportes.js"), requireAny: ["reports"] },
+        "/inventario": { path: "/inventario", public: false, loader: () => import("./pages/Inventario.js"), requireAny: ["inventory", "suppliers"] },
+        "/clientes": { path: "/clientes", public: false, loader: () => import("./pages/Clientes.js"), requireAny: ["quotes", "pos"] },
+        "/configuracion": { path: "/configuracion", public: false, loader: () => import("./pages/Configuracion.js"), requireAny: ["settings"] },
 
     // Ruta técnica para cerrar sesión
     "/logout": { public: true, loader: async () => ({ default: { render: () => "", mount() { } } }) },
@@ -52,12 +52,14 @@ function canAccess(meta = {}) {
     console.log('[router] canAccess check:', {
         authenticated: isAuthenticated(),
         user: auth.user,
-        perms: auth.user?.perms,
-        meta: meta
-    });
-    
-    if (!isAuthenticated()) {
-        console.warn('[router] No autenticado');
+        console.log('[router] canAccess check:', {
+            authenticated: isAuthenticated(),
+            userId: auth.user?.id,
+            username: auth.user?.username,
+            role: auth.user?.role,
+            userPerms: auth.user?.perms,
+            metaPath: meta.path || 'unknown'
+        });
         return false;
     }
 
@@ -67,7 +69,7 @@ function canAccess(meta = {}) {
         console.log('[router] requireAll check:', { required: meta.requireAll, result: allOk });
         if (!allOk) return false;
     }
-    if (meta.requireAny && Array.isArray(meta.requireAny) && meta.requireAny.length) {
+            console.log(`[router] requireAll check: necesita [${meta.requireAll.join(', ')}] → ${allOk ? '✓' : '❌'}`);
         // basta con tener uno
         const anyOk = meta.requireAny.some((p) => hasPerm(p));
         console.log('[router] requireAny check:', { required: meta.requireAny, result: anyOk });
@@ -76,12 +78,13 @@ function canAccess(meta = {}) {
     return true;
 }
 
-function render403(root) {
+            console.log(`[router] requireAny check: necesita UNO de [${meta.requireAny.join(', ')}] → ${anyOk ? '✓' : '❌'}`);
     const html = `
     <div class="p-6">
       <h1 class="text-xl font-semibold">403 — Acceso denegado</h1>
       <p class="text-slate-400 mt-1">No tenés permisos para acceder a esta sección.</p>
     </div>`;
+        console.log('[router] ✓ Acceso permitido');
     root.innerHTML = Shell.render(html);
     Shell.mount(root);
 }
