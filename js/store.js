@@ -93,15 +93,28 @@ export function setAuth(obj) {
 export function logout() { setAuth({ token: null, user: null }); }
 
 export function isAuthenticated() {
-    return Boolean(state.auth.token || state.auth.user);
+    const result = Boolean(state.auth.token || state.auth.user);
+    console.log('[store] isAuthenticated:', result, { token: !!state.auth.token, user: !!state.auth.user });
+    return result;
 }
 
-export function currentUser() { return state.auth.user || null; }
+export function currentUser() { 
+    console.log('[store] currentUser:', state.auth.user);
+    return state.auth.user || null; 
+}
 
 export function hasPerm(perm) {
-    const u = currentUser(); if (!u) return false;
-    const p = u.perms || {}; if (p.all) return true;
-    return !!p[perm];
+    const u = currentUser(); 
+    if (!u) {
+        console.log('[store] hasPerm check failed: no user', perm);
+        return false;
+    }
+    const p = u.perms || {}; 
+    const hasAll = !!p.all;
+    const hasPerm = !!p[perm];
+    const result = hasAll || hasPerm;
+    console.log('[store] hasPerm check:', { perm, perms: p, hasAll, hasPerm, result });
+    return result;
 }
 
 export function hasAnyPerm(perms = []) {
@@ -167,7 +180,27 @@ export const quotes = {
 
 // Auth
 export const auth = {
-    async init() { return state.auth.user; },
+    async init() { 
+        console.log('[auth] init() called');
+        
+        // 1) Si ya hay usuario en localStorage, usarlo
+        if (state.auth.user) {
+            console.log('[auth] user already in state:', state.auth.user);
+            return state.auth.user;
+        }
+        
+        // 2) Si hay token/cookie válida, intentar obtener datos del usuario del servidor
+        try {
+            console.log('[auth] attempting to recover session from server...');
+            const user = await api('/auth/me', 'GET');
+            console.log('[auth] server returned user:', user);
+            setAuth({ token: 'cookie', user });
+            return user;
+        } catch (err) {
+            console.log('[auth] no valid session on server:', err?.message);
+            return null;
+        }
+    },
     async login(identifier, password) {
         // Debug: log attempt (avoid logging password in plaintext)
         console.debug('[auth] login attempt:', { identifier });

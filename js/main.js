@@ -8,8 +8,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Intentar rehidratar sesión por cookie antes de iniciar el router
     try {
+        console.log('[main] Inicializando auth...');
         await store.auth.init();
-        console.debug("[auth] init completed");
+        const state = store.getState();
+        console.log('[main] auth.init completed, state:', state);
     } catch (err) {
         console.warn("[auth] init failed", err?.message || err);
     }

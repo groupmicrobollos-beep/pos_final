@@ -1,5 +1,5 @@
 // ./router.js
-import { isAuthenticated, setAuth, hasPerm, hasAnyPerm } from "./store.js";
+import { isAuthenticated, setAuth, hasPerm, hasAnyPerm, getState } from "./store.js";
 import { Shell } from "./components/Shell.js";
 
 // === Definición de rutas con metadatos de permisos ===
@@ -48,16 +48,29 @@ function canAccess(meta = {}) {
     if (meta.public) return true;
 
     // Requiere login
-    if (!isAuthenticated()) return false;
+    const auth = getState().auth;
+    console.log('[router] canAccess check:', {
+        authenticated: isAuthenticated(),
+        user: auth.user,
+        perms: auth.user?.perms,
+        meta: meta
+    });
+    
+    if (!isAuthenticated()) {
+        console.warn('[router] No autenticado');
+        return false;
+    }
 
     // Chequeos de permisos
     if (meta.requireAll && Array.isArray(meta.requireAll) && meta.requireAll.length) {
         const allOk = meta.requireAll.every((p) => hasPerm(p));
+        console.log('[router] requireAll check:', { required: meta.requireAll, result: allOk });
         if (!allOk) return false;
     }
     if (meta.requireAny && Array.isArray(meta.requireAny) && meta.requireAny.length) {
         // basta con tener uno
         const anyOk = meta.requireAny.some((p) => hasPerm(p));
+        console.log('[router] requireAny check:', { required: meta.requireAny, result: anyOk });
         if (!anyOk) return false;
     }
     return true;
