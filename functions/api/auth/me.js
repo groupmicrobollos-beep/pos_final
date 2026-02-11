@@ -31,7 +31,13 @@ function permsFor(role) {
         return { all: true, inventory: true, quotes: true, settings: true, reports: true, pos: true };
     if (role === "seller")
         return { pos: true, quotes: true, inventory: true };
-    return {};
+    if (role === "stock" || role === "depot")
+        return { inventory: true, suppliers: true };
+    if (role === "sales" || role === "ventas")
+        return { pos: true, quotes: true, reports: true };
+    if (role === "readonly" || role === "consulta")
+        return { readonly: true };
+    return {};  // guest/user sin permisos
 }
 
 // ===== Cookie helper (robusto) =====
@@ -91,7 +97,8 @@ export const onRequestGet = async ({ request, env }) => {
             // 3) Responder usuario + permisos
             const userOut = {
                 ...row,
-                perms: permsFor(row.role),
+                role: row.role || "user",  // Asegurar que siempre hay un role
+                perms: permsFor(row.role || "user"),  // Generar perms basado en role
             };
 
             return json(userOut, 200, request);

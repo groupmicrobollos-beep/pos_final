@@ -30,9 +30,31 @@ async function api(path, method = 'GET', body = null) {
     return res.text();
 }
 
+// Helper: regenerar permisos basado en rol
+function permsFor(role) {
+    if (role === "admin")
+        return { all: true, inventory: true, quotes: true, settings: true, reports: true, pos: true };
+    if (role === "seller")
+        return { pos: true, quotes: true, inventory: true };
+    if (role === "stock" || role === "depot")
+        return { inventory: true, suppliers: true };
+    if (role === "sales" || role === "ventas")
+        return { pos: true, quotes: true, reports: true };
+    if (role === "readonly" || role === "consulta")
+        return { readonly: true };
+    return {};  // guest/user sin permisos
+}
+
 const state = {
     auth: {
-        user: JSON.parse(localStorage.getItem("mb_user") || "null"),
+        user: (() => {
+            const userData = JSON.parse(localStorage.getItem("mb_user") || "null");
+            // Si el usuario existe pero no tiene perms, generarlos basado en el rol
+            if (userData && !userData.perms && userData.role) {
+                userData.perms = permsFor(userData.role);
+            }
+            return userData;
+        })(),
         token: localStorage.getItem("mb_token") || null,
     },
 };
@@ -52,6 +74,11 @@ function notify(key) {
 export function setAuth(obj) {
     const next = obj || { token: null, user: null };
     state.auth.token = next.token ?? null;
+    
+    // Asegurar que si el usuario tiene rol pero no perms, generar los perms
+    if (next.user && next.user.role && !next.user.perms) {
+        next.user.perms = permsFor(next.user.role);
+    }
     state.auth.user = next.user ?? null;
 
     if (state.auth.token) localStorage.setItem("mb_token", state.auth.token);

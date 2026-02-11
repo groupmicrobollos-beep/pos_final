@@ -21,7 +21,7 @@ function json(d, s = 200, req) {
     });
 }
 
-// ====== Utils ======
+// Utils
 async function sha256Hex(s) {
     const b = new TextEncoder().encode(s);
     const d = await crypto.subtle.digest("SHA-256", b);
@@ -33,7 +33,13 @@ function permsFor(role) {
         return { all: true, inventory: true, quotes: true, settings: true, reports: true, pos: true };
     if (role === "seller")
         return { pos: true, quotes: true, inventory: true };
-    return {};
+    if (role === "stock" || role === "depot")
+        return { inventory: true, suppliers: true };
+    if (role === "sales" || role === "ventas")
+        return { pos: true, quotes: true, reports: true };
+    if (role === "readonly" || role === "consulta")
+        return { readonly: true };
+    return {};  // guest/user sin permisos
 }
 
 // ====== Schema helper (evita 500 si aún no existe sessions) ======
@@ -154,10 +160,10 @@ export const onRequestPost = async ({ request, env }) => {
         id: user.id,
         email: user.email,
         username: user.username,
-        role: user.role,
+        role: user.role || "user",  // Asegurar que siempre hay un role
         branch_id: user.branch_id,
         full_name: user.full_name,
-        perms: permsFor(user.role),
+        perms: permsFor(user.role || "user"),  // Generar perms basado en role
     };
     console.log("[login] Respuesta final al cliente:", userOut);
     return new Response(JSON.stringify(userOut), {
