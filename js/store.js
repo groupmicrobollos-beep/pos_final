@@ -182,13 +182,11 @@ export const quotes = {
 export const auth = {
     async init() { 
         console.log('[auth] init() called');
-        
         // 1) Si ya hay usuario en localStorage, usarlo
         if (state.auth.user) {
             console.log('[auth] user already in state:', state.auth.user);
             return state.auth.user;
         }
-        
         // 2) Si hay token/cookie válida, intentar obtener datos del usuario del servidor
         try {
             console.log('[auth] attempting to recover session from server...');
@@ -197,7 +195,7 @@ export const auth = {
             setAuth({ token: 'cookie', user });
             return user;
         } catch (err) {
-            console.log('[auth] no valid session on server:', err?.message);
+            console.log('[auth] no valid session on server:', err && err.message ? err.message : err);
             return null;
         }
     },
@@ -209,7 +207,10 @@ export const auth = {
         const maybeEmail = (identifier || '').includes('@') ? identifier : null;
         const maybeUsername = maybeEmail ? null : identifier;
         const payload = { identifier, password, username: maybeUsername, email: maybeEmail };
-        console.debug('[auth] login payload prepared:', { ...payload, password: '••••' });
+        // Mostrar el payload sin el password en claro
+        const debugPayload = { ...payload };
+        if (debugPayload.password) debugPayload.password = '••••';
+        console.debug('[auth] login payload prepared:', debugPayload);
         const res = await api('/auth/login', 'POST', payload);
         console.debug('[auth] login response:', res);
         return res;

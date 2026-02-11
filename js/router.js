@@ -51,17 +51,12 @@ function canAccess(meta = {}) {
     const auth = getState().auth;
     console.log('[router] canAccess check:', {
         authenticated: isAuthenticated(),
-        user: auth.user,
-        console.log('[router] canAccess check:', {
-            authenticated: isAuthenticated(),
-            userId: auth.user?.id,
-            username: auth.user?.username,
-            role: auth.user?.role,
-            userPerms: auth.user?.perms,
-            metaPath: meta.path || 'unknown'
-        });
-        return false;
-    }
+        userId: auth.user?.id,
+        username: auth.user?.username,
+        role: auth.user?.role,
+        userPerms: auth.user?.perms,
+        metaPath: meta.path || 'unknown'
+    });
 
     // Chequeos de permisos
     if (meta.requireAll && Array.isArray(meta.requireAll) && meta.requireAll.length) {
