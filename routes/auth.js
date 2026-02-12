@@ -1,3 +1,4 @@
+
 // /api/auth/me
 router.get('/me', async (req, res) => {
     // Busca el token en headers o cookies (ajusta según tu lógica)
