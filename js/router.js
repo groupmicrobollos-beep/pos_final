@@ -78,8 +78,6 @@ function canAccess(meta = {}) {
     }
     return true;
 }
-    Shell.mount(root);
-}
 
 async function renderRoute(root) {
     let path = resolveRoute(currentPath());
