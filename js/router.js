@@ -1,3 +1,12 @@
+function render403(root) {
+    const html = `
+        <div class="p-6">
+            <h1 class="text-xl font-semibold">403 — Acceso denegado</h1>
+            <p class="text-slate-400 mt-1">No tenés permisos para acceder a esta sección.</p>
+        </div>`;
+    root.innerHTML = Shell.render(html);
+    Shell.mount(root);
+}
 // ./router.js
 import { isAuthenticated, setAuth, hasPerm, hasAnyPerm, getState } from "./store.js";
 import { Shell } from "./components/Shell.js";
