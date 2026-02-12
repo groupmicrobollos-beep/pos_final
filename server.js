@@ -21,6 +21,18 @@ if (process.env.RENDER) {
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
+// Logging middleware for API requests
+app.use((req, res, next) => {
+    if (req.path.startsWith('/api/')) {
+        console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+        if (req.method === 'POST' || req.method === 'PUT') {
+            console.log('  Body:', JSON.stringify(req.body).substring(0, 200));
+        }
+        console.log('  Authorization:', req.headers.authorization ? 'Yes' : 'No');
+    }
+    next();
+});
+
 // Serve static files from the CURRENT directory (which IS the frontend)
 app.use(express.static(__dirname));
 
@@ -45,6 +57,24 @@ app.use('/api/clients', clientsRoutes);
 
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date() });
+});
+
+app.get('/api/test', (req, res) => {
+    res.json({ message: "API is working", timestamp: new Date().toISOString() });
+});
+
+// Global error handler for API routes
+app.use((err, req, res, next) => {
+    console.error('[GlobalErrorHandler] Error:', err.message || err);
+    if (req.path.startsWith('/api/')) {
+        res.status(500).json({ 
+            error: err.message || 'Server error',
+            path: req.path,
+            method: req.method
+        });
+    } else {
+        next();
+    }
 });
 
 // Catch-all to serve index.html
