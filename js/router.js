@@ -62,25 +62,22 @@ function canAccess(meta = {}) {
     if (meta.requireAll && Array.isArray(meta.requireAll) && meta.requireAll.length) {
         const allOk = meta.requireAll.every((p) => hasPerm(p));
         console.log('[router] requireAll check:', { required: meta.requireAll, result: allOk });
-        if (!allOk) return false;
-    }
+        if (!allOk) {
             console.log(`[router] requireAll check: necesita [${meta.requireAll.join(', ')}] → ${allOk ? '✓' : '❌'}`);
-        // basta con tener uno
+            return false;
+        }
+    }
+    // basta con tener uno
+    if (meta.requireAny && Array.isArray(meta.requireAny) && meta.requireAny.length) {
         const anyOk = meta.requireAny.some((p) => hasPerm(p));
         console.log('[router] requireAny check:', { required: meta.requireAny, result: anyOk });
-        if (!anyOk) return false;
+        if (!anyOk) {
+            console.log(`[router] requireAny check: necesita UNO de [${meta.requireAny.join(', ')}] → ${anyOk ? '✓' : '❌'}`);
+            return false;
+        }
     }
     return true;
 }
-
-            console.log(`[router] requireAny check: necesita UNO de [${meta.requireAny.join(', ')}] → ${anyOk ? '✓' : '❌'}`);
-    const html = `
-    <div class="p-6">
-      <h1 class="text-xl font-semibold">403 — Acceso denegado</h1>
-      <p class="text-slate-400 mt-1">No tenés permisos para acceder a esta sección.</p>
-    </div>`;
-        console.log('[router] ✓ Acceso permitido');
-    root.innerHTML = Shell.render(html);
     Shell.mount(root);
 }
 
