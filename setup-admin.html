@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Setup - POS Final</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .status {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status.loading {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        .status.success {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+        .status.error {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+        .info {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        code {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            display: block;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+        .instructions {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Admin Setup</h1>
+        
+        <div class="instructions">
+            <h3>Instrucciones:</h3>
+            <ol>
+                <li>Haz clic en el botón que corresponda</li>
+                <li>Espera a que se complete</li>
+                <li>Ve a la app y haz login con tu usuario</li>
+            </ol>
+        </div>
+
+        <div class="info">
+            <strong>ℹ️ Nota:</strong> Este script se conectará a tu servidor en Render para promocionar usuarios a admin.
+        </div>
+
+        <button onclick="setupAdmin()">🚀 PROMOVER USUARIOS A ADMIN</button>
+
+        <div id="status"></div>
+
+        <div id="result" style="display:none;">
+            <h3>✅ Resultado:</h3>
+            <pre id="resultText"></pre>
+        </div>
+    </div>
+
+    <script>
+        // Detectar si está en desarrollo o producción
+        const BASE_URL = window.location.origin;
+        const API_URL = `${BASE_URL}/api`;
+
+        async function setupAdmin() {
+            const statusDiv = document.getElementById('status');
+            const resultDiv = document.getElementById('result');
+            const button = event.target;
+
+            statusDiv.className = 'status loading';
+            statusDiv.textContent = '⏳ Procesando...';
+            button.disabled = true;
+            resultDiv.style.display = 'none';
+
+            try {
+                console.log('📡 Llamando a /api/auth/setup-admin...');
+                
+                const response = await fetch(`${API_URL}/auth/setup-admin`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || `HTTP ${response.status}`);
+                }
+
+                statusDiv.className = 'status success';
+                statusDiv.innerHTML = `<strong>✅ ¡Éxito!</strong><br>${data.message}`;
+
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `
+                    <h3>📋 Detalles:</h3>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                    <h3>🔑 Próximos pasos:</h3>
+                    <ol>
+                        <li>Ve a <strong><a href="/" style="color: #4CAF50; text-decoration: none;">la aplicación</a></strong></li>
+                        <li>Haz login con tus credenciales (o admin/admin123 si fue creada nueva)</li>
+                        <li>¡Ya tendrás acceso completo a todas las funciones!</li>
+                    </ol>
+                `;
+                
+                console.log('✅ Setup completado:', data);
+
+            } catch (error) {
+                console.error('❌ Error:', error);
+                statusDiv.className = 'status error';
+                statusDiv.innerHTML = `<strong>❌ Error:</strong><br>${error.message}`;
+                
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `
+                    <h3>⚠️ Algo salió mal</h3>
+                    <p>Si el error es "Setup not needed - admins already exist", significa que ya hay admins en la BD.</p>
+                    <p><strong>Prueba hacer login con tu usuario existente.</strong></p>
+                    <pre>${error.message}</pre>
+                `;
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        // Mostrar estado inicial
+        window.addEventListener('load', () => {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = 'status loading';
+            statusDiv.textContent = '✓ Listo. Haz clic en el botón para comenzar.';
+        });
+    </script>
+</body>
+</html>

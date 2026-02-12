@@ -200,4 +200,70 @@ router.get('/debug-users', async (req, res) => {
     }
 });
 
+// Setup endpoint (emergency - only works if no admins exist)
+router.post('/setup-admin', async (req, res) => {
+    try {
+        console.log('[setup-admin] Checking if admin setup is needed...');
+        
+        // Check how many admins exist
+        const adminCheck = await db.execute("SELECT COUNT(*) as count FROM users WHERE role = 'admin'");
+        const adminCount = adminCheck.rows[0]?.count || 0;
+        
+        if (adminCount > 0) {
+            console.log('[setup-admin] Admins already exist, setup not needed');
+            return res.status(403).json({ error: "Setup not needed - admins already exist" });
+        }
+        
+        // Check total users
+        const userCheck = await db.execute("SELECT COUNT(*) as count FROM users");
+        const totalUsers = userCheck.rows[0]?.count || 0;
+        
+        console.log('[setup-admin] Current state: ' + totalUsers + ' users, 0 admins');
+        
+        if (totalUsers === 0) {
+            // Create default admin
+            console.log('[setup-admin] Creating default admin...');
+            const passHash = "sha256:" + crypto.createHash('sha256').update("admin123").digest('hex');
+            const adminId = `usr_${Date.now()}`;
+            
+            await db.execute({
+                sql: `INSERT INTO users (id, username, password_hash, full_name, role, email, active, perms, branch_id) 
+                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                args: [adminId, 'admin', passHash, 'Administrador', 'admin', 'admin@sistema.com', 1, '{"all":true}', null]
+            });
+            
+            console.log('[setup-admin] Admin created:', adminId);
+            return res.json({ 
+                message: "Default admin created", 
+                username: "admin",
+                password: "admin123",
+                id: adminId
+            });
+        } else {
+            // Promote all existing users to admin
+            console.log('[setup-admin] Promoting ' + totalUsers + ' user(s) to admin...');
+            
+            const adminPerms = JSON.stringify({ all: true });
+            await db.execute({
+                sql: "UPDATE users SET role = ?, perms = ? WHERE 1=1",
+                args: ['admin', adminPerms]
+            });
+            
+            // Get the first user to return details
+            const firstUser = await db.execute("SELECT username, id FROM users LIMIT 1");
+            const user = firstUser.rows[0];
+            
+            console.log('[setup-admin] All users promoted to admin');
+            return res.json({ 
+                message: totalUsers + " user(s) promoted to admin",
+                usersAffected: totalUsers,
+                firstUser: user
+            });
+        }
+    } catch (err) {
+        console.error('[setup-admin] Error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 module.exports = router;

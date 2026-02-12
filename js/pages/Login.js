@@ -284,8 +284,9 @@ export default {
       submitLabel.setAttribute('aria-hidden', 'true');
 
       try {
-        const me = await store.auth.login(identifier, password);
-        setAuth({ token: "cookie", user: me });
+        const response = await store.auth.login(identifier, password);
+        console.log('[login] Response:', response);
+        setAuth({ token: response.token, user: response.user });
         location.hash = "#/dashboard";
       } catch (err) {
         const msg = (err && err.message) ? err.message : "Error al iniciar sesión";
