@@ -6,26 +6,52 @@ const { sendPasswordResetEmail } = require('../services/email');
 
 // /api/auth/me
 router.get('/me', async (req, res) => {
-    const token = req.headers.authorization?.replace('Bearer ', '') || null;
-    if (!token) return res.status(401).json({ error: "No token" });
-    const parts = token.split(':');
-    if (parts[0] !== 'mb' || !parts[1]) return res.status(401).json({ error: "Invalid token" });
-    const userId = parts[1];
     try {
+        const authHeader = req.headers.authorization || '';
+        const token = authHeader.replace('Bearer ', '').trim();
+        
+        console.log('[me] Token recibido:', token);
+        
+        if (!token) {
+            console.log('[me] No hay token');
+            return res.status(401).json({ error: "No token" });
+        }
+        
+        const parts = token.split(':');
+        if (parts[0] !== 'mb' || !parts[1]) {
+            console.log('[me] Token inválido:', parts);
+            return res.status(401).json({ error: "Invalid token" });
+        }
+        
+        const userId = parts[1];
+        console.log('[me] Buscando usuario con id:', userId);
+        
         const result = await db.execute({
             sql: "SELECT id, username, full_name, role, email, active, perms, branch_id FROM users WHERE id = ?",
             args: [userId]
         });
+        
         const user = result.rows[0];
-        if (!user) return res.status(404).json({ error: "User not found" });
-        if (!user.active) return res.status(403).json({ error: "User inactive" });
+        if (!user) {
+            console.log('[me] Usuario no encontrado');
+            return res.status(404).json({ error: "User not found" });
+        }
+        
+        if (!user.active) {
+            console.log('[me] Usuario inactivo');
+            return res.status(403).json({ error: "User inactive" });
+        }
+        
         let perms = user.perms;
         if (typeof perms === 'string') {
             try { perms = JSON.parse(perms); } catch { perms = {}; }
         }
+        
+        console.log('[me] Usuario encontrado:', { id: user.id, username: user.username, role: user.role });
         res.json({ ...user, perms: perms || {} });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error('[me] Error:', err);
+        res.status(500).json({ error: "Server error: " + err.message });
     }
 });
 
