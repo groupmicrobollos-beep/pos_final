@@ -188,14 +188,31 @@ export const auth = {
         console.log('[auth] init() called');
         // 1) Si ya hay usuario en localStorage, usarlo
         if (state.auth.user) {
-            console.log('[auth] user already in state:', state.auth.user);
+            console.log('[auth] user already in state:', { 
+                id: state.auth.user.id,
+                username: state.auth.user.username,
+                role: state.auth.user.role,
+                hasPerms: !!state.auth.user.perms
+            });
             return state.auth.user;
         }
         // 2) Si hay token/cookie válida, intentar obtener datos del usuario del servidor
         try {
-            console.log('[auth] attempting to recover session from server...');
+            console.log('[auth] attempting to recover session from server at /api/auth/me...');
             const user = await api('/auth/me', 'GET');
-            console.log('[auth] server returned user:', user);
+            console.log('[auth] /auth/me response type:', typeof user);
+            console.log('[auth] /auth/me response keys:', user ? Object.keys(user) : 'null');
+            if (user && user.role) {
+                console.log('[auth] server returned valid user:', { 
+                    id: user.id,
+                    username: user.username,
+                    role: user.role,
+                    hasPerms: !!user.perms,
+                    perms: user.perms
+                });
+            } else {
+                console.warn('[auth] server returned something but not a valid user object:', user);
+            }
             setAuth({ token: 'cookie', user });
             return user;
         } catch (err) {
@@ -215,8 +232,20 @@ export const auth = {
         const debugPayload = { ...payload };
         if (debugPayload.password) debugPayload.password = '••••';
         console.debug('[auth] login payload prepared:', debugPayload);
+        console.log('[auth] Sending POST to /api/auth/login...');
         const res = await api('/auth/login', 'POST', payload);
-        console.debug('[auth] login response:', res);
+        console.log('[auth] login response type:', typeof res);
+        console.log('[auth] login response keys:', res ? Object.keys(res) : 'null');
+        console.debug('[auth] full login response:', res);
+        if (res && res.user) {
+            console.log('[auth] User from login:', { 
+                id: res.user.id,
+                username: res.user.username,
+                role: res.user.role,
+                hasPerms: !!res.user.perms,
+                perms: res.user.perms
+            });
+        }
         return res;
     },
     async logout() { logout(); },

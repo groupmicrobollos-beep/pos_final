@@ -61,28 +61,61 @@ function hashPassword(plain) {
 
 router.post('/login', async (req, res) => {
     try {
-        const { username, password } = req.body;
-        if (!username || !password) return res.status(400).json({ error: "Missing fields" });
+        const { username, password, identifier, email } = req.body;
+        console.log('[login] Request received:', { identifier, username, email, hasPassword: !!password });
+        
+        // Support both username and identifier
+        const searchFor = username || identifier || email;
+        if (!searchFor || !password) {
+            console.log('[login] Missing required fields');
+            return res.status(400).json({ error: "Missing fields" });
+        }
+        
+        console.log('[login] Searching for user:', searchFor);
         const result = await db.execute({
             sql: "SELECT * FROM users WHERE username = ? OR email = ?",
-            args: [username, username]
+            args: [searchFor, searchFor]
         });
+        
         const user = result.rows[0];
-        if (!user) return res.status(401).json({ error: "Invalid credentials" });
-        if (!user.active) return res.status(403).json({ error: "User inactive" });
-        const inputHash = hashPassword(password);
-        if (user.password_hash !== inputHash) {
+        if (!user) {
+            console.log('[login] User not found:', searchFor);
             return res.status(401).json({ error: "Invalid credentials" });
         }
-        const token = `mb:${user.id}:${Date.now()}`;
-        const { password_hash, ...safeUser } = user;
-        if (typeof safeUser.perms === 'string') {
-            try { safeUser.perms = JSON.parse(safeUser.perms); } catch { }
+        
+        console.log('[login] User found:', { id: user.id, username: user.username, role: user.role, active: user.active });
+        
+        if (!user.active) {
+            console.log('[login] User inactive:', user.id);
+            return res.status(403).json({ error: "User inactive" });
         }
-        res.json({ user: safeUser, token });
+        
+        const inputHash = hashPassword(password);
+        if (user.password_hash !== inputHash) {
+            console.log('[login] Invalid password for user:', user.id);
+            return res.status(401).json({ error: "Invalid credentials" });
+        }
+        
+        console.log('[login] Password verified for user:', user.id);
+        const token = `mb:${user.id}:${Date.now()}`;
+        const { password_hash, reset_token, reset_token_expires, ...safeUser } = user;
+        
+        if (typeof safeUser.perms === 'string') {
+            try { 
+                safeUser.perms = JSON.parse(safeUser.perms); 
+                console.log('[login] Parsed perms:', safeUser.perms);
+            } catch (e) { 
+                console.warn('[login] Failed to parse perms:', safeUser.perms);
+                safeUser.perms = {};
+            }
+        }
+        
+        const response = { user: safeUser, token };
+        console.log('[login] Returning response:', { user: { id: safeUser.id, username: safeUser.username, role: safeUser.role }, token });
+        res.json(response);
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Server error" });
+        console.error('[login] Caught error:', err);
+        res.status(500).json({ error: "Server error: " + err.message });
     }
 });
 
@@ -135,6 +168,35 @@ router.post('/reset-password', async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "Server error" });
+    }
+});
+
+// Debug endpoint (remove in production)
+router.get('/debug-users', async (req, res) => {
+    try {
+        console.log('[debug] Fetching user count and sample data...');
+        const countResult = await db.execute("SELECT COUNT(*) as count FROM users");
+        const userCount = countResult.rows[0]?.count || 0;
+        
+        const userResult = await db.execute("SELECT id, username, role, active, perms FROM users LIMIT 5");
+        const users = userResult.rows || [];
+        
+        console.log('[debug] User count:', userCount);
+        console.log('[debug] Sample users:', users);
+        
+        res.json({ 
+            userCount,
+            users: users.map(u => ({
+                id: u.id,
+                username: u.username,
+                role: u.role,
+                active: u.active,
+                perms: typeof u.perms === 'string' ? JSON.parse(u.perms || '{}') : u.perms
+            }))
+        });
+    } catch (err) {
+        console.error('[debug] Error:', err);
+        res.status(500).json({ error: err.message });
     }
 });
 
