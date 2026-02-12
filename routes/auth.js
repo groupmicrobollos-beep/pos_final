@@ -1,3 +1,32 @@
+// /api/auth/me
+router.get('/me', async (req, res) => {
+    // Busca el token en headers o cookies (ajusta según tu lógica)
+    const token = req.headers.authorization?.replace('Bearer ', '') || null;
+    if (!token) return res.status(401).json({ error: "No token" });
+
+    // Extrae el userId del token (ajusta si usás JWT, aquí es simple)
+    const parts = token.split(':');
+    if (parts[0] !== 'mb' || !parts[1]) return res.status(401).json({ error: "Invalid token" });
+    const userId = parts[1];
+
+    try {
+        const result = await db.execute({
+            sql: "SELECT id, username, full_name, role, email, active, perms, branch_id FROM users WHERE id = ?",
+            args: [userId]
+        });
+        const user = result.rows[0];
+        if (!user) return res.status(404).json({ error: "User not found" });
+        if (!user.active) return res.status(403).json({ error: "User inactive" });
+
+        let perms = user.perms;
+        if (typeof perms === 'string') {
+            try { perms = JSON.parse(perms); } catch { perms = {}; }
+        }
+        res.json({ ...user, perms: perms || {} });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 const express = require('express');
 const router = express.Router();
 const { db } = require('../db');

@@ -73,13 +73,17 @@ function notify(key) {
 
 export function setAuth(obj) {
     const next = obj || { token: null, user: null };
-    state.auth.token = next.token ?? null;
-    
-    // Asegurar que si el usuario tiene rol pero no perms, generar los perms
-    if (next.user && next.user.role && !next.user.perms) {
-        next.user.perms = permsFor(next.user.role);
+    // Validar que el usuario sea un objeto válido (no HTML, no string, no null)
+    let validUser = null;
+    if (next.user && typeof next.user === 'object' && !Array.isArray(next.user) && next.user.role) {
+        // Si no tiene perms pero sí rol, generarlos
+        if (!next.user.perms) {
+            next.user.perms = permsFor(next.user.role);
+        }
+        validUser = next.user;
     }
-    state.auth.user = next.user ?? null;
+    state.auth.token = next.token ?? null;
+    state.auth.user = validUser;
 
     if (state.auth.token) localStorage.setItem("mb_token", state.auth.token);
     else localStorage.removeItem("mb_token");
