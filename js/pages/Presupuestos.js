@@ -521,6 +521,7 @@ export default {
             <div><div class="text-slate-400">Hecho</div><div class="font-medium">${b.done ? 'Sí' : 'No'}</div></div>
             <div><div class="text-slate-400">Subtotal</div><div>${b.subtotal || money(totalNum)}</div></div>
             <div><div class="text-slate-400">Total</div><div class="font-semibold">${b.total || money(totalNum)}</div></div>
+            ${b.assignedUser ? `<div><div class="text-slate-400">Usuario responsable</div><div class="font-medium">${b.assignedUser}</div></div>` : ''}
           </div>
         </div>
 

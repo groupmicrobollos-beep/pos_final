@@ -302,6 +302,11 @@ window.generateBudgetPDF = async function (data) {
         { title: "SUCURSAL", val: data.sucursalNombre || "-" }
     ];
 
+    // Agregar usuario responsable si existe
+    if (data.assignedUser) {
+        boxes.push({ title: "RESPONSABLE", val: data.assignedUser || "-" });
+    }
+
     let cx = margin;
     doc.setTextColor(0);
     boxes.forEach(b => {

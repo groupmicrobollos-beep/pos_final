@@ -1148,8 +1148,8 @@ export default {
     confirmAdd.addEventListener("click", () => {
       if (!partSelect.value) { toast("Seleccioná una pieza", "error"); return; }
       if (!workSelect.value) { toast("Seleccioná un trabajo", "error"); return; }
-      const cost = parseFloat(workCost.value);
-      if (!cost || cost <= 0) { toast("Costo inválido", "error"); return; }
+      const cost = parseFloat(workCost.value || "0");
+      if (cost < 0) { toast("Costo inválido", "error"); return; }
       const opts = [...optionChecks].filter(c => c.checked).map(c => c.nextElementSibling.textContent.trim());
       const desc = `[SERVICIO] ${partSelect.value} - ${workSelect.value}${opts.length ? ` (${opts.join(", ")})` : ""}`;
       appendRow({ cantidad: 1, descripcion: desc, unit: cost, total: cost });
@@ -1185,7 +1185,7 @@ export default {
 
     function updateConfirmBtn() {
       const hasService = selectedService !== null;
-      const hasCost = parseFloat(serviceCost.value) > 0;
+      const hasCost = parseFloat(serviceCost.value || "0") >= 0;
       confirmServiceBtn.disabled = !(hasService && hasCost);
     }
 
@@ -1306,13 +1306,13 @@ export default {
       if (!selectedService) return;
       const quantity = Math.max(1, parseInt(serviceQuantity.value || "1", 10));
       const cost = parseFloat(serviceCost.value || "0");
-      if (!(cost > 0)) { toast("Costo inválido", "error"); return; }
+      if (cost < 0) { toast("Costo inválido", "error"); return; }
       const extra = serviceDescription.value.trim();
       const fullDesc = extra ? `${selectedService} - ${extra}` : selectedService;
       appendRow({ cantidad: quantity, descripcion: `[SERVICIO] ${fullDesc}`, unit: cost, total: quantity * cost });
       closeOthers();
       toast("Servicio agregado al presupuesto", "success");
-    });
+    })
 
     // === Repuestos
     let tempParts = [];
@@ -1338,7 +1338,7 @@ export default {
       const p = parseFloat(partPriceInput.value || "0");
       const t = q * (p > 0 ? p : 0);
       partTotalInput.textContent = money(t);
-      addPartBtn.disabled = !(partNameInput.value.trim() && p > 0 && q > 0);
+      addPartBtn.disabled = !(partNameInput.value.trim() && q > 0);
     }
     function clearPartForm() {
       partNameInput.value = ""; partQuantityInput.value = "1"; partPriceInput.value = ""; partDescriptionInput.value = "";
@@ -1356,7 +1356,7 @@ export default {
     addPartBtn.addEventListener("click", () => {
       const name = partNameInput.value.trim(); if (!name) return;
       const quantity = Math.max(1, parseInt(partQuantityInput.value || "1", 10));
-      const price = parseFloat(partPriceInput.value || "0"); if (!(price > 0)) return;
+      const price = parseFloat(partPriceInput.value || "0"); if (price < 0) return;
       const desc = partDescriptionInput.value.trim();
       const newPart = { id: rid("rep"), name, quantity, price, total: quantity * price, description: desc };
       tempParts.push(newPart);
