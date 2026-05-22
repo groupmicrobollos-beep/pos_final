@@ -986,8 +986,8 @@ export default {
     });
 
     // --- Eliminar Vehículo (modal)
-    function openDelVehModal() { delVehModal.classList.remove("hidden"); }
-    function closeDelVehModal() { delVehModal.classList.add("hidden"); }
+    function openDelVehModal() { ModalHelper.open(delVehModal); }
+    function closeDelVehModal() { ModalHelper.close(delVehModal); }
     deleteVehicleBtn.addEventListener("click", () => {
       if (!selectedClientId || !selectedVehicleId) return;
       const client = localClients.find(c => c.id === selectedClientId);
@@ -1027,8 +1027,8 @@ export default {
     });
 
     // --- Eliminar Cliente (modal)
-    function openDelCliModal() { delCliModal.classList.remove("hidden"); }
-    function closeDelCliModal() { delCliModal.classList.add("hidden"); }
+    function openDelCliModal() { ModalHelper.open(delCliModal); }
+    function closeDelCliModal() { ModalHelper.close(delCliModal); }
     deleteClientBtn.addEventListener("click", () => {
       if (!selectedClientId) return;
       const cli = localClients.find(c => c.id === selectedClientId);
@@ -1087,11 +1087,13 @@ export default {
     if (taxRateEl) taxRateEl.addEventListener("input", () => { itemsDirty = true; updateTotals(); });
     function appendRow({ cantidad = 1, descripcion, unit, total }) {
       const tr = document.createElement("tr");
+      const unitDisplay = unit === 0 ? "-" : money(unit);
+      const totalDisplay = total === 0 ? "-" : money(total);
       tr.innerHTML = `
         <td class="px-3 py-2">${cantidad}</td>
         <td class="px-3 py-2 text-left">${descripcion}</td>
-        <td class="px-3 py-2">${money(unit)}</td>
-        <td class="px-3 py-2">${money(total)}</td>
+        <td class="px-3 py-2">${unitDisplay}</td>
+        <td class="px-3 py-2">${totalDisplay}</td>
         <td class="px-3 py-2">
           <button class="delete-item px-2 py-1 rounded bg-rose-600/80 hover:bg-rose-600" title="Eliminar"><i class="fas fa-trash" aria-hidden="true"></i></button>
         </td>`;
@@ -1124,16 +1126,8 @@ export default {
     }
 
     // === Modal "Añadir Item"
-    function showAddItem() { addItemModal.classList.remove("hidden"); }
-    function hideAddItem() { addItemModal.classList.add("hidden"); }
-    addItemBtn.addEventListener("click", showAddItem);
-    addItemModal.addEventListener("click", (e) => { if (e.target === addItemModal) hideAddItem(); });
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") {
-        [addItemModal, othersModal, partsModal, signModal, delVehModal, delCliModal].forEach(m => !m.classList.contains("hidden") && m.classList.add("hidden"));
-      }
-    });
-    closeAddItem.forEach(b => b.addEventListener("click", hideAddItem));
+    addItemBtn.addEventListener("click", () => ModalHelper.open(addItemModal));
+    ModalHelper.setup(addItemModal, ".close-modal");
 
     partSelect.addEventListener("change", () => customPartContainer.classList.toggle("hidden", partSelect.value !== "__otro__"));
     workSelect.addEventListener("change", () => customWorkContainer.classList.toggle("hidden", workSelect.value !== "__otro__"));
@@ -1161,12 +1155,12 @@ export default {
     let selectedService = null;
     let customServices = JSON.parse(localStorage.getItem("customServices") || "[]");
 
-    const openOthers = () => { othersModal.classList.remove("hidden"); resetOthers(); loadCustomServices(); };
-    const closeOthers = () => { othersModal.classList.add("hidden"); resetOthers(); };
+    const openOthers = () => { ModalHelper.open(othersModal, () => { resetOthers(); loadCustomServices(); }); };
+    const closeOthers = () => { ModalHelper.close(othersModal, () => { resetOthers(); }); };
 
     othersBtn.addEventListener("click", openOthers);
-    closeServicesModal.addEventListener("click", closeOthers);
-    cancelServiceBtn.addEventListener("click", closeOthers);
+    ModalHelper.setup(othersModal, "#close-services-modal");
+    cancelServiceBtn.addEventListener("click", closeOthers);  // Botón alternativo de cierre
     othersModal.addEventListener("click", (e) => { if (e.target === othersModal) closeOthers(); });
 
     function clearAllServiceSelections() {
@@ -1317,21 +1311,14 @@ export default {
     // === Repuestos
     let tempParts = [];
     const openParts = () => {
-      partsModal.classList.remove("hidden");
-      partsModal.classList.add("flex"); // Ensure centering logic works
-      document.body.style.overflow = "hidden"; // Lock scroll
-      resetParts();
+      ModalHelper.open(partsModal, () => { resetParts(); });
     };
     const closeParts = () => {
-      partsModal.classList.add("hidden");
-      partsModal.classList.remove("flex");
-      document.body.style.overflow = ""; // Unlock scroll
-      resetParts();
+      ModalHelper.close(partsModal, () => { resetParts(); });
     };
     partsBtn.addEventListener("click", openParts);
-    closePartsModal.addEventListener("click", closeParts);
-    cancelPartsBtn.addEventListener("click", closeParts);
-    partsModal.addEventListener("click", (e) => { if (e.target === partsModal) closeParts(); });
+    ModalHelper.setup(partsModal, "#close-parts-modal");
+    cancelPartsBtn.addEventListener("click", closeParts);  // Botón alternativo de cierre
 
     function calcPartTotal() {
       const q = Math.max(1, parseInt(partQuantityInput.value || "1", 10));
@@ -1412,16 +1399,13 @@ export default {
     let drawing = false, last = null;
     const pos = (ev, canvas) => { const r = canvas.getBoundingClientRect(); const x = (ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left; const y = (ev.touches ? ev.touches[0].clientY : ev.clientY) - r.top; return { x, y }; };
     function showSign() {
-      signModal.classList.remove("hidden");
-      signModal.classList.add("flex");
-      document.body.style.overflow = "hidden";
-      resizeSignCanvas();
-      loadSignatureToEdit();
+      ModalHelper.open(signModal, () => {
+        resizeSignCanvas();
+        loadSignatureToEdit();
+      });
     }
     function hideSign() {
-      signModal.classList.add("hidden");
-      signModal.classList.remove("flex");
-      document.body.style.overflow = "";
+      ModalHelper.close(signModal);
     }
     function clearSignature() { signCtx.clearRect(0, 0, signCanvas.width, signCanvas.height); }
     function saveSignature() {
@@ -1446,7 +1430,7 @@ export default {
     signCanvas.addEventListener("touchmove", e => { e.preventDefault(); if (!drawing) return; const p = pos(e, signCanvas); signCtx.beginPath(); signCtx.moveTo(last.x, last.y); signCtx.lineTo(p.x, p.y); signCtx.stroke(); last = p; });
     window.addEventListener("touchend", () => drawing = false);
     signBtn.addEventListener("click", showSign);
-    closeSign.addEventListener("click", hideSign);
+    ModalHelper.setup(signModal, "#close-signature");
     clearSign.addEventListener("click", clearSignature);
     saveSign.addEventListener("click", saveSignature);
     if (printDate) printDate.textContent = new Date().toLocaleDateString(LOCALE);

@@ -159,26 +159,24 @@ export default {
     function openModal(c = null) {
       form.reset();
       currentVehicles = c ? JSON.parse(JSON.stringify(c.vehicles || [])) : [];
-      if (c) {
-        modalTitle.textContent = "Editar Cliente";
-        form.cid.value = c.id;
-        form.name.value = c.name;
-        form.phone.value = c.phone || "";
-        form.email.value = c.email || "";
-      } else {
-        modalTitle.textContent = "Nuevo Cliente";
-        form.cid.value = "";
-      }
-      renderVehiclesForm();
-      modal.classList.remove("hidden");
-      modal.classList.add("flex");
+      ModalHelper.open(modal, () => {
+        if (c) {
+          modalTitle.textContent = "Editar Cliente";
+          form.cid.value = c.id;
+          form.name.value = c.name;
+          form.phone.value = c.phone || "";
+          form.email.value = c.email || "";
+        } else {
+          modalTitle.textContent = "Nuevo Cliente";
+          form.cid.value = "";
+        }
+        renderVehiclesForm();
+      });
     }
-    function closeModal() { modal.classList.add("hidden"); modal.classList.remove("flex"); }
+    function closeModal() { ModalHelper.close(modal); }
 
     btnAdd.addEventListener("click", () => openModal(null));
-    btnClose.addEventListener("click", closeModal);
-    btnCancel.addEventListener("click", closeModal);
-    modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
+    ModalHelper.setup(modal, "#btn-close");
 
     // Table Actions
     tableBody.addEventListener("click", async (e) => {

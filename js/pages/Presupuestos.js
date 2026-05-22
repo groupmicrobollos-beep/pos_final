@@ -472,22 +472,18 @@ export default {
       const budget = await budgetsService.get(key);
       if (!budget) { toast("No se encontró el presupuesto", "error"); return; }
       current = budget;
-      modalBody.innerHTML = renderDetail(budget);
-      // PDF botón visible solo si existe el generador
-      if (typeof window.generateBudgetPDF === "function") modalPdf.classList.remove("hidden");
-      else modalPdf.classList.add("hidden");
-      modal.classList.remove("hidden");
-      modal.classList.add("flex");
-      document.body.style.overflow = "hidden"; // Lock scroll
+      ModalHelper.open(modal, () => {
+        modalBody.innerHTML = renderDetail(budget);
+        // PDF botón visible solo si existe el generador
+        if (typeof window.generateBudgetPDF === "function") modalPdf.classList.remove("hidden");
+        else modalPdf.classList.add("hidden");
+      });
     }
     function closeDetail() {
-      modal.classList.add("hidden");
-      modal.classList.remove("flex");
-      document.body.style.overflow = ""; // Unlock scroll
+      ModalHelper.close(modal);
       current = null;
     }
-    modalClose.addEventListener("click", closeDetail);
-    modal.addEventListener("click", (e) => { if (e.target === modal) closeDetail(); });
+    ModalHelper.setup(modal, "#modal-close");
     if (modalPrint) modalPrint.addEventListener("click", () => { if (current) simplePrint(current); });
     if (modalPdf) modalPdf.addEventListener("click", async () => {
       if (!current) return;

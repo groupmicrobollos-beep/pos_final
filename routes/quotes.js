@@ -43,9 +43,9 @@ router.post('/', async (req, res) => {
 
         await db.execute({
             sql: `INSERT INTO quotes (
-                id, client_name, client_dni, client_address, client_phone, client_email, 
-                vehicle, siniestro, branch_id, total, items, signature, status, date, vat_policy
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                id, client_name, client_dni, client_address, client_phone, client_email,
+                vehicle, siniestro, branch_id, total, items, signature, status, date, vat_policy, created_by
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             args: [
                 newId,
                 c.nombre || q.client_name || '',
@@ -62,7 +62,8 @@ router.post('/', async (req, res) => {
                 q.signature || null,
                 q.estado || q.status || 'draft',
                 q.fecha ? new Date(q.fecha).toISOString() : new Date().toISOString(),
-                q.vatPolicy || q.vat_policy || 'all'
+                q.vatPolicy || q.vat_policy || 'all',
+                q.created_by || q.createdBy || q.assignedUser || q.assigned_user || null
             ]
         });
         res.json({ success: true, id: newId });
@@ -81,7 +82,7 @@ router.put('/:id', async (req, res) => {
         await db.execute({
             sql: `UPDATE quotes SET 
                 client_name=?, client_dni=?, client_address=?, client_phone=?, client_email=?, 
-                vehicle=?, siniestro=?, branch_id=?, total=?, items=?, signature=?, status=?, vat_policy=?
+                vehicle=?, siniestro=?, branch_id=?, total=?, items=?, signature=?, status=?, vat_policy=?, created_by=?
                 WHERE id=?`,
             args: [
                 c.nombre || q.client_name || null,
@@ -97,6 +98,7 @@ router.put('/:id', async (req, res) => {
                 q.signature || null,
                 q.estado || q.status || 'draft',
                 q.vatPolicy || q.vat_policy || 'all',
+                q.created_by || q.createdBy || q.assignedUser || q.assigned_user || null,
                 req.params.id
             ]
         });

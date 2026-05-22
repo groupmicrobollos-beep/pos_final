@@ -394,16 +394,13 @@ export default {
     });
 
     // Cerrar modales
-    itemClose.addEventListener("click", () => hide(itemModal));
-    itemCancel.addEventListener("click", () => hide(itemModal));
-    itemModal.addEventListener("click", (e) => { if (e.target === itemModal) hide(itemModal); });
+    ModalHelper.setup(itemModal, "#item-close");
+    itemCancel.addEventListener("click", () => ModalHelper.close(itemModal));
 
-    suppClose.addEventListener("click", () => hide(suppModal));
-    suppCancel.addEventListener("click", () => hide(suppModal));
-    suppModal.addEventListener("click", (e) => { if (e.target === suppModal) hide(suppModal); });
+    ModalHelper.setup(suppModal, "#supp-close");
+    suppCancel.addEventListener("click", () => ModalHelper.close(suppModal));
 
-    sendClose.addEventListener("click", () => hide(sendModal));
-    sendModal.addEventListener("click", (e) => { if (e.target === sendModal) hide(sendModal); });
+    ModalHelper.setup(sendModal, "#send-close");
 
     // Guardado (sin submit nativo)
     itemSave.addEventListener("click", () => saveItem("close"));
@@ -500,8 +497,9 @@ export default {
       E.everyDays.value = data?.alerts?.everyDays ?? "";
       E.nextDate.value = data?.alerts?.nextDate || "";
       E.threshold.value = data?.alerts?.threshold ?? "";
-      show(itemModal);
-      setTimeout(() => E.name?.focus(), 0);
+      ModalHelper.open(itemModal, () => {
+        setTimeout(() => E.name?.focus(), 0);
+      });
     }
     function readItemForm(form) {
       const E = form.elements;
@@ -547,7 +545,7 @@ export default {
         if (mode === "new") {
           openItem(null);
         } else {
-          hide(itemModal);
+          ModalHelper.close(itemModal);
         }
       } catch (err) {
         console.error(err);
@@ -694,28 +692,29 @@ export default {
     }
     function openSend() {
       if (!buyList.length) { toast("La lista está vacía", "error"); return; }
-      const groups = {};
-      buyList.forEach(b => {
-        const it = items.find(i => i.id === b.itemId);
-        const sid = b.supplierId || it?.supplierId || "__sin__";
-        (groups[sid] ||= []).push({ ...b, item: it || {} });
-      });
-      sendBody.innerHTML = Object.entries(groups).map(([sid, block]) => {
-        const s = findSupplier(sid);
-        const msg = buildMessage(block, s);
-        return `
-          <div class="glass rounded-lg p-2">
-            <div class="flex items-center justify-between">
-              <div class="font-medium">${s ? (s.name + (s.company ? " — " + s.company : "")) : "Sin proveedor"}</div>
-              <div class="flex gap-2">
-                ${s?.phone ? `<a class="btn mini-btn" target="_blank" href="${waHref(block, s)}"><i class=\"fab fa-whatsapp\" aria-hidden=\"true\"></i> WhatsApp</a>` : ""}
-                ${s?.email ? `<a class="btn mini-btn" href="${mailtoHref(block, s)}"><i class=\"fas fa-envelope\" aria-hidden=\"true\"></i> Email</a>` : ""}
+      ModalHelper.open(sendModal, () => {
+        const groups = {};
+        buyList.forEach(b => {
+          const it = items.find(i => i.id === b.itemId);
+          const sid = b.supplierId || it?.supplierId || "__sin__";
+          (groups[sid] ||= []).push({ ...b, item: it || {} });
+        });
+        sendBody.innerHTML = Object.entries(groups).map(([sid, block]) => {
+          const s = findSupplier(sid);
+          const msg = buildMessage(block, s);
+          return `
+            <div class="glass rounded-lg p-2">
+              <div class="flex items-center justify-between">
+                <div class="font-medium">${s ? (s.name + (s.company ? " — " + s.company : "")) : "Sin proveedor"}</div>
+                <div class="flex gap-2">
+                  ${s?.phone ? `<a class="btn mini-btn" target="_blank" href="${waHref(block, s)}"><i class=\"fab fa-whatsapp\" aria-hidden=\"true\"></i> WhatsApp</a>` : ""}
+                  ${s?.email ? `<a class="btn mini-btn" href="${mailtoHref(block, s)}"><i class=\"fas fa-envelope\" aria-hidden=\"true\"></i> Email</a>` : ""}
+                </div>
               </div>
-            </div>
-            <textarea rows="7">${msg}</textarea>
-          </div>`;
-      }).join("");
-      show(sendModal);
+              <textarea rows="7">${msg}</textarea>
+            </div>`;
+        }).join("");
+      });
     }
 
     // ========== PROVEEDORES ==========
@@ -761,8 +760,9 @@ export default {
       S.email.value = data?.email || "";
       S.tags.value = (data?.tags || []).join(", ");
       S.notes.value = data?.notes || "";
-      show(suppModal);
-      setTimeout(() => S.name?.focus(), 0);
+      ModalHelper.open(suppModal, () => {
+        setTimeout(() => S.name?.focus(), 0);
+      });
     }
     function readSupplierForm(form) {
       const S = form.elements;
@@ -796,7 +796,7 @@ export default {
         if (mode === "new") {
           openSupplier(null);
         } else {
-          hide(suppModal);
+          ModalHelper.close(suppModal);
         }
       } catch (err) {
         console.error(err);

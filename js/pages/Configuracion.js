@@ -474,6 +474,10 @@ export default {
         if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center"><i class="fas fa-spinner fa-spin"></i> Cargando usuarios...</td></tr>`;
         localUsers = await store.users.list();
         if (!Array.isArray(localUsers)) localUsers = []; // safety
+        // Sync to localStorage for other modules (e.g., Presupuesto.js)
+        save(CFG_USERS_KEY, localUsers);
+        // Notify other modules that users list changed
+        document.dispatchEvent(new CustomEvent('cfg:users-updated', { detail: { users: localUsers } }));
         repaintUsers();
       } catch (e) {
         toast("Error cargando usuarios: " + e.message, "error");
@@ -526,39 +530,40 @@ export default {
 
     window.mount.openUser = (uid = null) => {
       editingUserId = uid;
-      uModal.classList.remove("hidden");
-      // Paint roles & branches
-      const rSel = $("#u-role");
-      rSel.innerHTML = ROLES.map(r => `<option value="${r.id}">${r.name}</option>`).join("");
+      ModalHelper.open(uModal, () => {
+        // Paint roles & branches
+        const rSel = $("#u-role");
+        rSel.innerHTML = ROLES.map(r => `<option value="${r.id}">${r.name}</option>`).join("");
 
-      const bSel = $("#u-branch");
-      // Ensure branches loaded
-      if (localBranches.length === 0) store.branches.list().then(l => { localBranches = l; paintBranchOptions(bSel); });
-      else paintBranchOptions(bSel);
+        const bSel = $("#u-branch");
+        // Ensure branches loaded
+        if (localBranches.length === 0) store.branches.list().then(l => { localBranches = l; paintBranchOptions(bSel); });
+        else paintBranchOptions(bSel);
 
-      if (uid) {
-        const u = localUsers.find(x => x.id === uid);
-        if (!u) return;
-        $("#u-user").value = u.username;
-        $("#u-fullname").value = u.full_name || "";
-        $("#u-email").value = u.email || "";
-        $("#u-pass").value = ""; // blank logic
-        $("#u-pass").placeholder = "(Dejar vacío para no cambiar)";
-        $("#u-role").value = u.role;
-        $("#u-active").checked = !!u.active;
-        $("#u-branch").value = u.branch_id || "";
-        $("#u-title").innerText = "Editar Usuario";
-      } else {
-        $("#u-user").value = "";
-        $("#u-fullname").value = "";
-        $("#u-email").value = "";
-        $("#u-pass").value = "";
-        $("#u-pass").placeholder = "Contraseña";
-        $("#u-role").value = "user";
-        $("#u-active").checked = true;
-        $("#u-branch").value = "";
-        $("#u-title").innerText = "Nuevo Usuario";
-      }
+        if (uid) {
+          const u = localUsers.find(x => x.id === uid);
+          if (!u) return;
+          $("#u-user").value = u.username;
+          $("#u-fullname").value = u.full_name || "";
+          $("#u-email").value = u.email || "";
+          $("#u-pass").value = ""; // blank logic
+          $("#u-pass").placeholder = "(Dejar vacío para no cambiar)";
+          $("#u-role").value = u.role;
+          $("#u-active").checked = !!u.active;
+          $("#u-branch").value = u.branch_id || "";
+          $("#u-title").innerText = "Editar Usuario";
+        } else {
+          $("#u-user").value = "";
+          $("#u-fullname").value = "";
+          $("#u-email").value = "";
+          $("#u-pass").value = "";
+          $("#u-pass").placeholder = "Contraseña";
+          $("#u-role").value = "user";
+          $("#u-active").checked = true;
+          $("#u-branch").value = "";
+          $("#u-title").innerText = "Nuevo Usuario";
+        }
+      });
     };
 
     const paintBranchOptions = (sel) => {
@@ -566,7 +571,7 @@ export default {
         localBranches.map(b => `<option value="${b.id}">${b.name}</option>`).join("");
     };
 
-    window.mount.closeUser = () => { uModal.classList.add("hidden"); };
+    window.mount.closeUser = () => { ModalHelper.close(uModal); };
 
     window.mount.saveUser = async () => {
       const username = $("#u-user").value.trim();
@@ -597,7 +602,7 @@ export default {
           toast("Usuario creado", "success");
         }
         window.mount.closeUser();
-        loadUsers();
+        loadUsers(); // This now syncs to localStorage via cfg:users-updated event
       } catch (e) {
         toast(e.message || "Error al guardar usuario", "error");
       }
@@ -653,25 +658,26 @@ export default {
 
     window.mount.openBranch = (bid = null) => {
       editingBranchId = bid;
-      bModal.classList.remove("hidden");
-      if (bid) {
-        const b = localBranches.find(x => x.id === bid);
-        $("#b-name").value = b.name;
-        $("#b-addr").value = b.address || "";
-        $("#b-phone").value = b.phone || "";
-        $("#b-cuit").value = b.cuit || "";
-        $("#b-code").value = b.code || "";
-        $("#b-title").innerText = "Editar Sucursal";
-      } else {
-        $("#b-name").value = "";
-        $("#b-addr").value = "";
-        $("#b-phone").value = "";
-        $("#b-cuit").value = "";
-        $("#b-code").value = "";
-        $("#b-title").innerText = "Nueva Sucursal";
-      }
+      ModalHelper.open(bModal, () => {
+        if (bid) {
+          const b = localBranches.find(x => x.id === bid);
+          $("#b-name").value = b.name;
+          $("#b-addr").value = b.address || "";
+          $("#b-phone").value = b.phone || "";
+          $("#b-cuit").value = b.cuit || "";
+          $("#b-code").value = b.code || "";
+          $("#b-title").innerText = "Editar Sucursal";
+        } else {
+          $("#b-name").value = "";
+          $("#b-addr").value = "";
+          $("#b-phone").value = "";
+          $("#b-cuit").value = "";
+          $("#b-code").value = "";
+          $("#b-title").innerText = "Nueva Sucursal";
+        }
+      });
     };
-    window.mount.closeBranch = () => bModal.classList.add("hidden");
+    window.mount.closeBranch = () => ModalHelper.close(bModal);
 
     window.mount.saveBranch = async () => {
       const name = $("#b-name").value.trim();
