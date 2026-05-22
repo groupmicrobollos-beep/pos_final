@@ -188,8 +188,8 @@ export default {
   </div>
 
   <!-- Modal Detalle -->
-  <div id="detail-modal" class="fixed inset-0 z-[1000] hidden items-center justify-center bg-black/60">
-    <div class="bg-slate-900 border border-white/10 rounded-xl w-[min(92vw,980px)] max-h-[86vh] overflow-auto">
+  <div id="detail-modal" data-modal-overlay data-modal-size="lg" class="modal-overlay fixed inset-0 z-[9999] hidden items-center justify-center p-4 bg-black/60" aria-hidden="true">
+    <div class="modal-panel bg-slate-900 border border-white/10 rounded-xl w-full max-h-[86vh] overflow-auto">
       <div class="flex items-center justify-between p-3 border-b border-white/10">
         <h2 class="text-lg font-semibold"><i class="fas fa-eye" aria-hidden="true"></i> Detalles del Presupuesto</h2>
         <div class="flex gap-2">
@@ -300,8 +300,7 @@ export default {
     });
 
     // Modal
-    modalClose.addEventListener("click", closeDetail);
-    modal.addEventListener("click", (e) => { if (e.target === modal) closeDetail(); });
+    ModalHelper.setup(modal, "#modal-close", null, null, () => { current = null; });
     modalPdf.addEventListener("click", async () => {
       if (!current || typeof window.generateBudgetPDF !== "function") return;
       try {
@@ -472,9 +471,11 @@ export default {
       modalBody.innerHTML = renderBudgetDetail(b);
       if (typeof window.generateBudgetPDF === "function") modalPdf.classList.remove("hidden");
       else modalPdf.classList.add("hidden");
-      modal.classList.remove("hidden"); modal.classList.add("flex");
+      ModalHelper.open(modal);
     }
-    function closeDetail() { modal.classList.add("hidden"); modal.classList.remove("flex"); current = null; }
+    function closeDetail() {
+      ModalHelper.close(modal, () => { current = null; });
+    }
     function deleteBudget(key, numero) {
       if (!confirm(`¿Eliminar el presupuesto ${numero}? Esta acción no se puede deshacer.`)) return;
       localStorage.removeItem(key);

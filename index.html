@@ -359,335 +359,133 @@
             opacity: 1 !important;
         }
 
-        /* ============================ */
-        /* Global modal styles (overlay + panel) */
-        /* Asegura contraste correcto en light/dark sin tocar cada modal */
-        .modal {
-            /* overlay color: adaptado por tema */
-            background: rgba(0, 0, 0, 0.55);
-            backdrop-filter: blur(4px);
+        /* Modales: estilos en css/modals.css (data-modal-overlay) */
+
+                /* Modales legacy eliminado — usar css/modals.css */
+
+
+        /* ========================================
+           INTERFAZ GENERAL - Mejoras visuales
+        ======================================== */
+
+        /* Botones con mejor estilo */
+        button:not([class*="btn-"]),
+        .btn {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
+            letter-spacing: 0.3px !important;
         }
 
-        html[data-theme="light"] .modal {
-            background: rgba(0, 0, 0, 0.45);
+        button:not([class*="btn-"]):hover,
+        .btn:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15) !important;
         }
 
-        html[data-theme="dark"] .modal {
-            background: rgba(2, 6, 23, 0.64);
+        button:not([class*="btn-"]):active,
+        .btn:active {
+            transform: translateY(0) !important;
         }
 
-        /* Modal inner panel: usar las variables de tema para fondo, borde y texto */
-        .modal>div,
-        .modal .modal-panel,
-        .modal .modal-content,
-        .modal .rounded-xl,
-        .modal .rounded-lg,
-        .modal .p-4,
-        .modal .p-3 {
-            background: var(--color-bg-card) !important;
-            color: var(--color-text) !important;
-            border: 1px solid var(--color-border) !important;
-            box-shadow: 0 12px 30px rgba(2, 6, 23, 0.18) !important;
+        /* Inputs mejorados */
+        input,
+        select,
+        textarea {
+            transition: all 0.2s ease !important;
+            border-radius: 8px !important;
         }
 
-        /* Light-mode: forzar panel más claro y overlay menos oscuro */
-        html[data-theme="light"] .modal {
-            background: rgba(0, 0, 0, 0.32) !important;
-            /* tenue overlay */
-            backdrop-filter: blur(3px) !important;
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none !important;
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1), 0 0 0 1px var(--color-primary) !important;
         }
 
-        html[data-theme="light"] .modal>div,
-        html[data-theme="light"] .modal .modal-panel,
-        html[data-theme="light"] .modal .modal-content {
-            background: var(--color-bg-card) !important;
-            color: var(--color-text) !important;
-            box-shadow: 0 10px 26px rgba(11, 78, 144, 0.06) !important;
+        /* Cards y panels mejorados */
+        .card,
+        .glass,
+        .surface,
+        .panel {
+            border-radius: 12px !important;
+            transition: all 0.2s ease !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
         }
 
-        /* Dark-mode: panel oscuro con contraste adecuado */
-        html[data-theme="dark"] .modal>div,
-        html[data-theme="dark"] .modal .modal-panel,
-        html[data-theme="dark"] .modal .modal-content {
-            background: var(--color-bg-card) !important;
-            /* dark variables already set */
-            color: var(--color-text) !important;
-            box-shadow: 0 12px 30px rgba(2, 6, 23, 0.45) !important;
+        .card:hover,
+        .surface:hover {
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
         }
 
-        /* Asegurar campos dentro del modal siguen la paleta y tienen buen contraste */
-        .modal input,
-        .modal select,
-        .modal textarea,
-        .modal button {
-            background: var(--color-bg-card) !important;
-            color: var(--color-text) !important;
+        /* Tipografía mejorada */
+        h1, h2, h3, h4, h5, h6 {
+            line-height: 1.25 !important;
+            letter-spacing: -0.01em !important;
+        }
+
+        p {
+            line-height: 1.6 !important;
+        }
+
+        /* Tablas responsive */
+        table {
+            border-radius: 8px !important;
+            overflow: hidden !important;
+        }
+
+        table th {
+            font-weight: 700 !important;
+            letter-spacing: 0.5px !important;
+            text-transform: uppercase !important;
+            font-size: 0.875rem !important;
+            padding: 12px 16px !important;
+        }
+
+        table td {
+            padding: 12px 16px !important;
             border-color: var(--color-border) !important;
         }
 
-        /* Forzar que botones claros en dark tengan suficiente contraste */
-        html[data-theme="dark"] .modal .btn,
-        html[data-theme="dark"] .modal button {
-            color: var(--color-text) !important;
+        /* Badge y elementos pequeños */
+        .badge,
+        .tag {
+            border-radius: 20px !important;
+            font-weight: 600 !important;
+            font-size: 0.85rem !important;
+            padding: 4px 12px !important;
         }
 
-        /* Si algún modal tenía clases de fondo explícito (ej. bg-slate-900), las sobreescribimos
-           para modo claro y oscuro, asignando el color del tema correspondiente. */
-        .modal .bg-slate-900,
-        .modal .bg-slate-950,
-        .modal .bg-slate-900\/80 {
-            background: var(--color-bg-card) !important;
-            color: var(--color-text) !important;
+        /* Links mejorados */
+        a {
+            transition: color 0.2s ease !important;
+            text-decoration: none !important;
         }
 
-        /* Forzar override genérico para cualquier clase bg-* dentro del modal (Tailwind helpers) */
-        .modal [class*="bg-"] {
-            background: var(--color-bg-card) !important;
-            color: var(--color-text) !important;
-            border-color: var(--color-border) !important;
+        a:hover {
+            text-decoration: underline !important;
         }
 
-        /* `.glass` se usa mucho para paneles internos; forzamos que adopten la paleta del tema */
-        .modal .glass {
-            background: var(--color-bg-card) !important;
-            color: var(--color-text) !important;
-            border: 1px solid var(--color-border) !important;
-            box-shadow: none !important;
+        /* Respuesta visual en elementos interactivos */
+        .btn,
+        button,
+        input[type="checkbox"],
+        input[type="radio"],
+        select {
+            cursor: pointer !important;
         }
 
-        /* Text color helpers dentro del modal (ej. text-slate-400) */
-        .modal [class*="text-"] {
-            color: var(--color-text) !important;
-        }
-
-        /* Inputs/textarea/select con clases semitransparentes: forzar fondo y texto */
-        .modal input[class],
-        .modal select[class],
-        .modal textarea[class] {
-            background: var(--color-bg-card) !important;
-            color: var(--color-text) !important;
-            border-color: var(--color-border) !important;
-        }
-
-        /* Si hay overlays oscuros dentro del modal (ej: elementos absolute), los aclaramos */
-        .modal *[class*="overlay"],
-        .modal .overlay,
-        .modal .backdrop {
-            background: transparent !important;
-        }
-
-        /* Very specific: if some modal panel uses inline dark classes on deep elements, override via descendant */
-        .modal .rounded-xl,
-        .modal .rounded-lg {
-            background: var(--color-bg-card) !important;
-            color: var(--color-text) !important;
-        }
-
-        /* Títulos dentro de modales */
-        .modal .panel-title,
-        .modal .card-title,
-        .modal .box-title,
-        .modal .form-section legend {
-            color: var(--color-text) !important;
-            font-weight: 700;
-        }
-
-        /* Asegurar botones de acción dentro del modal (footer) mantengan visibilidad */
-        .modal .btn-primary,
-        .modal .btn-danger,
-        .modal .btn-success,
-        .modal .btn-warning {
-            border-width: 1px !important;
-        }
-
-        /* Reglas específicas para modales que no usan la clase .modal (ej. estructura fija en las páginas)
-           Muchas páginas usan <div id="...-modal" class="fixed inset-0 ..."><div class="bg-slate-900 ...">; estas reglas
-           apuntan a ese patrón para forzar fondo claro y texto oscuro cuando el tema es claro.
-        */
-        /* overlay seleccionadores según pattern [id$="-modal"] o .fixed.inset-0 (no se necesita regla vacía) */
-        /* El panel interior (el primer div hijo) */
-        [id$="-modal"]>div,
-        .fixed.inset-0>div {
-            background: var(--color-bg-card) !important;
-            color: var(--color-text) !important;
-            border: 1px solid var(--color-border) !important;
-            box-shadow: 0 18px 40px rgba(2, 6, 23, 0.12) !important;
-            z-index: 99999 !important;
-        }
-
-        /* Forzar overrides para clases concretas usadas en Presupuesto (bg-slate-900 / bg-white/10) */
-        [id$="-modal"] .bg-slate-900,
-        .fixed.inset-0 .bg-slate-900,
-        [id$="-modal"] .bg-slate-950,
-        .fixed.inset-0 .bg-slate-950 {
-            background: var(--color-bg-card) !important;
-            color: var(--color-text) !important;
-            border-color: var(--color-border) !important;
-        }
-
-        /* Inputs/selects que usan bg-white/10 en los modales (se veían oscuros)
-           Nota: excluimos botones para no sobrescribir btn-secondary u otros botones
-        */
-        [id$="-modal"] .bg-white\/10:not(button),
-        .fixed.inset-0 .bg-white\/10:not(button),
-        [id$="-modal"] input[class*="bg-white"],
-        .fixed.inset-0 input[class*="bg-white"],
-        [id$="-modal"] select[class*="bg-white"],
-        .fixed.inset-0 select[class*="bg-white"] {
-            background: rgba(255, 255, 255, 0.92) !important;
-            color: var(--color-text) !important;
-            border: 1px solid rgba(15, 23, 42, 0.06) !important;
-        }
-
-        /* Restaurar apariencia de botones secundarios / outline dentro de modales
-           Muchos botones de cancelación usan clase bg-white/10 + btn-secondary; aseguramos
-           que se muestren como botones de outline / secundarios (fondo suave) y no blancos planos.
-        */
-        [id$="-modal"] .btn-secondary,
-        .fixed.inset-0 .btn-secondary,
-        [id$="-modal"] .btn-outline,
-        .fixed.inset-0 .btn-outline,
-        [id$="-modal"] button.bg-white\/10,
-        .fixed.inset-0 button.bg-white\/10 {
-            background: var(--color-bg-card-alt) !important;
-            color: var(--color-text) !important;
-            border: 1px solid var(--color-border) !important;
-            box-shadow: none !important;
-        }
-
-        /* Forzar color de texto para utilidades como text-slate-100/300 dentro de los modales fijos */
-        [id$="-modal"] [class*="text-slate-"],
-        .fixed.inset-0 [class*="text-slate-"] {
-            color: var(--color-text) !important;
-        }
-
-        /* Caso rápido: si quieres forzar manualmente un modal específico, añade data-light-modal="true"
-           al elemento overlay (ej: <div id="add-item-modal" data-light-modal="true" ...>)
-           y las reglas generales ya aplicarán con máxima prioridad.
-        */
-
-        /* ============================ */
-        /* Reglas adicionales muy específicas para cubrir más casos
-           - cubre dialogs con role="dialog", .modal-box, .modal-dialog, .dialog-panel
-           - cubre dropdowns y selects (Choices, Select2, flatpickr, headlessui, tippy)
-           - aumenta z-index y fuerza fondo claro en modo light; respeta dark via data-theme
-        */
-        /* Panel/dialog base */
-        .modal-box,
-        .modal-dialog,
-        .dialog-panel,
-        .dialog__panel,
-        .dialog,
-        [role="dialog"],
-        .modal-wrapper,
-        .modal-container,
-        .modal-panel,
-        .modal-content {
-            background: var(--color-bg-card) !important;
-            color: var(--color-text) !important;
-            border: 1px solid var(--color-border) !important;
-            box-shadow: 0 18px 40px rgba(2, 6, 23, 0.14) !important;
-            z-index: 99999 !important;
-        }
-
-        /* Dropdowns y listas dentro del modal */
-        .modal .dropdown-content,
-        .modal .dropdown-menu,
-        .modal .menu,
-        .modal .menu-item,
-        .modal .choices__list,
-        .modal .choices__list--dropdown,
-        .modal .choices__inner,
-        .modal .select2-container,
-        .modal .select2-dropdown,
-        .modal .select2-results,
-        .modal .react-select__menu,
-        .modal .react-select__menu-list,
-        .modal .flatpickr-calendar,
-        .modal .tippy-box,
-        .modal .headlessui-popover__panel,
-        .modal .headlessui-menu__items {
-            background: var(--color-bg-card) !important;
-            color: var(--color-text) !important;
-            border: 1px solid var(--color-border) !important;
-            box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08) !important;
-            z-index: 100000 !important;
-        }
-
-        /* Selects nativos y custom dentro del modal */
-        .modal select,
-        .modal .select,
-        .modal .dropdown select,
-        .modal .select-native {
-            background: var(--color-bg-card) !important;
-            color: var(--color-text) !important;
-            border-color: var(--color-border) !important;
-        }
-
-        /* Inputs dentro de listas/dropdowns (ej datepickers) */
-        .modal .flatpickr-input,
-        .modal input.flatpickr-input,
-        .modal .pika-single {
-            background: var(--color-bg-card) !important;
-            color: var(--color-text) !important;
-            border: 1px solid var(--color-border) !important;
-        }
-
-        /* Forzar contraste de badges/labels dentro de modales */
-        .modal .badge,
-        .modal .tag,
-        .modal .chip {
-            background: var(--color-bg-card-alt) !important;
-            color: var(--color-text) !important;
-            border: 1px solid var(--color-border) !important;
-        }
-
-        /* Aclarar cualquier sombra o overlay oscuro interno */
-        .modal *[style*="background: rgba(0, 0, 0"],
-        .modal *[style*="background: rgba(2,6,23"],
-        .modal .inner-overlay,
-        .modal .dark-overlay {
-            background: transparent !important;
-        }
-
-        /* Caso extremo: si hay reglas con !important y clases oscuras anidadas, usar atributo data-light-modal */
-        .modal[data-light-modal="true"] *,
-        [data-light-modal="true"] .modal * {
-            background: var(--color-bg-card) !important;
-            color: var(--color-text) !important;
-            border-color: var(--color-border) !important;
-        }
-
-        /* ============================ */
-        /* UTILITIES FOR JS-INJECTED CONTENT (Bypass Tailwind) */
-        .surface {
-            background: var(--color-bg-card) !important;
-            color: var(--color-text) !important;
-            border: 1px solid var(--color-border) !important;
-        }
-
-        .surface-alt {
-            background: var(--color-bg-card-alt) !important;
-            color: var(--color-text) !important;
-        }
-
-        .text-main {
-            color: var(--color-text) !important;
-        }
-
-        .text-muted-custom {
-            color: var(--color-text-muted) !important;
-        }
-
-        /* Fix images in dark mode (invert filter if needed, but usually just proper background) */
-        img.broken-fix {
-            background: var(--color-bg-card-alt);
+        input[type="checkbox"]:focus,
+        input[type="radio"]:focus {
+            outline: 2px solid var(--color-primary) !important;
+            outline-offset: 2px !important;
         }
     </style>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Microbollos POS</title>
     <link rel="stylesheet" href="./dist/output.css">
+    <link rel="stylesheet" href="./css/modals.css">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <!-- libs PDF -->
@@ -701,7 +499,7 @@
 
 <body class="min-h-dvh antialiased">
     <div id="app" class="h-dvh w-dvw"></div>
-    <script type="module" src="./js/main.js?v=PRO_FINAL_V2"></script>
+    <script type="module" src="./js/main.js?v=MODAL_FIX_V1"></script>
 </body>
 
 </html>

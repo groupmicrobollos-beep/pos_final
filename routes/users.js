@@ -26,8 +26,14 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
     try {
         const { id, username, password, full_name, role, email, active, perms, branch_id } = req.body;
+        if (!username || !String(username).trim()) {
+            return res.status(400).json({ error: "Username is required" });
+        }
+        if (!password || !String(password).trim()) {
+            return res.status(400).json({ error: "Password is required for new users" });
+        }
         const newId = id || `usr_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-        const password_hash = password ? hashPassword(password) : "";
+        const password_hash = hashPassword(password);
         const permsStr = typeof perms === 'object' ? JSON.stringify(perms) : perms;
 
         await db.execute({

@@ -1,122 +1,171 @@
 /**
- * Modal Helper - Centralizado para manejo consistente de modales
- * Proporciona apertura/cierre con bloqueo de scroll
+ * Modal Helper — overlays en document.body, sin conflictos de CSS.
  */
 
 const ModalHelper = (() => {
-  let openModals = [];
+  let openStack = [];
+  let escBound = false;
+  const placeholders = new WeakMap();
 
-  const toggleBodyScroll = (block) => {
-    if (block) {
-      document.body.style.overflow = 'hidden';
-    } else if (openModals.length === 0) {
-      document.body.style.overflow = '';
+  const lockScroll = () => {
+    document.body.classList.add('modal-scroll-lock');
+    const gap = window.innerWidth - document.documentElement.clientWidth;
+    if (gap > 0) document.body.style.paddingRight = `${gap}px`;
+  };
+
+  const unlockScroll = () => {
+    if (openStack.length > 0) return;
+    document.body.classList.remove('modal-scroll-lock');
+    document.body.style.paddingRight = '';
+  };
+
+  const isOverlay = (el) =>
+    el?.nodeType === 1 &&
+    (el.hasAttribute('data-modal-overlay') || el.classList?.contains('modal-overlay'));
+
+  const ensureInBody = (modal) => {
+    if (modal.parentElement === document.body) return;
+    const ph = document.createComment(`modal-ph-${modal.id || 'anon'}`);
+    modal.parentElement?.insertBefore(ph, modal);
+    placeholders.set(modal, ph);
+    document.body.appendChild(modal);
+  };
+
+  const restoreParent = (modal) => {
+    const ph = placeholders.get(modal);
+    if (ph?.parentNode) {
+      ph.parentNode.insertBefore(modal, ph);
+      ph.remove();
     }
+    placeholders.delete(modal);
+  };
+
+  const bindEscOnce = () => {
+    if (escBound) return;
+    escBound = true;
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || openStack.length === 0) return;
+      const top = openStack[openStack.length - 1];
+      if (top) ModalHelper.close(top);
+    });
+  };
+
+  const resolveCloseButtons = (modal, closeButton) => {
+    if (!closeButton) return [];
+    const sels = typeof closeButton === 'string'
+      ? closeButton.split(',').map(s => s.trim()).filter(Boolean)
+      : [];
+    const btns = [];
+    if (typeof closeButton === 'string') {
+      sels.forEach(sel => {
+        if (sel.startsWith('#') && modal.querySelector(sel)) {
+          const el = modal.querySelector(sel);
+          if (el) btns.push(el);
+        } else {
+          modal.querySelectorAll(sel).forEach(el => btns.push(el));
+        }
+      });
+    } else if (closeButton instanceof HTMLElement) {
+      btns.push(closeButton);
+    } else if (closeButton?.forEach) {
+      btns.push(...closeButton);
+    }
+    return btns;
   };
 
   return {
-    /**
-     * Abre un modal (quita 'hidden', bloquea scroll)
-     * @param {HTMLElement} modal - Elemento modal
-     * @param {Function} onOpen - Callback opcional después de abrir
-     */
     open(modal, onOpen) {
-      if (!modal) return;
-      modal.classList.remove('hidden');
-      if (!openModals.includes(modal)) {
-        openModals.push(modal);
+      if (!modal || !isOverlay(modal)) {
+        console.warn('[ModalHelper] Elemento inválido — falta data-modal-overlay');
+        return;
       }
-      toggleBodyScroll(true);
-      onOpen?.();
+
+      ensureInBody(modal);
+      modal.classList.remove('hidden');
+      modal.setAttribute('aria-hidden', 'false');
+      modal.removeAttribute('inert');
+
+      if (!openStack.includes(modal)) openStack.push(modal);
+      bindEscOnce();
+      lockScroll();
+
+      requestAnimationFrame(() => {
+        onOpen?.();
+        const panel = modal.querySelector('.modal-panel') || modal.querySelector(':scope > div');
+        const focusable = panel?.querySelector(
+          'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])'
+        );
+        focusable?.focus?.({ preventScroll: true });
+      });
     },
 
-    /**
-     * Cierra un modal (añade 'hidden', desbloquea scroll si no hay otros abiertos)
-     * @param {HTMLElement} modal - Elemento modal
-     * @param {Function} onClose - Callback opcional después de cerrar
-     */
     close(modal, onClose) {
       if (!modal) return;
+
       modal.classList.add('hidden');
-      openModals = openModals.filter(m => m !== modal);
-      toggleBodyScroll(openModals.length > 0);
+      modal.setAttribute('aria-hidden', 'true');
+      modal.setAttribute('inert', '');
+
+      openStack = openStack.filter(m => m !== modal);
+      unlockScroll();
+      restoreParent(modal);
       onClose?.();
     },
 
-    /**
-     * Cierra todos los modales abiertos
-     */
     closeAll() {
-      openModals.forEach(modal => {
-        modal.classList.add('hidden');
-      });
-      openModals = [];
-      toggleBodyScroll(false);
+      [...openStack].reverse().forEach(m => this.close(m));
     },
 
     /**
-     * Configura manejadores estándar para un modal
-     * @param {HTMLElement} modal - Elemento modal
-     * @param {HTMLElement|string} closeButton - Botón de cierre o selector
-     * @param {HTMLElement|string} confirmButton - Botón de confirmación (opcional) o selector
-     * @param {Function} onConfirm - Callback para confirmación
+     * @param {HTMLElement} modal
+     * @param {string|HTMLElement} closeButton - selectores dentro del modal
+     * @param {string|HTMLElement} [confirmButton]
+     * @param {Function} [onConfirm]
+     * @param {Function} [onClose]
      */
-    setup(modal, closeButton, confirmButton, onConfirm) {
-      if (!modal) return;
+    setup(modal, closeButton, confirmButton, onConfirm, onClose) {
+      if (!modal || !isOverlay(modal)) return;
 
-      // Resolver elementos desde selectores string
-      const closeBtn = typeof closeButton === 'string' 
-        ? modal.querySelector(closeButton) 
-        : closeButton;
-      
-      const confirmBtn = typeof confirmButton === 'string' 
-        ? modal.querySelector(confirmButton) 
-        : confirmButton;
-
-      // Cierre por click en botón
-      if (closeBtn) {
-        closeBtn.addEventListener('click', () => this.close(modal));
+      if (!modal.hasAttribute('data-modal-overlay')) {
+        modal.setAttribute('data-modal-overlay', '');
+      }
+      if (!modal.classList.contains('modal-overlay')) {
+        modal.classList.add('modal-overlay');
       }
 
-      // Cierre por click en backdrop (overlay mismo, no contenido)
-      modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-          this.close(modal);
-        }
+      const handleClose = (e) => {
+        e?.preventDefault?.();
+        e?.stopPropagation?.();
+        this.close(modal, onClose);
+      };
+
+      resolveCloseButtons(modal, closeButton).forEach(btn => {
+        btn.addEventListener('click', handleClose);
       });
 
-      // Cierre por ESC
-      const handleEsc = (e) => {
-        if (e.key === 'Escape' && openModals.includes(modal)) {
-          this.close(modal);
-        }
-      };
-      document.addEventListener('keydown', handleEsc);
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) handleClose(e);
+      });
 
-      // Confirmación si existe botón
+      const confirmBtn = typeof confirmButton === 'string'
+        ? modal.querySelector(confirmButton)
+        : confirmButton;
+
       if (confirmBtn && onConfirm) {
-        confirmBtn.addEventListener('click', () => {
+        confirmBtn.addEventListener('click', (e) => {
+          e.preventDefault();
           onConfirm();
-          this.close(modal);
+          handleClose(e);
         });
       }
-
-      // Retornar cleanup function
-      return () => {
-        if (closeBtn) closeBtn.removeEventListener('click', () => this.close(modal));
-        document.removeEventListener('keydown', handleEsc);
-        if (confirmBtn) confirmBtn.removeEventListener('click', onConfirm);
-      };
-    }
+    },
   };
 })();
 
-// Asignar a window para disponibilidad global
 if (typeof window !== 'undefined') {
   window.ModalHelper = ModalHelper;
 }
 
-// Exportar para uso en CommonJS/Node.js
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = ModalHelper;
 }

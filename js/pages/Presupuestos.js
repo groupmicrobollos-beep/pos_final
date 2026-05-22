@@ -184,8 +184,8 @@ export default {
   </div>
 
   <!-- Modal Detalle -->
-  <div id="detail-modal" class="fixed inset-0 z-[1000] hidden items-center justify-center modal">
-    <div class="bg-slate-900 border border-white/10 rounded-xl w-[min(92vw,980px)] max-h-[86vh] overflow-auto">
+  <div id="detail-modal" data-modal-overlay data-modal-size="lg" class="modal-overlay fixed inset-0 z-[9999] hidden items-center justify-center p-4 bg-black/60" aria-hidden="true">
+    <div class="modal-panel bg-slate-900 border border-white/10 rounded-xl w-full max-h-[86vh] overflow-auto">
       <div class="flex items-center justify-between p-3 border-b border-white/10">
         <h2 class="text-lg font-semibold"><i class="fas fa-eye" aria-hidden="true"></i> Detalles del Presupuesto</h2>
         <div class="flex gap-2">
@@ -322,7 +322,7 @@ export default {
       statToday.textContent = todayCount;
       statAmount.textContent = money(totalAmount);
       // cantidad hechos / pendientes
-      const doneCount = all.filter(b => (b.details && b.details.done)).length;
+      const doneCount = all.filter(b => b.done).length;
       statDone.textContent = doneCount;
       statPending.textContent = Math.max(0, all.length - doneCount);
     }
@@ -341,7 +341,7 @@ export default {
         const matchesTerm =
           !term ||
           (b.numero || "").toLowerCase().includes(term) ||
-          (b.cliente || "").toLowerCase().includes(term) ||
+          ((b.cliente?.nombre || b.cliente || "")).toLowerCase().includes(term) ||
           vehInfo.toLowerCase().includes(term);
 
         // sucursal
@@ -421,8 +421,8 @@ export default {
           <td class="max-w-[240px] truncate">${b.cliente?.nombre || b.cliente || "Sin especificar"}</td>
           <td class="max-w-[260px] truncate">${vehicleInfo(b)}</td>
           <td>${sucName}</td>
-          <td class="font-medium">${b.total}</td>
-          <td>${b.details?.done ? `<span class="badge status-active">Hecho</span>` : `<span class="badge ${expired ? "status-expired" : "status-active"}">${expired ? "Vencido" : "Vigente"}</span>`}</td>
+          <td class="font-medium">${money(b.total)}</td>
+          <td>${b.done ? `<span class="badge status-active">Hecho</span>` : `<span class="badge ${expired ? "status-expired" : "status-active"}">${expired ? "Vencido" : "Vigente"}</span>`}</td>
           <td class="whitespace-nowrap">
             <button data-act="view" data-key="${b.key}" class="px-2 py-1 rounded bg-white/10 hover:bg-white/20" title="Ver"><i class="fas fa-eye" aria-hidden="true"></i></button>
             <button data-act="toggle" data-key="${b.key}" class="px-2 py-1 rounded bg-emerald-600/80 hover:bg-emerald-600 mx-1" title="Marcar hecho"><i class="fas fa-check" aria-hidden="true"></i></button>
@@ -462,7 +462,9 @@ export default {
       const b = await budgetsService.get(key);
       if (!b) { toast("No se encontró el presupuesto", "error"); return; }
       b.done = !b.done;
-      await budgetsService.save(b, key, { update: true });
+      b.status = b.done ? "realizado" : "pendiente";
+      b.estado = b.status;
+      await budgetsService.save(b, key);
       load(); // refresh
       toast(`Presupuesto ${b.numero} marcado ${b.done ? 'como hecho' : 'como pendiente'}`, "success");
     }
@@ -517,7 +519,7 @@ export default {
             <div><div class="text-slate-400">Hecho</div><div class="font-medium">${b.done ? 'Sí' : 'No'}</div></div>
             <div><div class="text-slate-400">Subtotal</div><div>${b.subtotal || money(totalNum)}</div></div>
             <div><div class="text-slate-400">Total</div><div class="font-semibold">${b.total || money(totalNum)}</div></div>
-            ${b.assignedUser ? `<div><div class="text-slate-400">Usuario responsable</div><div class="font-medium">${b.assignedUser}</div></div>` : ''}
+            ${(b.assignedUserName || b.assignedUser) ? `<div><div class="text-slate-400">Creado por</div><div class="font-medium">${b.assignedUserName || b.assignedUser}</div></div>` : ''}
           </div>
         </div>
 

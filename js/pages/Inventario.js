@@ -16,6 +16,12 @@ function load(key, def) { try { return JSON.parse(localStorage.getItem(key) || J
 
 const INV_ACTIVE_TAB = "inv_active_tab";
 const INV_LIST_KEY = "inv_buy_list";
+const INV_ITEMS_KEY = "inv_items";
+const INV_SUPPLIERS_KEY = "inv_suppliers";
+
+function save(key, val) {
+  localStorage.setItem(key, JSON.stringify(val));
+}
 const ARS = { style: "currency", currency: "ARS", minimumFractionDigits: 2, maximumFractionDigits: 2 };
 const money = (n) => (Number(n) || 0).toLocaleString("es-AR", ARS);
 const todayISO = () => new Date().toISOString().slice(0, 10);
@@ -30,24 +36,6 @@ function toast(msg, type = "info") {
   el.textContent = msg;
   document.body.appendChild(el);
   setTimeout(() => { el.style.opacity = "0"; el.style.transform = "translateX(10px)"; setTimeout(() => el.remove(), 150); }, 1900);
-}
-
-// Data helpers
-let items = [];
-let suppliers = [];
-
-async function loadItems() {
-  items = await store.products.list();
-  return items;
-}
-
-async function loadSuppliers() {
-  suppliers = await store.suppliers.list();
-  return suppliers;
-}
-
-function findSupplier(id) {
-  return suppliers.find(s => s.id === id) || null;
 }
 
 function parseNum(v) {
@@ -181,58 +169,38 @@ export default {
   },
 
   mount(root) {
-    // Helpers modales
-    const show = (el) => { el?.classList.remove("hidden"); el?.classList.add("flex"); el && (el.style.display = "flex"); };
-    const hide = (el) => { el?.classList.add("hidden"); el?.classList.remove("flex"); el && (el.style.display = "none"); };
-
     // Estado
     let items = [];
     let suppliers = [];
-    let buyList = load(INV_LIST_KEY, []); // TODO: Mover a la DB
+    let buyList = load(INV_LIST_KEY, []);
     let viewItems = [];
+    let editingItemId = null;
+    let editingSupplierId = null;
 
-    // Funciones para cargar datos de la API
+    const findSupplier = (id) => suppliers.find(s => s.id === id) || null;
+
     async function loadData() {
       try {
-        const [itemsRes, suppliersRes] = await Promise.all([
-          fetch('/api/products/list'),
-          fetch('/api/suppliers/list')
+        const [rawItems, rawSuppliers] = await Promise.all([
+          store.products.list(),
+          store.suppliers.list(),
         ]);
-
-        if (!itemsRes.ok || !suppliersRes.ok) {
-          throw new Error('Error al cargar datos');
-        }
-
-        const rawItems = await itemsRes.json();
-        // Map backend (description, price) -> frontend (name, cost)
-        items = rawItems.map(p => {
-          // Try extracting code if description is "CODE - NAME"
-          let name = p.description || "";
-          let code = "";
-          const parts = name.split(" - ");
-          if (parts.length > 1 && parts[0].length <= 6) {
-            code = parts[0];
-            name = parts.slice(1).join(" - ");
-          }
-          return {
-            ...p,
-            name: name,
-            code: code, // inferred
-            cost: p.price,
-            // unit/min/supplierId are missing in DB, default them
-            unit: 'u',
-            min: 5,
-            supplierId: ''
-          };
-        });
-
-        suppliers = await suppliersRes.json();
-
+        items = (rawItems || []).map(p => ({
+          ...p,
+          name: p.name || p.description || "",
+          cost: p.cost ?? p.price ?? 0,
+          unit: p.unit || "u",
+          min: p.min ?? p.min_stock ?? 0,
+          supplierId: p.supplierId || p.supplier_id || "",
+        }));
+        suppliers = rawSuppliers || [];
+        save(INV_ITEMS_KEY, items);
+        save(INV_SUPPLIERS_KEY, suppliers);
         refreshItems();
         refreshSuppliers();
       } catch (err) {
         console.error(err);
-        toast("Error al cargar datos", "error");
+        toast("Error al cargar inventario: " + (err.message || err), "error");
       }
     }
 
@@ -319,87 +287,45 @@ export default {
 
     // Lista de compra: enviar / limpiar
     btnSend.addEventListener("click", openSend);
-    btnClearList.addEventListener("click", async () => {
+    btnClearList.addEventListener("click", () => {
       if (!buyList.length) return toast("La lista ya está vacía");
       if (!confirm("¿Vaciar la lista de compra?")) return;
-
-      try {
-        // Eliminar cada item de la lista
-        await Promise.all(
-          buyList.map(item =>
-            fetch(`/api/shopping/${item.id}`, { method: 'DELETE' })
-          )
-        );
-
-        await loadData();
-        toast("Lista de compra vaciada ✅", "success");
-      } catch (err) {
-        console.error(err);
-        toast("Error al vaciar la lista", "error");
-      }
+      buyList = [];
+      save(INV_LIST_KEY, buyList);
+      paintBuyList();
+      refreshKPIs();
+      toast("Lista de compra vaciada ✅", "success");
     });
 
-    // Delegación lista de compra (eliminar línea + editar qty/nota)
-    listWrap.addEventListener("click", async (e) => {
+    listWrap.addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-blid]");
       if (!btn) return;
-
       const id = btn.dataset.blid;
-      try {
-        await fetch(`/api/shopping/${id}`, { method: 'DELETE' });
-        await loadData();
-      } catch (err) {
-        console.error(err);
-        toast("Error al eliminar el item", "error");
-      }
+      buyList = buyList.filter(b => b.id !== id);
+      save(INV_LIST_KEY, buyList);
+      paintBuyList();
+      refreshKPIs();
     });
 
-    let updateTimer = null;
     listWrap.addEventListener("input", (e) => {
-      const row = e.target.closest('[data-blid]');
+      const row = e.target.closest("[data-blid]");
       if (!row) return;
-
       const id = row.getAttribute("data-blid");
       const item = buyList.find(b => b.id === id);
       if (!item) return;
-
-      // Usar debounce para no hacer muchas llamadas a la API
-      clearTimeout(updateTimer);
-      updateTimer = setTimeout(async () => {
-        try {
-          const updates = {};
-
-          if (e.target.classList.contains("bl-qty")) {
-            const v = Math.max(1, parseInt(e.target.value || "1", 10));
-            e.target.value = v;
-            updates.quantity = v;
-          }
-
-          if (e.target.classList.contains("bl-note")) {
-            updates.notes = e.target.value || "";
-          }
-
-          await fetch(`/api/shopping/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(updates)
-          });
-
-          await loadData();
-        } catch (err) {
-          console.error(err);
-          toast("Error al actualizar el item", "error");
-        }
-      }, 500); // Esperar 500ms antes de actualizar
+      if (e.target.classList.contains("bl-qty")) {
+        item.qty = Math.max(1, parseInt(e.target.value || "1", 10));
+        e.target.value = item.qty;
+      }
+      if (e.target.classList.contains("bl-note")) {
+        item.note = e.target.value || "";
+      }
+      save(INV_LIST_KEY, buyList);
     });
 
     // Cerrar modales
-    ModalHelper.setup(itemModal, "#item-close");
-    itemCancel.addEventListener("click", () => ModalHelper.close(itemModal));
-
-    ModalHelper.setup(suppModal, "#supp-close");
-    suppCancel.addEventListener("click", () => ModalHelper.close(suppModal));
-
+    ModalHelper.setup(itemModal, "#item-close, #item-cancel");
+    ModalHelper.setup(suppModal, "#supp-close, #supp-cancel");
     ModalHelper.setup(sendModal, "#send-close");
 
     // Guardado (sin submit nativo)
@@ -485,6 +411,7 @@ export default {
     function openItem(data = null) {
       const E = itemForm.elements;
       itemForm.reset();
+      editingItemId = data?.id || null;
       E.iid.value = data?.id || rid("itm");
       E.code.value = data?.code || "";
       E.name.value = data?.name || "";
@@ -528,28 +455,29 @@ export default {
       if (!data.unit) return toast("Unidad obligatoria", "error");
 
       try {
-        if (data.id) {
-          await store.products.update(data.id, data);
+        const exists = editingItemId && items.some(x => x.id === editingItemId);
+        if (exists) {
+          await store.products.update(editingItemId, data);
         } else {
           await store.products.create(data);
         }
 
-        await loadData(); // Reload fully to get mapped/fresh data
-        // items = await apiGet('/api/products/list'); <- replaced by loadData
-        autoNeed(data);
+        await loadData();
+        const saved = items.find(x => x.id === data.id) || data;
+        autoNeed(saved);
 
         setTab("items");
-        // refreshItems(); <- loadData does this
         toast("Insumo guardado ✅", "success");
 
         if (mode === "new") {
+          editingItemId = null;
           openItem(null);
         } else {
           ModalHelper.close(itemModal);
         }
       } catch (err) {
         console.error(err);
-        toast("Error al guardar el insumo", "error");
+        toast("Error al guardar el insumo: " + (err.message || err), "error");
       }
     }
     async function delItem(id) {
@@ -573,24 +501,14 @@ export default {
       if (!it) return;
 
       try {
-        // Registrar el movimiento de stock
-        await fetch('/api/stock/movement', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            product_id: id,
-            type: delta > 0 ? 'in' : 'out',
-            quantity: Math.abs(delta),
-            notes: delta > 0 ? 'Incremento manual' : 'Decremento manual'
-          })
-        });
-
+        const newStock = Math.max(0, (Number(it.stock) || 0) + delta);
+        await store.products.update(id, { ...it, stock: newStock });
         await loadData();
         const updatedItem = items.find(x => x.id === id);
         if (updatedItem) autoNeed(updatedItem);
       } catch (err) {
         console.error(err);
-        toast("Error al actualizar el stock", "error");
+        toast("Error al actualizar el stock: " + (err.message || err), "error");
       }
     }
     function autoNeed(it) {
@@ -605,30 +523,24 @@ export default {
         save(INV_LIST_KEY, buyList);
       }
     }
-    async function toggleNeed(id) {
+    function toggleNeed(id) {
       const it = items.find(x => x.id === id);
       if (!it) return;
-
-      try {
-        const exists = buyList.find(b => b.itemId === id);
-        if (exists) {
-          buyList = buyList.filter(b => b.itemId !== id);
-        } else {
-          buyList.push({
-            id: rid("bl"),
-            itemId: id,
-            qty: Math.max(1, it.min_stock || 1),
-            note: "",
-            supplierId: it.supplier_id || ""
-          });
-        }
-        save(INV_LIST_KEY, buyList); // TODO: Mover a la DB
-        paintBuyList();
-        refreshKPIs();
-      } catch (err) {
-        console.error(err);
-        toast("Error al actualizar la lista de compra", "error");
+      const exists = buyList.find(b => b.itemId === id);
+      if (exists) {
+        buyList = buyList.filter(b => b.itemId !== id);
+      } else {
+        buyList.push({
+          id: rid("bl"),
+          itemId: id,
+          qty: Math.max(1, (it.min || 1) - (it.stock || 0)),
+          note: "",
+          supplierId: it.supplierId || "",
+        });
       }
+      save(INV_LIST_KEY, buyList);
+      paintBuyList();
+      refreshKPIs();
     }
 
     // ====== LISTA DE COMPRA ======
@@ -642,12 +554,13 @@ export default {
 
       const groups = {};
       buyList.forEach(b => {
-        const sid = b.supplier_id || "__sin__";
-        (groups[sid] ||= []).push(b);
+        const it = items.find(i => i.id === b.itemId);
+        const sid = b.supplierId || it?.supplierId || "__sin__";
+        (groups[sid] ||= []).push({ ...b, item: it || {} });
       });
 
       listWrap.innerHTML = Object.entries(groups).map(([sid, arr]) => {
-        const s = suppliers.find(s => s.id === sid);
+        const s = sid === "__sin__" ? null : findSupplier(sid);
         const head = s ? `${s.name}${s.company ? " — " + s.company : ""}` : "Sin proveedor";
         const contact = s ? `<div class="text-xs text-slate-400">${s.phone ? `<i class=\"fas fa-phone\" aria-hidden=\"true\"></i> ${s.phone}` : ""} ${s.email ? ` · <i class=\"fas fa-envelope\" aria-hidden=\"true\"></i> ${s.email}` : ""}</div>` : "";
         return `
@@ -662,9 +575,9 @@ export default {
             <div class="mt-2 space-y-1">
               ${arr.map(b => `
                 <div class="flex items-center gap-2" data-blid="${b.id}">
-                  <div class="flex-1 truncate">${b.product_name || "(eliminado)"} <span class="text-slate-400">(${b.product_unit || "-"})</span></div>
-                  <input type="number" min="1" class="bl-qty w-16 h-7 px-2 rounded bg-white/10 border border-white/10 text-right" value="${b.quantity}"/>
-                  <input type="text" class="bl-note flex-1 h-7 px-2 rounded bg-white/10 border border-white/10" placeholder="Nota..." value="${b.notes || ""}"/>
+                  <div class="flex-1 truncate">${b.item?.name || "(eliminado)"} <span class="text-slate-400">(${b.item?.unit || "-"})</span></div>
+                  <input type="number" min="1" class="bl-qty w-16 h-7 px-2 rounded bg-white/10 border border-white/10 text-right" value="${b.qty || 1}"/>
+                  <input type="text" class="bl-note flex-1 h-7 px-2 rounded bg-white/10 border border-white/10" placeholder="Nota..." value="${b.note || ""}"/>
                   <button class="mini-btn btn" data-blid="${b.id}" title="Quitar de la lista"><i class="fas fa-trash" aria-hidden="true"></i></button>
                 </div>`).join("")}
             </div>
@@ -725,7 +638,7 @@ export default {
       } else {
         emptySuppliers.classList.add("hidden");
         rowsSuppliers.innerHTML = suppliers.map(s => {
-          const tags = s.tags ? JSON.parse(s.tags) : [];
+          const tags = Array.isArray(s.tags) ? s.tags : [];
           return `
           <tr class="hover:bg-white/5">
             <td class="font-medium">${s.name}</td>
@@ -752,6 +665,7 @@ export default {
     function openSupplier(data = null) {
       const S = suppForm.elements;
       suppForm.reset();
+      editingSupplierId = data?.id || null;
       S.sid.value = data?.id || rid("supp");
       S.name.value = data?.name || "";
       S.company.value = data?.company || "";
@@ -783,24 +697,25 @@ export default {
       if (!data.name) return toast("Nombre del proveedor obligatorio", "error");
 
       try {
-        if (data.id) {
-          await apiPut(`/api/suppliers/${data.id}`, data);
+        const exists = editingSupplierId && suppliers.some(s => s.id === editingSupplierId);
+        if (exists) {
+          await store.suppliers.update(editingSupplierId, data);
         } else {
-          await apiPost('/api/suppliers/save', data);
+          await store.suppliers.create(data);
         }
 
-        suppliers = await apiGet('/api/suppliers/list');
-        refreshSuppliers();
+        await loadData();
         toast("Proveedor guardado ✅", "success");
 
         if (mode === "new") {
+          editingSupplierId = null;
           openSupplier(null);
         } else {
           ModalHelper.close(suppModal);
         }
       } catch (err) {
         console.error(err);
-        toast("Error al guardar el proveedor", "error");
+        toast("Error al guardar el proveedor: " + (err.message || err), "error");
       }
     }
 
@@ -808,17 +723,12 @@ export default {
       if (!confirm("¿Eliminar proveedor? (los insumos quedarán sin proveedor)")) return;
 
       try {
-        await apiDelete(`/api/suppliers/${id}`);
-
-        suppliers = await apiGet('/api/suppliers/list');
-        items = await apiGet('/api/products/list');
-
-        refreshSuppliers();
-        refreshItems();
+        await store.suppliers.remove(id);
+        await loadData();
         toast("Proveedor eliminado", "success");
       } catch (err) {
         console.error(err);
-        toast("Error al eliminar el proveedor", "error");
+        toast("Error al eliminar el proveedor: " + (err.message || err), "error");
       }
     }
 
@@ -834,20 +744,7 @@ export default {
       fSupp.value = ""; // reset para evitar filtros colgados
     }
 
-    // === Pintado inicial ===
-    async function init() {
-      try {
-        items = await apiGet('/api/products/list');
-        suppliers = await apiGet('/api/suppliers/list');
-        repaintSupplierFilter();
-        refreshItems();
-        refreshSuppliers();
-      } catch (err) {
-        console.error(err);
-        toast("Error al cargar los datos iniciales", "error");
-      }
-    }
-    init();
+    loadData();
 
     // ====== Export / Import ======
     function exportData() {
@@ -890,8 +787,8 @@ function kpi(icon, label, id) {
 
 function modalItem() {
   return /*html*/`
-  <div id="item-modal" class="fixed inset-0 z-[1000] hidden items-center justify-center bg-black/60" style="display:none">
-    <div class="bg-slate-900 border border-white/10 rounded-xl w-[min(92vw,880px)]">
+  <div id="item-modal" data-modal-overlay data-modal-size="lg" class="modal-overlay fixed inset-0 z-[9999] hidden items-center justify-center p-4 bg-black/60" aria-hidden="true">
+    <div class="modal-panel bg-slate-900 border border-white/10 rounded-xl w-full max-w-[880px] max-h-[90vh] overflow-auto">
       <div class="flex items-center justify-between p-3 border-b border-white/10">
   <h2 class="text-lg font-semibold"><i class="fas fa-plus" aria-hidden="true"></i> Insumo</h2>
   <button id="item-close" type="button" class="px-3 py-1.5 rounded bg-white/10 hover:bg-white/20"><i class="fas fa-times" aria-hidden="true"></i></button>
@@ -945,8 +842,8 @@ function modalItem() {
 
 function modalSupplier() {
   return /*html*/`
-  <div id="supp-modal" class="fixed inset-0 z-[1000] hidden items-center justify-center bg-black/60" style="display:none">
-    <div class="bg-slate-900 border border-white/10 rounded-xl w-[min(92vw,760px)]">
+  <div id="supp-modal" data-modal-overlay data-modal-size="md" class="modal-overlay fixed inset-0 z-[9999] hidden items-center justify-center p-4 bg-black/60" aria-hidden="true">
+    <div class="modal-panel bg-slate-900 border border-white/10 rounded-xl w-full max-w-[760px] max-h-[90vh] overflow-auto">
       <div class="flex items-center justify-between p-3 border-b border-white/10">
   <h2 class="text-lg font-semibold"><i class="fas fa-tag" aria-hidden="true"></i> Proveedor</h2>
   <button id="supp-close" type="button" class="px-3 py-1.5 rounded bg-white/10 hover:bg-white/20"><i class="fas fa-times" aria-hidden="true"></i></button>
@@ -983,8 +880,8 @@ function modalSupplier() {
 
 function modalSend() {
   return /*html*/`
-  <div id="send-modal" class="fixed inset-0 z-[1000] hidden items-center justify-center bg-black/60" style="display:none">
-    <div class="bg-slate-900 border border-white/10 rounded-xl w-[min(92vw,900px)] max-h-[86vh] overflow-auto">
+  <div id="send-modal" data-modal-overlay data-modal-size="lg" class="modal-overlay fixed inset-0 z-[9999] hidden items-center justify-center p-4 bg-black/60" aria-hidden="true">
+    <div class="modal-panel bg-slate-900 border border-white/10 rounded-xl w-full max-w-[900px] max-h-[90vh] overflow-auto">
       <div class="flex items-center justify-between p-3 border-b border-white/10">
         <h2 class="text-lg font-semibold">Enviar lista de compra</h2>
   <button id="send-close" type="button" class="px-3 py-1.5 rounded bg-white/10 hover:bg-white/20"><i class="fas fa-times" aria-hidden="true"></i></button>

@@ -150,6 +150,23 @@ app.get('*', (req, res) => {
             console.log("Migration: Verified Clients/Vehicles tables");
         } catch (e) { console.error("Migration Clients Error:", e); }
 
+        // --- Safe Migration for "created_by" in quotes ---
+        try {
+            await db.execute("ALTER TABLE quotes ADD COLUMN created_by TEXT");
+            console.log("Migration: Added 'created_by' column to quotes");
+        } catch (e) { }
+
+        // --- Products: columnas para inventario ---
+        for (const sql of [
+            "ALTER TABLE products ADD COLUMN code TEXT",
+            "ALTER TABLE products ADD COLUMN unit TEXT DEFAULT 'u'",
+            "ALTER TABLE products ADD COLUMN min_stock INTEGER DEFAULT 0",
+            "ALTER TABLE products ADD COLUMN supplier_id TEXT",
+            "ALTER TABLE products ADD COLUMN meta TEXT",
+        ]) {
+            try { await db.execute(sql); } catch (e) { /* ya existe */ }
+        }
+        console.log("Migration: Verified products inventory columns");
 
         // --- Seed Admin User if missing ---
         const userCountInitial = await db.execute("SELECT COUNT(*) as count FROM users");

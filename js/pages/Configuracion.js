@@ -526,6 +526,7 @@ export default {
 
     // Modal Users
     const uModal = $("#user-modal");
+    ModalHelper.setup(uModal, "button[onclick*='closeUser'], .btn-secondary");
     let editingUserId = null;
 
     window.mount.openUser = (uid = null) => {
@@ -654,6 +655,7 @@ export default {
 
     // Modal Branch
     const bModal = $("#branch-modal");
+    ModalHelper.setup(bModal, "button[onclick*='closeBranch'], .btn-secondary");
     let editingBranchId = null;
 
     window.mount.openBranch = (bid = null) => {
@@ -774,8 +776,8 @@ export default {
 
   modalUser() {
     return /*html*/`
-      <div id="user-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm hidden animate-fade-in">
-         <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-700">
+      <div id="user-modal" data-modal-overlay data-modal-size="md" class="modal-overlay fixed inset-0 z-[9999] hidden items-center justify-center p-4 bg-black/50 backdrop-blur-sm" aria-hidden="true">
+         <div class="modal-panel bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-700">
              <div class="bg-slate-50 dark:bg-slate-900 p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
                  <h3 id="u-title" class="font-bold text-lg text-slate-800 dark:text-slate-200">Usuario</h3>
                  <button onclick="mount.closeUser()" class="text-slate-400 hover:text-red-500 text-xl">&times;</button>
@@ -823,8 +825,8 @@ export default {
 
   modalBranch() {
     return /*html*/`
-      <div id="branch-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm hidden animate-fade-in">
-         <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-700">
+      <div id="branch-modal" data-modal-overlay data-modal-size="md" class="modal-overlay fixed inset-0 z-[9999] hidden items-center justify-center p-4 bg-black/50 backdrop-blur-sm" aria-hidden="true">
+         <div class="modal-panel bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-700">
              <div class="bg-slate-50 dark:bg-slate-900 p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
                  <h3 id="b-title" class="font-bold text-lg text-slate-800 dark:text-slate-200">Sucursal</h3>
                  <button onclick="mount.closeBranch()" class="text-slate-400 hover:text-red-500 text-xl">&times;</button>

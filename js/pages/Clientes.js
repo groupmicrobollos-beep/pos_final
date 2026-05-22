@@ -1,5 +1,6 @@
 
 import store from "../store.js";
+import { normalizeVehiclesList } from "../utils/format.js";
 
 const rid = (p = "id") => `${p}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
 
@@ -43,8 +44,8 @@ export default {
   </div>
 
   <!-- Modal Cliente -->
-  <div id="client-modal" class="fixed inset-0 z-[1000] hidden items-center justify-center bg-black/60">
-    <div class="bg-slate-900 border border-white/10 rounded-xl w-[min(92vw,600px)] max-h-[90vh] overflow-auto flex flex-col">
+  <div id="client-modal" data-modal-overlay data-modal-size="md" class="modal-overlay fixed inset-0 z-[9999] hidden items-center justify-center p-4 bg-black/60" aria-hidden="true">
+    <div class="modal-panel bg-slate-900 border border-white/10 rounded-xl w-full max-w-[600px] max-h-[90vh] overflow-auto flex flex-col">
       <div class="flex items-center justify-between p-3 border-b border-white/10">
         <h2 class="text-lg font-semibold" id="modal-title">Cliente</h2>
         <button id="client-close" class="px-3 py-1.5 rounded bg-white/10 hover:bg-white/20"><i class="fas fa-times" aria-hidden="true"></i></button>
@@ -72,9 +73,9 @@ export default {
           <div class="border-t border-white/10 pt-3">
             <div class="flex items-center justify-between mb-2">
               <h3 class="font-medium text-sm">Vehículos</h3>
-              <button type="button" id="btn-add-veh-modal" class="btn mini-btn btn-indigo"><i class="fas fa-plus"></i></button>
+              <button type="button" id="btn-add-veh" class="btn mini-btn btn-indigo"><i class="fas fa-plus"></i></button>
             </div>
-            <div id="veh-list-modal" class="space-y-2 max-h-[200px] overflow-auto pr-1">
+            <div id="veh-list" class="space-y-2 max-h-[200px] overflow-auto pr-1">
               <!-- Lista de inputs de vehículos -->
             </div>
           </div>
@@ -107,8 +108,8 @@ export default {
     const btnCancel = root.querySelector("#client-cancel");
     const btnSave = root.querySelector("#client-save");
 
-    const btnAddVeh = root.querySelector("#btn-add-veh-modal");
-    const vehList = root.querySelector("#veh-list-modal");
+    const btnAddVeh = root.querySelector("#btn-add-veh");
+    const vehList = root.querySelector("#veh-list");
 
     // State
     let clients = [];
@@ -144,7 +145,6 @@ export default {
           <td class="font-medium">${c.name}</td>
           <td>${c.phone || "-"}</td>
           <td>${c.email || "-"}</td>
-          <td>${c.address || "-"}</td>
           <td class="text-right">${(c.vehicles || []).length}</td>
           <td class="text-right whitespace-nowrap">
             <button class="btn mini-btn btn-indigo" data-act="edit" data-id="${c.id}" title="Editar"><i class="fas fa-edit"></i></button>
@@ -176,7 +176,7 @@ export default {
     function closeModal() { ModalHelper.close(modal); }
 
     btnAdd.addEventListener("click", () => openModal(null));
-    ModalHelper.setup(modal, "#btn-close");
+    ModalHelper.setup(modal, "#client-close, #client-cancel");
 
     // Table Actions
     tableBody.addEventListener("click", async (e) => {
@@ -246,7 +246,7 @@ export default {
         name: form.name.value.trim(),
         phone: form.phone.value.trim(),
         email: form.email.value.trim(),
-        vehicles: currentVehicles
+        vehicles: normalizeVehiclesList(currentVehicles)
       };
       if (!data.name) return alert("Nombre obligatorio");
       if (!data.phone) return alert("Teléfono obligatorio");

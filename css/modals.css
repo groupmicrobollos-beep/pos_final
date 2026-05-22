@@ -1,0 +1,110 @@
+/**
+ * Modales — SOLO overlays con [data-modal-overlay]
+ * No usar ids que terminen en -modal en elementos internos.
+ */
+
+/* Overlay cerrado */
+[data-modal-overlay].hidden {
+  display: none !important;
+}
+
+/* Overlay abierto */
+[data-modal-overlay]:not(.hidden) {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 9999 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 16px !important;
+  background: rgba(2, 6, 23, 0.65) !important;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  overflow: hidden !important;
+  animation: modalOverlayIn 0.2s ease-out;
+}
+
+html[data-theme="light"] [data-modal-overlay]:not(.hidden) {
+  background: rgba(15, 23, 42, 0.35) !important;
+}
+
+/* Panel (primer hijo directo del overlay) */
+[data-modal-overlay] > .modal-panel,
+[data-modal-overlay] > div:first-child {
+  position: relative !important;
+  z-index: 1 !important;
+  width: min(92vw, 960px) !important;
+  max-width: 100% !important;
+  max-height: min(90vh, calc(100dvh - 32px)) !important;
+  margin: auto !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  border-radius: 12px !important;
+  background: var(--color-bg-card, #0f172a) !important;
+  color: var(--color-text, #e2e8f0) !important;
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.1)) !important;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45) !important;
+  animation: modalPanelIn 0.25s cubic-bezier(0.34, 1.2, 0.64, 1);
+  /* Reset de reglas viejas que rompían position */
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+}
+
+/* Paneles angostos */
+[data-modal-overlay][data-modal-size="sm"] > .modal-panel,
+[data-modal-overlay][data-modal-size="sm"] > div:first-child {
+  width: min(92vw, 560px) !important;
+}
+
+[data-modal-overlay][data-modal-size="lg"] > .modal-panel,
+[data-modal-overlay][data-modal-size="lg"] > div:first-child {
+  width: min(92vw, 980px) !important;
+}
+
+[data-modal-overlay][data-modal-size="md"] > .modal-panel,
+[data-modal-overlay][data-modal-size="md"] > div:first-child {
+  width: min(92vw, 720px) !important;
+}
+
+@keyframes modalOverlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 640px) {
+  [data-modal-overlay]:not(.hidden) {
+    padding: 10px !important;
+  }
+  [data-modal-overlay] > .modal-panel,
+  [data-modal-overlay] > div:first-child {
+    width: 100% !important;
+    max-height: calc(100dvh - 20px) !important;
+    border-radius: 14px !important;
+  }
+}
+
+/* Scrollbar del panel */
+[data-modal-overlay] > div:first-child::-webkit-scrollbar {
+  width: 8px;
+}
+[data-modal-overlay] > div:first-child::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 4px;
+}
+
+body.modal-scroll-lock {
+  overflow: hidden !important;
+}

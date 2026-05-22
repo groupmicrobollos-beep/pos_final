@@ -46,6 +46,7 @@ function toast(msg, type = "info") {
 
 import store from "../store.js";
 import budgetsService from "../services/budgets.js";
+import { normalizeVehicle, normalizeVehiclesList, parseAmount, displayAmount } from "../utils/format.js";
 
 function setupCanvas(ctx) {
   ctx.lineCap = "round";
@@ -271,9 +272,9 @@ export default {
         </div>
 
         <!-- Modal: Añadir Item -->
-        <div id="add-item-modal"
-             class="fixed inset-0 z-[1000] hidden flex items-center justify-center bg-black/60 p-4">
-          <div class="surface rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-4 shadow-2xl">
+        <div id="add-item-modal" data-modal-overlay data-modal-size="lg"
+             class="modal-overlay fixed inset-0 z-[9999] hidden items-center justify-center p-4 bg-black/60" aria-hidden="true">
+          <div class="modal-panel surface rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-4 shadow-2xl">
             <div class="flex items-center justify-between">
               <h2 class="text-lg font-semibold text-main"><i class="fas fa-plus" aria-hidden="true"></i> Añadir Nuevo Ítem</h2>
               <button class="close-modal px-2 py-1 rounded hover:bg-white/10 text-main"><i class="fas fa-times" aria-hidden="true"></i></button>
@@ -347,12 +348,12 @@ export default {
         </div>
 
         <!-- Modal: Otros Trabajos -->
-        <div id="other-services-modal"
-             class="fixed inset-0 z-[1000] hidden flex items-center justify-center bg-black/60 p-4">
-          <div class="surface rounded-xl w-[min(92vw,980px)] max-h-[90vh] overflow-y-auto p-4">
+        <div id="other-services-modal" data-modal-overlay data-modal-size="lg"
+             class="modal-overlay fixed inset-0 z-[9999] hidden items-center justify-center p-4 bg-black/60" aria-hidden="true">
+          <div class="modal-panel surface rounded-xl w-full max-h-[90vh] overflow-y-auto p-4">
             <div class="flex items-center justify-between">
               <h2 class="text-lg font-semibold text-main"><i class="fas fa-tools" aria-hidden="true"></i> Otros Trabajos y Servicios</h2>
-              <button id="close-services-modal" class="px-2 py-1 rounded hover:bg-white/10 text-main"><i class="fas fa-times" aria-hidden="true"></i></button>
+              <button id="close-services-btn" type="button" class="px-2 py-1 rounded hover:bg-white/10 text-main"><i class="fas fa-times" aria-hidden="true"></i></button>
             </div>
 
             <div class="mt-4 grid md:grid-cols-2 gap-4">
@@ -416,12 +417,12 @@ export default {
         </div>
 
         <!-- Modal: Repuestos -->
-        <div id="parts-modal"
-             class="fixed inset-0 z-[1000] hidden flex items-center justify-center bg-black/60 p-4">
-          <div class="surface rounded-xl w-[min(92vw,980px)] max-h-[90vh] overflow-y-auto p-4">
+        <div id="parts-modal" data-modal-overlay data-modal-size="lg"
+             class="modal-overlay fixed inset-0 z-[9999] hidden items-center justify-center p-4 bg-black/60" aria-hidden="true">
+          <div class="modal-panel surface rounded-xl w-full max-h-[90vh] overflow-y-auto p-4">
             <div class="flex items-center justify-between">
                     <h2 class="text-lg font-semibold text-main"><i class="fas fa-cogs" aria-hidden="true"></i> Repuestos</h2>
-                    <button id="close-parts-modal" class="px-2 py-1 rounded hover:bg-white/10 text-main"><i class="fas fa-times" aria-hidden="true"></i></button>
+                    <button id="close-parts-btn" type="button" class="px-2 py-1 rounded hover:bg-white/10 text-main"><i class="fas fa-times" aria-hidden="true"></i></button>
                   </div>
 
             <div class="mt-4 grid md:grid-cols-2 gap-4">
@@ -475,15 +476,15 @@ export default {
         </div>
 
         <!-- Modal: Firma digital -->
-        <div id="signature-modal"
-             class="fixed inset-0 z-[1000] hidden flex items-center justify-center bg-black/60 p-4">
-          <div class="surface border border-white/10 rounded-xl w-[min(92vw,720px)] max-h-[90vh] overflow-y-auto p-4">
+        <div id="signature-modal" data-modal-overlay data-modal-size="md"
+             class="modal-overlay fixed inset-0 z-[9999] hidden items-center justify-center p-4 bg-black/60" aria-hidden="true">
+          <div class="modal-panel surface border border-white/10 rounded-xl w-full max-w-[720px] max-h-[90vh] overflow-y-auto p-4">
             <div class="flex items-center justify-between">
               <div class="font-medium text-main">Firma Digital</div>
               <button id="close-signature" class="px-2 py-1 rounded hover:bg-white/10 text-main"><i class="fas fa-times" aria-hidden="true"></i></button>
             </div>
             <div class="mt-3 glass rounded-lg p-2">
-              <canvas id="signature-canvas-modal" class="w-full h-60 surface rounded"></canvas>
+              <canvas id="signature-canvas" class="w-full h-60 surface rounded"></canvas>
             </div>
             <div class="mt-3 flex justify-end gap-2">
               <button id="clear-signature" class="px-3 py-2 rounded surface hover:bg-white/20 text-main"><i class="fas fa-broom" aria-hidden="true"></i> Limpiar</button>
@@ -493,9 +494,9 @@ export default {
         </div>
 
         <!-- Modal: Confirmar eliminación de vehículo -->
-        <div id="confirm-del-veh-modal"
-             class="fixed inset-0 z-[1000] hidden flex items-center justify-center bg-black/60">
-          <div class="surface border border-white/10 rounded-xl w-[min(92vw,560px)] p-4">
+        <div id="confirm-del-veh-modal" data-modal-overlay data-modal-size="sm"
+             class="modal-overlay fixed inset-0 z-[9999] hidden items-center justify-center p-4 bg-black/60" aria-hidden="true">
+          <div class="modal-panel surface border border-white/10 rounded-xl w-full max-w-[560px] p-4">
             <h2 class="text-lg font-semibold text-main">Eliminar vehículo</h2>
             <p class="mt-2 text-muted-custom">¿Seguro que querés eliminar este vehículo? <strong>La acción no es reversible.</strong></p>
             <div id="del-veh-summary" class="mt-2 text-sm text-muted-custom"></div>
@@ -507,9 +508,9 @@ export default {
         </div>
 
         <!-- Modal: Confirmar eliminación de cliente -->
-        <div id="confirm-del-cli-modal"
-             class="fixed inset-0 z-[1000] hidden flex items-center justify-center bg-black/60">
-          <div class="surface border border-white/10 rounded-xl w-[min(92vw,560px)] p-4">
+        <div id="confirm-del-cli-modal" data-modal-overlay data-modal-size="sm"
+             class="modal-overlay fixed inset-0 z-[9999] hidden items-center justify-center p-4 bg-black/60" aria-hidden="true">
+          <div class="modal-panel surface border border-white/10 rounded-xl w-full max-w-[560px] p-4">
             <h2 class="text-lg font-semibold text-main">Eliminar cliente</h2>
             <p class="mt-2 text-muted-custom">¿Seguro que querés eliminar este cliente y <strong>todos sus vehículos</strong>? <strong>La acción no es irreversible.</strong></p>
             <div id="del-cli-summary" class="mt-2 text-sm text-muted-custom"></div>
@@ -643,7 +644,7 @@ export default {
 
     // Otros Trabajos
     const othersModal = root.querySelector("#other-services-modal");
-    const closeServicesModal = root.querySelector("#close-services-modal");
+    const closeServicesModal = root.querySelector("#close-services-btn");
     const cancelServiceBtn = root.querySelector("#cancel-service");
     const confirmServiceBtn = root.querySelector("#confirm-service");
     const serviceQuantity = root.querySelector("#service-quantity");
@@ -655,7 +656,7 @@ export default {
 
     // Repuestos
     const partsModal = root.querySelector("#parts-modal");
-    const closePartsModal = root.querySelector("#close-parts-modal");
+    const closePartsModal = root.querySelector("#close-parts-btn");
     const cancelPartsBtn = root.querySelector("#cancel-parts");
     const confirmPartsBtn = root.querySelector("#confirm-parts");
     const partNameInput = root.querySelector("#part-name");
@@ -674,7 +675,7 @@ export default {
     const closeSign = root.querySelector("#close-signature");
     const clearSign = root.querySelector("#clear-signature");
     const saveSign = root.querySelector("#save-signature");
-    const signCanvas = root.querySelector("#signature-canvas-modal");
+    const signCanvas = root.querySelector("#signature-canvas");
     const printCanvas = root.querySelector("#signature-canvas");
     const printDate = root.querySelector("#print-date");
     const signCtx = signCanvas.getContext("2d");
@@ -684,11 +685,20 @@ export default {
     dateInput.value = todayISO();
 
     // Pintar usuarios desde store (cfg_users)
-    function paintUsersIntoSelect() {
+    async function paintUsersIntoSelect() {
       try {
-        const users = JSON.parse(localStorage.getItem("cfg_users") || "[]");
-        selUser.innerHTML = `<option value="">(Asignar usuario)</option>` + users.map(u => `<option value="${u.id}">${u.full_name || u.username}</option>`).join("");
-      } catch { selUser.innerHTML = `<option value="">(Asignar usuario)</option>`; }
+        let users = JSON.parse(localStorage.getItem("cfg_users") || "[]");
+        if (!users.length) {
+          users = await store.users.list();
+          try { localStorage.setItem("cfg_users", JSON.stringify(users)); } catch { /* ignore */ }
+        }
+        selUser.innerHTML = `<option value="">(Asignar usuario)</option>` +
+          users.filter(u => u.active !== 0 && u.active !== false).map(u =>
+            `<option value="${u.id}">${u.full_name || u.username}</option>`
+          ).join("");
+      } catch {
+        selUser.innerHTML = `<option value="">(Asignar usuario)</option>`;
+      }
     }
     paintUsersIntoSelect();
 
@@ -915,8 +925,7 @@ export default {
     vehicleSel.addEventListener("change", () => {
       selectedVehicleId = vehicleSel.value || null;
       deleteVehicleBtn.disabled = !selectedVehicleId;
-      const clients = getClients();
-      const client = clients.find(c => c.id === selectedClientId);
+      const client = localClients.find(c => c.id === selectedClientId);
       if (!client) return;
       const v = client.vehicles?.find(v => v.id === selectedVehicleId) || null;
       fillVehicleForm(v); // si es null => deja el form en blanco (nuevo)
@@ -937,9 +946,10 @@ export default {
       const vData = getVehicleFormData();
       // Check if user filled vehicle data
       if (vData.vehiculo && vData.patente) {
+        const normalized = normalizeVehicle(vData);
         const idxV = vehicles.findIndex(v => v.id === selectedVehicleId);
-        if (idxV >= 0) vehicles[idxV] = vData;
-        else vehicles.push(vData);
+        if (idxV >= 0) vehicles[idxV] = { ...vehicles[idxV], ...normalized };
+        else vehicles.push(normalized);
       } else if (selectedVehicleId) {
         // Maybe updating existing vehicle but cleared fields? Assume required.
         // Or just user didn't touch vehicle form.
@@ -957,7 +967,7 @@ export default {
         phone: clientData.phone,
         email: clientData.email || "", // Fix: Include email
         address: clientData.address || "", // Fix: Include address
-        vehicles: vehicles
+        vehicles: normalizeVehiclesList(vehicles)
       };
 
       try {
@@ -972,12 +982,10 @@ export default {
           toast("Cliente creado ✅", "success");
         }
         await loadClientsIntoSelect(existingClientSel, savedId);
-        // Refetch to get full object with IDs
-        currentClient = localClients.find(c => c.id === savedId);
+        const currentClient = localClients.find(c => c.id === savedId);
         selectedClientId = savedId;
 
-        // Determine active vehicle
-        const savedVehicleId = vData.id || (currentClient.vehicles[0]?.id);
+        const savedVehicleId = selectedVehicleId || currentClient?.vehicles?.[0]?.id || null;
         loadVehiclesIntoSelect(currentClient, savedVehicleId);
         selectedVehicleId = savedVehicleId;
 
@@ -995,8 +1003,7 @@ export default {
       delVehSummary.textContent = v ? `${v.brand || v.vehiculo || ""} ${v.plate || v.patente ? "— " + (v.plate || v.patente) : ""}` : "";
       openDelVehModal();
     });
-    cancelDelVeh.addEventListener("click", closeDelVehModal);
-    delVehModal.addEventListener("click", (e) => { if (e.target === delVehModal) closeDelVehModal(); });
+    ModalHelper.setup(delVehModal, "#cancel-del-veh");
     confirmDelVeh.addEventListener("click", async () => {
       if (!selectedClientId || !selectedVehicleId) return;
       const client = localClients.find(c => c.id === selectedClientId);
@@ -1035,8 +1042,7 @@ export default {
       delCliSummary.textContent = cli ? `${cli.name} — ${cli.phone || "s/tel"} (${(cli.vehicles || []).length} vehículo/s)` : "";
       openDelCliModal();
     });
-    cancelDelCli.addEventListener("click", closeDelCliModal);
-    delCliModal.addEventListener("click", (e) => { if (e.target === delCliModal) closeDelCliModal(); });
+    ModalHelper.setup(delCliModal, "#cancel-del-cli");
     confirmDelCli.addEventListener("click", async () => {
       if (!selectedClientId) return;
       try {
@@ -1058,9 +1064,7 @@ export default {
         const descCell = tr.querySelector("td:nth-child(2)");
         const cell = tr.querySelector("td:nth-child(4)");
         if (!cell) return;
-        const num = parseFloat(
-          cell.textContent.replace(/[^\d.,-]/g, "").replace(/\./g, "").replace(",", ".")
-        ) || 0;
+        const num = parseAmount(cell.textContent);
 
         subtotal += num;
 
@@ -1087,8 +1091,8 @@ export default {
     if (taxRateEl) taxRateEl.addEventListener("input", () => { itemsDirty = true; updateTotals(); });
     function appendRow({ cantidad = 1, descripcion, unit, total }) {
       const tr = document.createElement("tr");
-      const unitDisplay = unit === 0 ? "-" : money(unit);
-      const totalDisplay = total === 0 ? "-" : money(total);
+      const unitDisplay = displayAmount(unit, money);
+      const totalDisplay = displayAmount(total, money);
       tr.innerHTML = `
         <td class="px-3 py-2">${cantidad}</td>
         <td class="px-3 py-2 text-left">${descripcion}</td>
@@ -1111,9 +1115,9 @@ export default {
       itemsBody.querySelectorAll("tr").forEach(tr => {
         const tds = tr.querySelectorAll("td");
         if (tds.length >= 4) {
-          const cantidad = parseFloat((tds[0].textContent || "1").replace(",", "."));
-          const unit = parseFloat(tds[2].textContent.replace(/[^\d.,-]/g, "").replace(/\./g, "").replace(",", "."));
-          const total = parseFloat(tds[3].textContent.replace(/[^\d.,-]/g, "").replace(/\./g, "").replace(",", "."));
+          const cantidad = parseAmount(tds[0].textContent || "1") || 1;
+          const unit = parseAmount(tds[2].textContent);
+          const total = parseAmount(tds[3].textContent);
           arr.push({
             cantidad: isNaN(cantidad) ? 1 : cantidad,
             descripcion: tds[1].textContent.trim(),
@@ -1147,7 +1151,7 @@ export default {
       const opts = [...optionChecks].filter(c => c.checked).map(c => c.nextElementSibling.textContent.trim());
       const desc = `[SERVICIO] ${partSelect.value} - ${workSelect.value}${opts.length ? ` (${opts.join(", ")})` : ""}`;
       appendRow({ cantidad: 1, descripcion: desc, unit: cost, total: cost });
-      hideAddItem();
+      ModalHelper.close(addItemModal);
       toast("Ítem agregado", "success");
     });
 
@@ -1159,9 +1163,7 @@ export default {
     const closeOthers = () => { ModalHelper.close(othersModal, () => { resetOthers(); }); };
 
     othersBtn.addEventListener("click", openOthers);
-    ModalHelper.setup(othersModal, "#close-services-modal");
-    cancelServiceBtn.addEventListener("click", closeOthers);  // Botón alternativo de cierre
-    othersModal.addEventListener("click", (e) => { if (e.target === othersModal) closeOthers(); });
+    ModalHelper.setup(othersModal, "#close-services-btn, #cancel-service", null, null, () => { resetOthers(); });
 
     function clearAllServiceSelections() {
       othersModal.querySelectorAll(".service-item").forEach(i => i.classList.remove("ring", "ring-indigo-500/50"));
@@ -1317,13 +1319,12 @@ export default {
       ModalHelper.close(partsModal, () => { resetParts(); });
     };
     partsBtn.addEventListener("click", openParts);
-    ModalHelper.setup(partsModal, "#close-parts-modal");
-    cancelPartsBtn.addEventListener("click", closeParts);  // Botón alternativo de cierre
+    ModalHelper.setup(partsModal, "#close-parts-btn, #cancel-parts", null, null, () => { resetParts(); });
 
     function calcPartTotal() {
       const q = Math.max(1, parseInt(partQuantityInput.value || "1", 10));
       const p = parseFloat(partPriceInput.value || "0");
-      const t = q * (p > 0 ? p : 0);
+      const t = q * (p >= 0 ? p : 0);
       partTotalInput.textContent = money(t);
       addPartBtn.disabled = !(partNameInput.value.trim() && q > 0);
     }
@@ -1362,7 +1363,7 @@ export default {
             <div>
               <div class="font-medium">${p.name}</div>
               ${p.description ? `<div class="text-xs text-slate-400">${p.description}</div>` : ""}
-              <div class="text-xs">${p.quantity} × ${money(p.price)} = <strong>${money(p.total)}</strong></div>
+              <div class="text-xs">${p.quantity} × ${displayAmount(p.price, money)} = <strong>${displayAmount(p.total, money)}</strong></div>
             </div>
             <button class="del-part px-2 py-1 rounded bg-rose-600/80 hover:bg-rose-600 text-xs"><i class="fas fa-trash" aria-hidden="true"></i></button>
           </div>

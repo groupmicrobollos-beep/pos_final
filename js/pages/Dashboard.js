@@ -12,9 +12,10 @@ function _lsBranches() { try { return JSON.parse(localStorage.getItem(CFG_BRANCH
 function getBranches() { return (window.CFG && typeof window.CFG.getBranches === "function") ? window.CFG.getBranches() : _lsBranches(); }
 
 import budgetsService from "../services/budgets.js";
+import store from "../store.js";
+import { displayAmount } from "../utils/format.js";
 
 // ====== App locals ======
-const CLIENTS_KEY = "clients_db";
 
 const ARS = { style: "currency", currency: "ARS", minimumFractionDigits: 2, maximumFractionDigits: 2 };
 const money = (n) => (Number(n) || 0).toLocaleString("es-AR", ARS);
@@ -188,7 +189,7 @@ export default {
     const kpiMtd = root.querySelector("#kpi-mtd");
     const kpiAvg = root.querySelector("#kpi-avg");
     const kpiDone = root.querySelector("#kpi-done");
-    const kpiPending = root.querySelector("#kpi-pending");
+    const kpiUnexecuted = root.querySelector("#kpi-unexecuted");
 
     // Charts
     const spark = root.querySelector("#chart-spark");
@@ -217,11 +218,6 @@ export default {
       if (kpiBranchesEl) kpiBranchesEl.textContent = list.length;
     }
     paintBranchFilter();
-    // Reaccionar a cambios del panel de Configuración
-    window.addEventListener("cfg:branches-updated", () => {
-      paintBranchFilter();
-      applyFilters(); renderAll();
-    });
 
     // Estado
     let budgets = [];
@@ -230,9 +226,8 @@ export default {
     // Cargar y renderizar
     loadBudgets(); // handle promise internally
 
-    // Reaccionar a cambios de presupuestos desde otros módulos / pestañas
-    document.addEventListener("budgets:updated", () => { loadBudgets(); applyFilters(); renderAll(); });
-    window.addEventListener("storage", (e) => { if (!e.key) return; if (e.key === "budgets_list" || e.key.startsWith("budget_")) { loadBudgets(); applyFilters(); renderAll(); } });
+    document.addEventListener("budgets:updated", () => { loadBudgets(); });
+    document.addEventListener("cfg:branches-updated", () => { paintBranchFilter(); loadBudgets(); });
 
     // Eventos
     fBranch.addEventListener("change", () => { applyFilters(); renderAll(); });
@@ -264,11 +259,11 @@ export default {
           paintBranchFilter(); // Pinta el select con nombres reales
         }
 
-        budgets = list.map(s => ({ ...s, details: s.details || null }));
+        budgets = list;
       } catch (e) {
         console.error("Dashboard load error", e);
-        const list = JSON.parse(localStorage.getItem("budgets_list") || "[]");
-        budgets = list.map(s => { const full = JSON.parse(localStorage.getItem(s.key) || "null"); return { ...s, details: full || null }; });
+        budgets = [];
+        toast("No se pudieron cargar los presupuestos", "error");
       }
       applyFilters();
       renderAll();
@@ -307,8 +302,6 @@ export default {
       const todayISO = new Date().toISOString().slice(0, 10);
       const todayCount = filtered.filter(b => b.fecha === todayISO).length;
       const mtdAmount = filtered.reduce((s, b) => s + parseMoney(b.total), 0);
-      const totalBranchesConfigured = getBranches().length; // reflejar Configuración
-      const clients = getClientsCount();
       const totalBudgets = filtered.length;
       const avgTicket = totalBudgets ? mtdAmount / totalBudgets : 0;
 
@@ -316,15 +309,13 @@ export default {
       kpiToday.textContent = todayCount;
       kpiMtd.textContent = money(mtdAmount);
       kpiAvg.textContent = money(avgTicket);
-      if (kpiDone) kpiDone.textContent = filtered.filter(b => b.details && b.details.done).length;
-      if (kpiPending) kpiPending.textContent = Math.max(0, filtered.length - (filtered.filter(b => b.details && b.details.done).length));
-      // Monto no ejecutado = suma de totales de presupuestos que NO fueron marcados como hechos
-      const unexecutedAmount = filtered.reduce((s, b) => s + (b.details && b.details.done ? 0 : parseMoney(b.total)), 0);
-      const kUn = root.querySelector("#kpi-unexecuted"); if (kUn) kUn.textContent = money(unexecutedAmount);
+      if (kpiDone) kpiDone.textContent = filtered.filter(b => b.done).length;
+      const unexecutedAmount = filtered.reduce((s, b) => s + (b.done ? 0 : parseMoney(b.total)), 0);
+      if (kpiUnexecuted) kpiUnexecuted.textContent = money(unexecutedAmount);
     }
 
     function renderUnexecuted() {
-      const list = filtered.filter(b => !(b.details && b.details.done));
+      const list = filtered.filter(b => !b.done);
       const container = root.querySelector("#unexecuted-list");
       const totalEl = root.querySelector("#unexecuted-total");
       const emptyEl = root.querySelector("#unexecuted-empty");
@@ -342,8 +333,8 @@ export default {
     }
     function renderLastBudgets() {
       const latest = [...filtered].sort((a, b) => {
-        const da = a.details?.fechaCreacion || a.fecha || "";
-        const db = b.details?.fechaCreacion || b.fecha || "";
+        const da = a.fecha || "";
+        const db = b.fecha || "";
         return (db > da) ? 1 : (db < da ? -1 : 0);
       }).slice(0, 8);
 
@@ -360,7 +351,7 @@ export default {
             <td class="font-medium">${b.numero}</td>
             <td>${toDMY(b.fecha)}</td>
             <td class="max-w-[260px] truncate">${b.cliente?.nombre || b.cliente || "Sin nombre"}</td>
-            <td class="font-medium text-right">${money(b.total)}</td>
+            <td class="font-medium text-right">${displayAmount(b.total, money)}</td>
             <td><span class="badge ${expired ? "status-expired" : "status-active"}">${expired ? "Vencido" : "Vigente"}</span></td>
             <td class="text-right whitespace-nowrap">
               <button data-act="view" data-key="${b.key}" class="btn btn-icon" title="Ver"><i class="fas fa-eye" aria-hidden="true"></i></button>
@@ -373,11 +364,7 @@ export default {
     }
     function renderActivity() {
       const list = [...filtered]
-        .sort((a, b) => {
-          const da = a.details?.fechaCreacion || a.fecha || "";
-          const db = b.details?.fechaCreacion || b.fecha || "";
-          return (db > da) ? 1 : (db < da ? -1 : 0);
-        })
+        .sort((a, b) => (b.fecha || "").localeCompare(a.fecha || ""))
         .slice(0, 8);
 
       if (!list.length) {
@@ -387,9 +374,10 @@ export default {
       }
       activityEmpty.classList.add("hidden");
       activity.innerHTML = list.map(b => {
-        const time = (b.details?.fechaCreacion || b.fecha || "").replace("T", " ").slice(0, 16).replace(/-/g, "/");
+        const time = toDMY(b.fecha);
         const sucName = branchName(b.sucursal);
-        return `<li>• ${time} — Presupuesto <strong>${b.numero}</strong> — ${sucName} — <span class="text-slate-600">${money(b.total)}</span></li>`;
+        const creator = b.assignedUserName ? ` — ${b.assignedUserName}` : "";
+        return `<li>• ${time} — Presupuesto <strong>${b.numero}</strong> — ${sucName}${creator} — <span class="text-slate-600">${displayAmount(b.total, money)}</span></li>`;
       }).join("");
     }
     function renderCharts() {
@@ -434,10 +422,12 @@ export default {
       const delta = Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24));
       return delta > 30;
     }
-    function getClientsCount() {
-      try { return (JSON.parse(localStorage.getItem(CLIENTS_KEY) || "[]") || []).length; }
-      catch { return 0; }
-    }
+    let clientsCount = 0;
+    store.clients.list().then(list => {
+      clientsCount = (list || []).length;
+      const el = root.querySelector("#kpi-clients");
+      if (el) el.textContent = clientsCount;
+    }).catch(() => { clientsCount = 0; });
     function getLastDays(n) {
       const arr = []; const base = new Date(); base.setHours(0, 0, 0, 0);
       for (let i = n - 1; i >= 0; i--) { const d = new Date(base); d.setDate(base.getDate() - i); arr.push(d); }
@@ -576,13 +566,16 @@ export default {
       try { sessionStorage.setItem("editBudgetKey", key); } catch { }
       location.hash = "#/presupuesto";
     }
-    function deleteBudget(key, numero) {
+    async function deleteBudget(key, numero) {
       if (!confirm(`¿Eliminar el presupuesto ${numero}? Esta acción no se puede deshacer.`)) return;
-      localStorage.removeItem(key);
-      const list = JSON.parse(localStorage.getItem("budgets_list") || "[]").filter(x => x.key !== key);
-      localStorage.setItem("budgets_list", JSON.stringify(list));
-      loadBudgets(); applyFilters(); renderAll();
-      toast(`Presupuesto ${numero} eliminado ✅`, "success");
+      try {
+        await budgetsService.remove(key);
+        toast(`Presupuesto ${numero} eliminado ✅`, "success");
+        loadBudgets();
+      } catch (e) {
+        console.error(e);
+        toast("Error al eliminar presupuesto", "error");
+      }
     }
   }
 };

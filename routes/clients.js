@@ -6,6 +6,28 @@ const { getDB } = require('../db');
 // --- Helpers ---
 const rid = () => crypto.randomUUID();
 
+/** Acepta campos en español (vehiculo, patente…) o inglés (brand, plate…). */
+function normalizeVehicle(v = {}) {
+    const yearRaw = v.year ?? v.modelo;
+    const yearNum = yearRaw !== undefined && yearRaw !== '' && yearRaw !== null
+        ? parseInt(String(yearRaw), 10)
+        : null;
+    return {
+        id: v.id || undefined,
+        brand: (v.brand || v.vehiculo || '').trim() || null,
+        model: (v.model || '').trim() || null,
+        year: Number.isFinite(yearNum) ? yearNum : null,
+        plate: (v.plate || v.patente || '').trim() || null,
+        vin: (v.vin || v.chasis || '').trim() || null,
+        insurance: (v.insurance || v.compania || '').trim() || null,
+    };
+}
+
+function normalizeVehicles(vehicles) {
+    if (!Array.isArray(vehicles)) return [];
+    return vehicles.map(normalizeVehicle);
+}
+
 // GET /api/clients - with optional search
 router.get('/', async (req, res) => {
     try {
@@ -66,11 +88,12 @@ router.post('/', async (req, res) => {
 
         // Add vehicles if provided
         if (Array.isArray(vehicles) && vehicles.length > 0) {
-            for (const v of vehicles) {
-                const vid = rid();
+            for (const raw of normalizeVehicles(vehicles)) {
+                const v = normalizeVehicle(raw);
+                const vid = v.id || rid();
                 await db.execute({
                     sql: "INSERT INTO vehicles (id, client_id, brand, model, year, plate, vin, insurance) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                    args: [vid, id, v.brand || null, v.model || null, v.year || null, v.plate || null, v.vin || null, v.insurance || null]
+                    args: [vid, id, v.brand, v.model, v.year, v.plate, v.vin, v.insurance]
                 });
             }
         }
@@ -117,19 +140,18 @@ router.put('/:id', async (req, res) => {
             }
 
             // Upsert incoming
-            for (const v of vehicles) {
+            for (const raw of normalizeVehicles(vehicles)) {
+                const v = normalizeVehicle(raw);
                 if (v.id && existingIds.has(v.id)) {
-                    // Update
                     await db.execute({
                         sql: "UPDATE vehicles SET brand = ?, model = ?, year = ?, plate = ?, vin = ?, insurance = ? WHERE id = ?",
-                        args: [v.brand || null, v.model || null, v.year || null, v.plate || null, v.vin || null, v.insurance || null, v.id]
+                        args: [v.brand, v.model, v.year, v.plate, v.vin, v.insurance, v.id]
                     });
                 } else {
-                    // Create
                     const vid = v.id || rid();
                     await db.execute({
                         sql: "INSERT INTO vehicles (id, client_id, brand, model, year, plate, vin, insurance) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                        args: [vid, clientId, v.brand || null, v.model || null, v.year || null, v.plate || null, v.vin || null, v.insurance || null]
+                        args: [vid, clientId, v.brand, v.model, v.year, v.plate, v.vin, v.insurance]
                     });
                 }
             }

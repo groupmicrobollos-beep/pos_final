@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "verify": "node verify_system.js"
   },
   "dependencies": {
     "@libsql/client": "^0.17.0",
