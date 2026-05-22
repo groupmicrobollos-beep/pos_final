@@ -472,17 +472,47 @@ export default {
       const tbody = $("#userTableBody");
       try {
         if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center"><i class="fas fa-spinner fa-spin"></i> Cargando usuarios...</td></tr>`;
+        
+        console.log('[loadUsers] Attempting to load users from API...');
         localUsers = await store.users.list();
-        if (!Array.isArray(localUsers)) localUsers = []; // safety
-        // Sync to localStorage for other modules (e.g., Presupuesto.js)
+        
+        if (!Array.isArray(localUsers)) {
+          console.warn('[loadUsers] API returned non-array response, treating as empty');
+          localUsers = [];
+        }
+        
+        console.log(`[loadUsers] Loaded ${localUsers.length} users from API`);
+        
+        // If we got no users but have cached data, try to use that
+        if (localUsers.length === 0) {
+          console.warn('[loadUsers] No users from API, checking localStorage cache...');
+          const cached = load(CFG_USERS_KEY, []);
+          if (cached && cached.length > 0) {
+            console.log(`[loadUsers] Found ${cached.length} cached users, using those`);
+            localUsers = cached;
+          }
+        }
+        
+        // Sync to localStorage for other modules
         save(CFG_USERS_KEY, localUsers);
         // Notify other modules that users list changed
         document.dispatchEvent(new CustomEvent('cfg:users-updated', { detail: { users: localUsers } }));
         repaintUsers();
       } catch (e) {
-        toast("Error cargando usuarios: " + e.message, "error");
-        console.error(e);
-        if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">Error cargando usuarios. Intenta recargar la página.</td></tr>`;
+        console.error('[loadUsers] Error loading users:', e.message);
+        
+        // Try fallback to localStorage
+        console.warn('[loadUsers] Attempting fallback to cached data...');
+        const cached = load(CFG_USERS_KEY, []);
+        if (cached && cached.length > 0) {
+          console.log(`[loadUsers] Fallback: using ${cached.length} cached users`);
+          localUsers = cached;
+          repaintUsers();
+          toast("Usuarios cargados desde caché (sin conexión con servidor)", "warn");
+        } else {
+          toast("Error cargando usuarios: " + e.message, "error");
+          if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">Error cargando usuarios. Intenta recargar la página.<br /><small>${e.message}</small></td></tr>`;
+        }
       }
     };
     window.mount.loadUsers = loadUsers;

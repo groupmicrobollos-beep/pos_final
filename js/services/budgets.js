@@ -52,38 +52,77 @@ function makeSummary(data, users = [], branches = []) {
 }
 
 async function list() {
-  const [quotes, clients, users, branches] = await Promise.all([
-    store.quotes.list(),
-    store.clients.list().catch(() => []),
-    store.users.list().catch(() => []),
-    store.branches.list().catch(() => []),
-  ]);
+  console.log('[budgetsService.list] Starting...');
+  
+  try {
+    const [quotes, clients, users, branches] = await Promise.all([
+      store.quotes.list().catch(err => {
+        console.error('[budgetsService.list] Error loading quotes:', err.message);
+        return [];
+      }),
+      store.clients.list().catch(err => {
+        console.error('[budgetsService.list] Error loading clients:', err.message);
+        return [];
+      }),
+      store.users.list().catch(err => {
+        console.error('[budgetsService.list] Error loading users:', err.message);
+        return [];
+      }),
+      store.branches.list().catch(err => {
+        console.error('[budgetsService.list] Error loading branches:', err.message);
+        return [];
+      }),
+    ]);
 
-  if (branches.length) {
-    try { localStorage.setItem("cfg_branches", JSON.stringify(branches)); } catch { /* ignore */ }
-  }
+    // Store successful data in cache
+    if (branches.length) {
+      try { localStorage.setItem("cfg_branches", JSON.stringify(branches)); } catch { /* ignore */ }
+    }
+    if (users.length) {
+      try { localStorage.setItem("cfg_users", JSON.stringify(users)); } catch { /* ignore */ }
+    }
 
-  return quotes.map(q => {
-    const summary = makeSummary(q, users, branches);
-    const cName = (summary.cliente?.nombre || "").toLowerCase();
-    const clientMatch = clients.find(c => (c.name || "").toLowerCase() === cName);
+    console.log(`[budgetsService.list] Loaded: ${quotes.length} quotes, ${clients.length} clients, ${users.length} users, ${branches.length} branches`);
 
-    if (clientMatch) {
-      const vName = (summary.cliente?.vehiculo || "").toLowerCase();
-      const vMatch = (clientMatch.vehicles || []).find(v =>
-        (v.brand || "").toLowerCase().includes(vName) ||
-        (v.vehiculo || "").toLowerCase().includes(vName) ||
-        vName.includes((v.brand || "").toLowerCase())
-      ) || clientMatch.vehicles?.[0];
-
-      if (vMatch && typeof summary.cliente === "object") {
-        summary.cliente.patente = vMatch.plate || vMatch.patente || summary.cliente.patente;
-        summary.cliente.modelo = vMatch.year || vMatch.model || vMatch.modelo || summary.cliente.modelo;
-        summary.cliente.compania = vMatch.insurance || vMatch.compania || summary.cliente.compania;
+    // If we got no quotes but have cached data, try to use that
+    if (!quotes || quotes.length === 0) {
+      console.warn('[budgetsService.list] No quotes returned from API, checking for cached data...');
+      try {
+        const cached = JSON.parse(localStorage.getItem("budgets_list") || "[]");
+        if (cached && cached.length > 0) {
+          console.log(`[budgetsService.list] Found ${cached.length} cached quotes, using those`);
+          quotes = cached;
+        }
+      } catch (e) {
+        console.error('[budgetsService.list] Error loading cached quotes:', e.message);
       }
     }
-    return summary;
-  });
+
+    return (quotes || []).map(q => {
+      const summary = makeSummary(q, users, branches);
+      const cName = (summary.cliente?.nombre || "").toLowerCase();
+      const clientMatch = clients.find(c => (c.name || "").toLowerCase() === cName);
+
+      if (clientMatch) {
+        const vName = (summary.cliente?.vehiculo || "").toLowerCase();
+        const vMatch = (clientMatch.vehicles || []).find(v =>
+          (v.brand || "").toLowerCase().includes(vName) ||
+          (v.vehiculo || "").toLowerCase().includes(vName) ||
+          vName.includes((v.brand || "").toLowerCase())
+        ) || clientMatch.vehicles?.[0];
+
+        if (vMatch && typeof summary.cliente === "object") {
+          summary.cliente.patente = vMatch.plate || vMatch.patente || summary.cliente.patente;
+          summary.cliente.modelo = vMatch.year || vMatch.model || vMatch.modelo || summary.cliente.modelo;
+          summary.cliente.compania = vMatch.insurance || vMatch.compania || summary.cliente.compania;
+        }
+      }
+      return summary;
+    });
+  } catch (err) {
+    console.error('[budgetsService.list] Fatal error:', err.message);
+    return [];
+  }
 }
 
 async function get(id) {

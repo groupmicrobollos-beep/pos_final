@@ -55,8 +55,38 @@ app.use('/api/suppliers', supplierRoutes);
 app.use('/api/clients', clientsRoutes);
 
 
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date() });
+app.get('/api/health', async (req, res) => {
+    try {
+        const { getDBStatus } = require('./db');
+        const dbStatus = getDBStatus();
+        
+        // Try to perform a simple query to verify DB connectivity
+        let dbHealthy = true;
+        let dbError = null;
+        try {
+            const result = await db.execute("SELECT 1 as connected");
+            dbHealthy = result.rows && result.rows.length > 0;
+        } catch (err) {
+            dbHealthy = false;
+            dbError = err.message;
+        }
+        
+        res.json({ 
+            status: 'ok', 
+            timestamp: new Date(),
+            database: {
+                ...dbStatus,
+                healthy: dbHealthy,
+                error: dbError
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ 
+            status: 'error', 
+            error: err.message,
+            timestamp: new Date()
+        });
+    }
 });
 
 app.get('/api/test', (req, res) => {

@@ -9,7 +9,14 @@ function hashPassword(plain) {
 
 router.get('/', async (req, res) => {
     try {
+        console.log('[users.get] Fetching all users...');
         const result = await db.execute("SELECT id, username, full_name, role, email, active, perms, branch_id, created_at FROM users ORDER BY username");
+        
+        if (!result || !result.rows) {
+            console.warn('[users.get] No rows returned from query');
+            return res.json([]);
+        }
+        
         const users = result.rows.map(u => {
             let perms = u.perms;
             if (typeof perms === 'string') {
@@ -17,9 +24,16 @@ router.get('/', async (req, res) => {
             }
             return { ...u, perms: perms || {} };
         });
+        
+        console.log(`[users.get] Returning ${users.length} users`);
         res.json(users);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error('[users.get] Error:', err.message);
+        console.error('[users.get] Stack:', err.stack);
+        res.status(500).json({ 
+            error: err.message,
+            details: 'Failed to fetch users. Check server logs for details.'
+        });
     }
 });
 

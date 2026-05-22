@@ -314,11 +314,20 @@ export default {
     // ====== Load + Filters + Aggregation ======
     async function load() {
       try {
+        console.log('[Reports.load] Starting to load data...');
         // Cargar presupuestos y sucursales (para tener nombres frescos)
         const [list, branches] = await Promise.all([
-          budgetsService.list(),
-          fetch("/api/branches").then(r => r.ok ? r.json() : []).catch(() => [])
+          budgetsService.list().catch(err => {
+            console.error('[Reports.load] Error loading budgets:', err.message);
+            return [];
+          }),
+          fetch("/api/branches").then(r => r.ok ? r.json() : []).catch(err => {
+            console.error('[Reports.load] Error loading branches:', err.message);
+            return [];
+          })
         ]);
+
+        console.log(`[Reports.load] Loaded ${list.length} budgets and ${branches.length} branches`);
 
         if (branches.length) {
           CFG_BRANCHES = branches;
@@ -326,13 +335,42 @@ export default {
         }
 
         all = list.map(s => ({ ...s, details: s.details || null }));
+        
+        // If we got no budgets from API, try cached data
+        if (all.length === 0) {
+          console.warn('[Reports.load] No budgets from API, checking for cached data...');
+          try {
+            const cachedList = JSON.parse(localStorage.getItem("budgets_list") || "[]");
+            if (cachedList && cachedList.length > 0) {
+              console.log(`[Reports.load] Found ${cachedList.length} cached budgets`);
+              all = cachedList.map(s => {
+                const full = JSON.parse(localStorage.getItem(s.key) || "null");
+                return { ...s, details: full || null };
+              }).filter(b => !!b.details);
+              console.log(`[Reports.load] Using ${all.length} cached budgets with details`);
+              toast("Presupuestos cargados desde caché (sin conexión con servidor)", "warn");
+            }
+          } catch (err) {
+            console.error('[Reports.load] Error loading cached budgets:', err.message);
+          }
+        }
       } catch (e) {
         console.error("Reports load error", e);
-        const list = JSON.parse(localStorage.getItem("budgets_list") || "[]");
-        all = list.map(s => {
-          const full = JSON.parse(localStorage.getItem(s.key) || "null");
-          return { ...s, details: full || null };
-        }).filter(b => !!b.details);
+        toast("Error cargando reportes: " + e.message, "error");
+        try {
+          const list = JSON.parse(localStorage.getItem("budgets_list") || "[]");
+          all = list.map(s => {
+            const full = JSON.parse(localStorage.getItem(s.key) || "null");
+            return { ...s, details: full || null };
+          }).filter(b => !!b.details);
+          if (all.length > 0) {
+            console.log(`[Reports.load] Using fallback: ${all.length} cached budgets`);
+            toast("Usando caché (error en conexión)", "warn");
+          }
+        } catch (err) {
+          console.error('[Reports.load] Fallback also failed:', err.message);
+          all = [];
+        }
       }
       applyFilters(); computeAggregates(); renderAll();
     }

@@ -4,14 +4,28 @@ const { db } = require('../db');
 
 router.get('/', async (req, res) => {
     try {
+        console.log('[quotes.get] Fetching all quotes...');
         const result = await db.execute("SELECT * FROM quotes ORDER BY date DESC");
+        
+        if (!result || !result.rows) {
+            console.warn('[quotes.get] No rows returned from query');
+            return res.json([]);
+        }
+        
         const quotes = result.rows.map(q => ({
             ...q,
             items: typeof q.items === 'string' ? JSON.parse(q.items) : q.items
         }));
+        
+        console.log(`[quotes.get] Returning ${quotes.length} quotes`);
         res.json(quotes);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error('[quotes.get] Error:', err.message);
+        console.error('[quotes.get] Stack:', err.stack);
+        res.status(500).json({ 
+            error: err.message,
+            details: 'Failed to fetch quotes. Check server logs for details.'
+        });
     }
 });
 

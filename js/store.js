@@ -16,39 +16,54 @@ async function api(path, method = 'GET', body = null) {
 
     console.log(`[api] ${method} /api${path}`, { hasAuth: !!token });
     
-    const res = await fetch(`/api${path}`, opts);
-    const contentType = (res.headers.get('Content-Type') || '').toLowerCase();
-    
-    console.log(`[api] Response:`, { 
-        status: res.status, 
-        statusText: res.statusText,
-        contentType: contentType,
-        ok: res.ok
-    });
-    
-    // Try to capture response body (JSON or text) for clearer diagnostics
-    const rawText = await res.text().catch(() => "");
-    console.log(`[api] Response body (first 300 chars):`, rawText.substring(0, 300));
-    
-    if (!res.ok) {
-        let parsed = null;
-        try { parsed = JSON.parse(rawText); } catch (e) { /* not JSON */ }
-        console.warn(`[api] Request failed: ${method} /api${path} status=${res.status}`);
-        throw new Error(parsed?.error || parsed?.message || `${res.status} ${res.statusText}` || 'API Error');
-    }
-
-    // Return sensible type based on Content-Type
-    if (contentType.includes('application/json')) {
-        try {
-            return JSON.parse(rawText);
-        } catch (e) {
-            console.error('[api] Failed to parse JSON response:', e, 'Body:', rawText.substring(0, 500));
-            throw new Error('Invalid JSON response from server');
+    try {
+        const res = await fetch(`/api${path}`, opts);
+        const contentType = (res.headers.get('Content-Type') || '').toLowerCase();
+        
+        console.log(`[api] Response:`, { 
+            status: res.status, 
+            statusText: res.statusText,
+            contentType: contentType,
+            ok: res.ok
+        });
+        
+        // Try to capture response body (JSON or text) for clearer diagnostics
+        const rawText = await res.text().catch(() => "");
+        console.log(`[api] Response body (first 300 chars):`, rawText.substring(0, 300));
+        
+        if (!res.ok) {
+            let parsed = null;
+            try { parsed = JSON.parse(rawText); } catch (e) { /* not JSON */ }
+            console.warn(`[api] Request failed: ${method} /api${path} status=${res.status}`);
+            
+            // Enhanced error message
+            const errorMsg = parsed?.error || parsed?.message || `${res.status} ${res.statusText}` || 'API Error';
+            const err = new Error(errorMsg);
+            err.status = res.status;
+            err.details = parsed?.details;
+            throw err;
         }
+
+        // Return sensible type based on Content-Type
+        if (contentType.includes('application/json')) {
+            try {
+                return JSON.parse(rawText);
+            } catch (e) {
+                console.error('[api] Failed to parse JSON response:', e, 'Body:', rawText.substring(0, 500));
+                throw new Error('Invalid JSON response from server');
+            }
+        }
+        
+        console.warn(`[api] Warning: Got non-JSON response from ${method} /api${path}, returning text`);
+        return rawText;
+    } catch (err) {
+        // Enhanced error logging
+        console.error(`[api] Fetch error for ${method} /api${path}:`, err.message);
+        if (err.status === 0) {
+            console.error('[api] Network error - server may be unreachable');
+        }
+        throw err;
     }
-    
-    console.warn(`[api] Warning: Got non-JSON response from ${method} /api${path}, returning text`);
-    return rawText;
 }
 
 // Helper: regenerar permisos basado en rol

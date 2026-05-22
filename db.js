@@ -10,13 +10,24 @@ const rawUrl = process.env.TURSO_DATABASE_URL;
 const url = rawUrl ? rawUrl.replace("libsql://", "https://") : undefined;
 const authToken = process.env.TURSO_AUTH_TOKEN;
 
+let usingTurso = false;
+let dbStatus = 'unknown';
+
 if (!url) {
-    console.warn("WARNING: TURSO_DATABASE_URL is not set. Database operations will fail.");
+    console.warn("⚠️  TURSO_DATABASE_URL is not set. Using local SQLite database.");
+    dbStatus = 'using-local';
+} else if (!authToken) {
+    console.warn("⚠️  TURSO_AUTH_TOKEN is not set. Using local SQLite database.");
+    dbStatus = 'using-local';
+} else {
+    usingTurso = true;
+    dbStatus = 'using-turso';
+    console.log("✓ Using Turso remote database");
 }
 
 const db = createClient({
     url: url || 'file:local.db',
-    authToken: authToken,
+    authToken: authToken || undefined,
 });
 
 async function initDB() {
@@ -48,4 +59,23 @@ async function initDB() {
 
 const getDB = () => db;
 
-module.exports = { db, initDB, getDB };
+// Helper function to safely execute queries with fallback behavior
+async function safeExecute(query) {
+    try {
+        return await db.execute(query);
+    } catch (err) {
+        console.error('DB Error:', err.message);
+        console.error('Query:', typeof query === 'string' ? query.substring(0, 100) : query.sql?.substring(0, 100));
+        throw err;
+    }
+}
+
+function getDBStatus() {
+    return {
+        status: dbStatus,
+        tursoEnabled: usingTurso,
+        localDbPath: 'file:local.db'
+    };
+}
+
+module.exports = { db, initDB, getDB, safeExecute, getDBStatus };
