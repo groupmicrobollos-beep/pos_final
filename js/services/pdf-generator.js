@@ -263,7 +263,11 @@ window.generateBudgetPDF = async function (data) {
 
     const address = data.company?.address || "";
     const emailInfo = data.company?.email || "";
-    const phoneInfo = data.company?.phone || "José Heredia: 351 652-1795 | Federico Heredia: 351 372-0630";
+    // Manejar teléfono como array o string
+    let phoneInfo = data.company?.phone || "José Heredia: 351 652-1795 | Federico Heredia: 351 372-0630";
+    if (Array.isArray(phoneInfo)) {
+      phoneInfo = phoneInfo.filter(p => p && p.trim()).join(" | ");
+    }
     const cuitInfo = data.company?.cuit || data.sucursalCuit || "20-21581927-3";
     const contact = [emailInfo, phoneInfo].filter(Boolean).join(" | ");
 

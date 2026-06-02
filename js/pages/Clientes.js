@@ -118,11 +118,19 @@ export default {
     // Load
     async function loadData() {
       try {
+        console.log('[Clientes] Loading clients from API...');
         clients = await store.clients.list();
+        if (!Array.isArray(clients)) {
+          console.warn('[Clientes] API returned non-array, treating as empty');
+          clients = [];
+        }
+        console.log(`[Clientes] Loaded ${clients.length} clients successfully`);
         renderTable();
       } catch (e) { 
-        console.error(e);
-        emptyMsg.textContent = `Error cargando clientes: ${e.message || 'Error de conexión'}`;
+        console.error('[Clientes] Error:', e);
+        const errorMsg = e.message || 'Error de conexión';
+        const statusCode = e.status ? ` (código ${e.status})` : '';
+        emptyMsg.textContent = `❌ Error cargando clientes${statusCode}: ${errorMsg}. Recargá la página.`;
         emptyMsg.classList.remove("hidden");
         tableBody.innerHTML = "";
       }

@@ -175,8 +175,16 @@ export default {
                    <input id="cfg-addr" type="text" class="ui-input w-full mt-1 surface">
                 </label>
                 <label class="block">
-                   <span class="text-sm font-medium text-main">Teléfono</span>
-                   <input id="cfg-phone" type="text" class="ui-input w-full mt-1 surface">
+                   <span class="text-sm font-medium text-main">Teléfonos</span>
+                   <div class="space-y-2 mt-2">
+                     <div class="flex gap-2">
+                       <input id="cfg-phone" type="text" class="ui-input flex-1 mt-1 surface" placeholder="Ej: 351 652-1795">
+                       <button id="add-phone-btn" type="button" class="px-3 py-2 rounded bg-emerald-600/80 hover:bg-emerald-600 text-white mt-1" title="Agregar teléfono">
+                         <i class="fas fa-plus" aria-hidden="true"></i> Agregar
+                       </button>
+                     </div>
+                     <div id="phones-list" class="space-y-2 text-xs"></div>
+                   </div>
                 </label>
                 <label class="block">
                    <span class="text-sm font-medium text-main">Email</span>
@@ -421,13 +429,66 @@ export default {
     // Run check initially
     checkPreviewLogo();
 
+    // --- PHONES MANAGER ---
+    let phonesList = [];
+    const cfgPhoneInput = $("#cfg-phone");
+    const addPhoneBtn = $("#add-phone-btn");
+    const phonesListContainer = $("#phones-list");
+
+    function renderPhonesList() {
+      if (!phonesListContainer) return;
+      phonesListContainer.innerHTML = phonesList.map((phone, idx) => `
+        <div class="flex items-center justify-between bg-slate-700/30 rounded p-2 pl-3">
+          <span class="text-slate-200 text-sm">${phone}</span>
+          <button type="button" class="px-2 py-1 rounded bg-rose-600/80 hover:bg-rose-600 text-white text-xs"
+                  onclick="(() => { phonesList.splice(${idx}, 1); window.mount.renderPhonesList(); })()">
+            <i class="fas fa-trash" aria-hidden="true"></i>
+          </button>
+        </div>
+      `).join("");
+      if (phonesList.length === 0) {
+        phonesListContainer.innerHTML = '<div class="text-xs text-slate-400">No hay teléfonos agregados aún</div>';
+      }
+    }
+    window.mount.renderPhonesList = renderPhonesList;
+
+    if (addPhoneBtn && cfgPhoneInput) {
+      addPhoneBtn.addEventListener("click", () => {
+        const phone = cfgPhoneInput.value.trim();
+        if (!phone) { toast("Ingresá un teléfono", "error"); return; }
+        if (phonesList.includes(phone)) { toast("Este teléfono ya está agregado", "warn"); return; }
+        phonesList.push(phone);
+        cfgPhoneInput.value = "";
+        renderPhonesList();
+        toast("Teléfono agregado", "success");
+      });
+      cfgPhoneInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") { addPhoneBtn.click(); e.preventDefault(); }
+      });
+    }
+
     const fillSettingsForm = () => {
       const cfg = load(CFG_SETTINGS_KEY, defaultSettings());
       if (!$("#cfg-brand")) return; // safety
       $("#cfg-brand").value = cfg.brandName || "";
       $("#cfg-company").value = cfg.companyName || "";
       $("#cfg-addr").value = cfg.address || "";
-      $("#cfg-phone").value = cfg.phone || "";
+      
+      // Cargar teléfonos
+      phonesList = [];
+      if (cfg.phone) {
+        // Si viene como array, usar directamente; si no, dividir por |
+        if (Array.isArray(cfg.phone)) {
+          phonesList = cfg.phone.filter(p => p && p.trim());
+        } else if (typeof cfg.phone === 'string' && cfg.phone.includes('|')) {
+          phonesList = cfg.phone.split('|').map(p => p.trim()).filter(p => p);
+        } else if (typeof cfg.phone === 'string' && cfg.phone.trim()) {
+          phonesList = [cfg.phone.trim()];
+        }
+      }
+      if (cfgPhoneInput) cfgPhoneInput.value = "";
+      renderPhonesList();
+      
       $("#cfg-email").value = cfg.email || "";
       $("#cfg-tax").value = cfg.taxRate || 21;
       $("#cfg-inv").value = cfg.invoiceType || "B";
@@ -444,7 +505,8 @@ export default {
       cfg.brandName = $("#cfg-brand").value;
       cfg.companyName = $("#cfg-company").value;
       cfg.address = $("#cfg-addr").value;
-      cfg.phone = $("#cfg-phone").value;
+      // Guardar teléfonos como array
+      cfg.phone = phonesList.length > 0 ? phonesList : [];
       cfg.email = $("#cfg-email").value;
       cfg.taxRate = parseFloat($("#cfg-tax").value) || 0;
       cfg.invoiceType = $("#cfg-inv").value;

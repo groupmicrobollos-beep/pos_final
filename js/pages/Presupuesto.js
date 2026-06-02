@@ -478,17 +478,21 @@ export default {
         <!-- Modal: Firma digital -->
         <div id="signature-modal" data-modal-overlay data-modal-size="md"
              class="modal-overlay fixed inset-0 z-[9999] hidden items-center justify-center p-4 bg-black/60" aria-hidden="true">
-          <div class="modal-panel surface border border-white/10 rounded-xl w-full max-w-[500px] max-h-[90vh] overflow-y-auto p-4">
-            <div class="flex items-center justify-between">
-              <div class="font-medium text-main">Firma Digital</div>
+          <div class="modal-panel surface border border-white/10 rounded-xl w-full max-w-[600px] max-h-[85vh] overflow-y-auto p-4">
+            <div class="flex items-center justify-between mb-4">
+              <div class="font-medium text-main text-lg">Firma Digital</div>
               <button id="close-signature" class="px-2 py-1 rounded hover:bg-white/10 text-main"><i class="fas fa-times" aria-hidden="true"></i></button>
             </div>
-            <div class="mt-3 glass rounded-lg p-2 border border-white/10">
-              <canvas id="signature-canvas" class="w-full bg-white rounded" style="height: 200px; display: block; cursor: crosshair;"></canvas>
+            <div class="mb-3 p-2 bg-slate-700/30 rounded border border-white/5 text-xs text-slate-400">Dibuja tu firma con el ratón o toca la pantalla con tu dedo en dispositivos móviles</div>
+            <div class="mt-3 glass rounded-lg p-3 border border-white/10 bg-white" style="position: relative;">
+              <canvas id="signature-canvas" width="540" height="180" class="w-full border border-slate-300 rounded" style="touch-action: none; cursor: crosshair; display: block; background: white;"></canvas>
             </div>
-            <div class="mt-3 flex justify-end gap-2">
-              <button id="clear-signature" class="px-3 py-2 rounded surface hover:bg-white/20 text-main"><i class="fas fa-broom" aria-hidden="true"></i> Limpiar</button>
-              <button id="save-signature" class="px-3 py-2 rounded bg-indigo-600/80 hover:bg-indigo-600 text-white"><i class="fas fa-save" aria-hidden="true"></i> Guardar firma</button>
+            <div class="mt-4 flex justify-between gap-2">
+              <div class="text-xs text-slate-400">Canvas: <span id="canvas-size" class="font-mono">0x0</span></div>
+              <div class="flex gap-2">
+                <button id="clear-signature" class="px-3 py-2 rounded surface hover:bg-white/20 text-main"><i class="fas fa-broom" aria-hidden="true"></i> Limpiar</button>
+                <button id="save-signature" class="px-3 py-2 rounded bg-indigo-600/80 hover:bg-indigo-600 text-white"><i class="fas fa-save" aria-hidden="true"></i> Guardar firma</button>
+              </div>
             </div>
           </div>
         </div>
@@ -1393,9 +1397,16 @@ export default {
 
     // === Firma digital
     function resizeSignCanvas() {
-      const rect = signCanvas.getBoundingClientRect(); const ratio = window.devicePixelRatio || 1;
-      signCanvas.width = rect.width * ratio; signCanvas.height = rect.height * ratio;
-      signCtx.setTransform(ratio, 0, 0, ratio, 0, 0); setupCanvas(signCtx);
+      // Canvas mantiene sus dimensiones HTML (540x180), no las redimensionamos con rect
+      // Esto evita problemas de scaling en móvil
+      const ratio = window.devicePixelRatio || 1;
+      // Ajustar para DPI pero mantener proporción
+      signCanvas.width = signCanvas.offsetWidth * ratio;
+      signCanvas.height = signCanvas.offsetHeight * ratio;
+      signCtx.setTransform(ratio, 0, 0, ratio, 0, 0); 
+      setupCanvas(signCtx);
+      const sizeEl = root.querySelector('#canvas-size');
+      if (sizeEl) sizeEl.textContent = `${signCanvas.width}x${signCanvas.height}`;
     }
     let drawing = false, last = null;
     const pos = (ev, canvas) => { const r = canvas.getBoundingClientRect(); const x = (ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left; const y = (ev.touches ? ev.touches[0].clientY : ev.clientY) - r.top; return { x, y }; };
