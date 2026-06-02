@@ -120,7 +120,12 @@ export default {
       try {
         clients = await store.clients.list();
         renderTable();
-      } catch (e) { console.error(e); }
+      } catch (e) { 
+        console.error(e);
+        emptyMsg.textContent = `Error cargando clientes: ${e.message || 'Error de conexión'}`;
+        emptyMsg.classList.remove("hidden");
+        tableBody.innerHTML = "";
+      }
     }
     loadData();
 

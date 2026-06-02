@@ -114,7 +114,7 @@ export default {
             </label>
             <label class="text-sm">
               <span class="block mb-1 text-muted-custom">Fecha:</span>
-              <input id="budget-date" type="date" readonly class="w-full h-10 px-3 rounded surface border border-white/10 text-main">
+              <input id="budget-date" type="date" class="w-full h-10 px-3 rounded surface border border-white/10 text-main">
             </label>
           </div>
         </div>
@@ -478,13 +478,13 @@ export default {
         <!-- Modal: Firma digital -->
         <div id="signature-modal" data-modal-overlay data-modal-size="md"
              class="modal-overlay fixed inset-0 z-[9999] hidden items-center justify-center p-4 bg-black/60" aria-hidden="true">
-          <div class="modal-panel surface border border-white/10 rounded-xl w-full max-w-[720px] max-h-[90vh] overflow-y-auto p-4">
+          <div class="modal-panel surface border border-white/10 rounded-xl w-full max-w-[500px] max-h-[90vh] overflow-y-auto p-4">
             <div class="flex items-center justify-between">
               <div class="font-medium text-main">Firma Digital</div>
               <button id="close-signature" class="px-2 py-1 rounded hover:bg-white/10 text-main"><i class="fas fa-times" aria-hidden="true"></i></button>
             </div>
-            <div class="mt-3 glass rounded-lg p-2">
-              <canvas id="signature-canvas" class="w-full h-60 surface rounded"></canvas>
+            <div class="mt-3 glass rounded-lg p-2 border border-white/10">
+              <canvas id="signature-canvas" class="w-full bg-white rounded" style="height: 200px; display: block; cursor: crosshair;"></canvas>
             </div>
             <div class="mt-3 flex justify-end gap-2">
               <button id="clear-signature" class="px-3 py-2 rounded surface hover:bg-white/20 text-main"><i class="fas fa-broom" aria-hidden="true"></i> Limpiar</button>
