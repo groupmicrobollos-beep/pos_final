@@ -485,7 +485,7 @@ export default {
             </div>
             <div class="mb-3 p-2 bg-slate-700/30 rounded border border-white/5 text-xs text-slate-400">Dibuja tu firma con el ratón o toca la pantalla con tu dedo en dispositivos móviles</div>
             <div class="mt-3 glass rounded-lg p-3 border border-white/10 bg-white" style="position: relative; width: 100%; max-width: 540px;">
-              <canvas id="signature-canvas" width="540" height="180" class="w-full border border-slate-300 rounded" style="touch-action: none; cursor: crosshair; display: block; background: white; max-width: 100%;"></canvas>
+              <canvas id="signature-canvas-modal" width="540" height="180" class="w-full border border-slate-300 rounded" style="touch-action: none; cursor: crosshair; display: block; background: white; max-width: 100%;"></canvas>
             </div>
             <div class="mt-4 flex justify-between gap-2">
               <div class="text-xs text-slate-400">Canvas: <span id="canvas-size" class="font-mono">0x0</span></div>
@@ -679,7 +679,7 @@ export default {
     const closeSign = root.querySelector("#close-signature");
     const clearSign = root.querySelector("#clear-signature");
     const saveSign = root.querySelector("#save-signature");
-    const signCanvas = root.querySelector("#signature-canvas");
+    const signCanvas = root.querySelector("#signature-canvas-modal");
     const printCanvas = root.querySelector("#signature-canvas");
     const printDate = root.querySelector("#print-date");
     const signCtx = signCanvas.getContext("2d");
