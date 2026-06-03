@@ -118,18 +118,33 @@ export default {
     // Load
     async function loadData() {
       try {
-        console.log('[Clientes] Loading clients from API...');
+        console.log('[Clientes] Loading clients from API (20s timeout)...');
         clients = await store.clients.list();
         if (!Array.isArray(clients)) {
-          console.warn('[Clientes] API returned non-array, treating as empty');
+          console.warn('[Clientes] API returned non-array response, treating as empty');
           clients = [];
         }
         console.log(`[Clientes] Loaded ${clients.length} clients successfully`);
         renderTable();
       } catch (e) { 
         console.error('[Clientes] Error:', e);
-        const errorMsg = e.message || 'Error de conexión';
-        const statusCode = e.status ? ` (código ${e.status})` : '';
+        
+        let errorMsg = e.message || 'Error desconocido';
+        const statusCode = e.status ? ` (${e.status})` : '';
+        
+        // Detectar tipo de error
+        if (errorMsg.includes('Timeout') || errorMsg.includes('timeout')) {
+          errorMsg = 'Conexión muy lenta - intenta de nuevo';
+        } else if (errorMsg.includes('unreachable')) {
+          errorMsg = 'Servidor no disponible';
+        } else if (statusCode === ' (401)') {
+          errorMsg = 'No autenticado - inicia sesión de nuevo';
+        } else if (statusCode === ' (403)') {
+          errorMsg = 'Sin permisos para ver clientes';
+        } else if (statusCode === ' (500)') {
+          errorMsg = 'Error del servidor';
+        }
+        
         emptyMsg.textContent = `❌ Error cargando clientes${statusCode}: ${errorMsg}. Recargá la página.`;
         emptyMsg.classList.remove("hidden");
         tableBody.innerHTML = "";

@@ -1,23 +1,31 @@
 const listeners = new Map();
 
 // Helper for API calls
-async function api(path, method = 'GET', body = null) {
+async function api(path, method = 'GET', body = null, timeoutMs = 15000) {
     const headers = { 'Content-Type': 'application/json' };
-    const token = state.auth.token; // Changed to use token from state directly or localStorage if managed there
+    const token = state.auth.token;
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    // Include credentials to allow cookies (session sid) to be set/read across origins
     const opts = { method, headers, credentials: 'include' };
     if (body) {
         opts.body = JSON.stringify(body);
-        // Helpful debug when diagnosing login issues
         if (path === '/auth/login') console.debug('[api] login payload', body);
     }
 
-    console.log(`[api] ${method} /api${path}`, { hasAuth: !!token });
+    console.log(`[api] ${method} /api${path}`, { hasAuth: !!token, timeout: timeoutMs });
     
     try {
+        // Crear AbortController para timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+            controller.abort();
+        }, timeoutMs);
+        
+        opts.signal = controller.signal;
+        
         const res = await fetch(`/api${path}`, opts);
+        clearTimeout(timeoutId);
+        
         const contentType = (res.headers.get('Content-Type') || '').toLowerCase();
         
         console.log(`[api] Response:`, { 
@@ -27,7 +35,6 @@ async function api(path, method = 'GET', body = null) {
             ok: res.ok
         });
         
-        // Try to capture response body (JSON or text) for clearer diagnostics
         const rawText = await res.text().catch(() => "");
         console.log(`[api] Response body (first 300 chars):`, rawText.substring(0, 300));
         
@@ -36,7 +43,6 @@ async function api(path, method = 'GET', body = null) {
             try { parsed = JSON.parse(rawText); } catch (e) { /* not JSON */ }
             console.warn(`[api] Request failed: ${method} /api${path} status=${res.status}`);
             
-            // Enhanced error message
             const errorMsg = parsed?.error || parsed?.message || `${res.status} ${res.statusText}` || 'API Error';
             const err = new Error(errorMsg);
             err.status = res.status;
@@ -44,7 +50,6 @@ async function api(path, method = 'GET', body = null) {
             throw err;
         }
 
-        // Return sensible type based on Content-Type
         if (contentType.includes('application/json')) {
             try {
                 return JSON.parse(rawText);
@@ -58,6 +63,10 @@ async function api(path, method = 'GET', body = null) {
         return rawText;
     } catch (err) {
         // Enhanced error logging
+        if (err.name === 'AbortError') {
+            console.error(`[api] Timeout (${timeoutMs}ms) for ${method} /api${path}`);
+            throw new Error(`Timeout después de ${timeoutMs/1000}s - conexión lenta o servidor no responde`);
+        }
         console.error(`[api] Fetch error for ${method} /api${path}:`, err.message);
         if (err.status === 0) {
             console.error('[api] Network error - server may be unreachable');
@@ -200,13 +209,13 @@ export const users = {
     remove: (id) => api(`/users/${id}`, 'DELETE'),
 };
 
-// Clients
+// Clients - 20s timeout porque es operación pesada (clientes + vehículos)
 export const clients = {
-    list: () => api('/clients'),
-    get: (id) => api(`/clients/${id}`),
-    create: (c) => api('/clients', 'POST', c),
-    update: (id, c) => api(`/clients/${id}`, 'PUT', c),
-    remove: (id) => api(`/clients/${id}`, 'DELETE'),
+    list: () => api('/clients', 'GET', null, 20000),
+    get: (id) => api(`/clients/${id}`, 'GET', null, 20000),
+    create: (c) => api('/clients', 'POST', c, 15000),
+    update: (id, c) => api(`/clients/${id}`, 'PUT', c, 15000),
+    remove: (id) => api(`/clients/${id}`, 'DELETE', null, 10000),
 };
 
 // Presupuestos

@@ -31,22 +31,69 @@ function normalizeVehicles(vehicles) {
 // GET /api/clients - with optional search
 router.get('/', async (req, res) => {
     try {
+        console.log('[clients.list] Starting to fetch clients...');
         const db = getDB();
-        const clients = await db.execute("SELECT * FROM clients ORDER BY name ASC");
+        
+        // Usar JOIN para traer todo de una sola consulta (mucho más rápido)
+        const query = `
+            SELECT 
+                c.id, c.name, c.phone, c.email, c.address, c.created_at, c.updated_at,
+                v.id as vehicle_id, v.brand, v.model, v.year, v.plate, v.vin, v.insurance
+            FROM clients c
+            LEFT JOIN vehicles v ON v.client_id = c.id
+            ORDER BY c.name ASC, c.id ASC
+        `;
+        
+        const result = await db.execute(query);
+        console.log(`[clients.list] Query returned ${result.rows?.length || 0} rows (clients + vehicles)`);
+        
+        if (!result.rows || result.rows.length === 0) {
+            console.log('[clients.list] No clients found, returning empty array');
+            return res.json([]);
+        }
 
-        // Fetch vehicles for each client (inefficient for large DBs but fine for this scale)
-        const clientsWithVehicles = await Promise.all(clients.rows.map(async (c) => {
-            const vehicles = await db.execute({
-                sql: "SELECT * FROM vehicles WHERE client_id = ?",
-                args: [c.id]
-            });
-            return { ...c, vehicles: vehicles.rows };
-        }));
+        // Agrupar filas en clientes con sus vehículos
+        const clientMap = new Map();
+        
+        result.rows.forEach(row => {
+            if (!clientMap.has(row.id)) {
+                clientMap.set(row.id, {
+                    id: row.id,
+                    name: row.name,
+                    phone: row.phone,
+                    email: row.email,
+                    address: row.address,
+                    created_at: row.created_at,
+                    updated_at: row.updated_at,
+                    vehicles: []
+                });
+            }
+            
+            // Agregar vehículo si existe
+            if (row.vehicle_id) {
+                clientMap.get(row.id).vehicles.push({
+                    id: row.vehicle_id,
+                    brand: row.brand,
+                    model: row.model,
+                    year: row.year,
+                    plate: row.plate,
+                    vin: row.vin,
+                    insurance: row.insurance,
+                    client_id: row.id
+                });
+            }
+        });
 
+        const clientsWithVehicles = Array.from(clientMap.values());
+        console.log(`[clients.list] Returning ${clientsWithVehicles.length} clients`);
         res.json(clientsWithVehicles);
+        
     } catch (error) {
-        console.error("Error fetching clients:", error);
-        res.status(500).json({ error: error.message });
+        console.error("[clients.list] Error fetching clients:", error);
+        res.status(500).json({ 
+            error: error.message || "Error fetching clients",
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 });
 
