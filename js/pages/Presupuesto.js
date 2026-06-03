@@ -1159,11 +1159,31 @@ export default {
     });
     confirmAdd.addEventListener("click", () => {
       if (!partSelect.value) { toast("Seleccioná una pieza", "error"); return; }
-      if (!workSelect.value) { toast("Seleccioná un trabajo", "error"); return; }
+      
+      // Validar pieza personalizada si se seleccionó "Otro"
+      let partName = partSelect.value;
+      if (partName === "__otro__") {
+        const customPart = customPartInput.value.trim();
+        if (!customPart) { toast("Completá el nombre de la pieza personalizada", "error"); return; }
+        partName = customPart;
+      }
+      
+      // Trabajo es OPCIONAL ahora
+      let workName = workSelect.value || "";
+      if (workName === "__otro__") {
+        const customWork = customWorkInput.value.trim();
+        if (!customWork) { toast("Completá el nombre del trabajo personalizado", "error"); return; }
+        workName = customWork;
+      }
+      
       const cost = parseFloat(workCost.value || "0");
       if (cost < 0) { toast("Costo inválido", "error"); return; }
+      
       const opts = [...optionChecks].filter(c => c.checked).map(c => c.nextElementSibling.textContent.trim());
-      const desc = `[SERVICIO] ${partSelect.value} - ${workSelect.value}${opts.length ? ` (${opts.join(", ")})` : ""}`;
+      const workPart = workName ? ` - ${workName}` : "";
+      const optPart = opts.length ? ` (${opts.join(", ")})` : "";
+      const desc = `[SERVICIO] ${partName}${workPart}${optPart}`;
+      
       appendRow({ cantidad: 1, descripcion: desc, unit: cost, total: cost });
       ModalHelper.close(addItemModal);
       toast("Ítem agregado", "success");

@@ -748,15 +748,58 @@ export default {
 
     // ====== Export / Import ======
     function exportData() {
-      const payload = { items, suppliers, buyList, exportedAt: new Date().toISOString(), version: 1 };
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = `inventario_${todayISO().replace(/-/g, "")}.json`; a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 300);
+      if (!window.XLSX) {
+        toast("Error: SheetJS no disponible. Exportando como JSON...", "warn");
+        const payload = { items, suppliers, buyList, exportedAt: new Date().toISOString(), version: 1 };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = `inventario_${todayISO().replace(/-/g, "")}.json`; a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 300);
+        return;
+      }
+      
+      try {
+        const wb = window.XLSX.utils.book_new();
+        
+        // Hoja de Ítems
+        if (items && items.length > 0) {
+          const itemsWs = window.XLSX.utils.json_to_sheet(items);
+          window.XLSX.utils.book_append_sheet(wb, itemsWs, "Items");
+        }
+        
+        // Hoja de Proveedores
+        if (suppliers && suppliers.length > 0) {
+          const suppliersWs = window.XLSX.utils.json_to_sheet(suppliers);
+          window.XLSX.utils.book_append_sheet(wb, suppliersWs, "Proveedores");
+        }
+        
+        // Hoja de Lista de Compra
+        if (buyList && buyList.length > 0) {
+          const buyListWs = window.XLSX.utils.json_to_sheet(buyList);
+          window.XLSX.utils.book_append_sheet(wb, buyListWs, "ListaCompra");
+        }
+        
+        const filename = `inventario_${todayISO().replace(/-/g, "")}.xlsx`;
+        window.XLSX.writeFile(wb, filename);
+        toast("Inventario exportado como XLSX ✅", "success");
+      } catch (e) {
+        console.error("Error exportando XLSX:", e);
+        toast("Error exportando XLSX: " + e.message, "error");
+      }
     }
     function importData(ev) {
       const f = ev.target.files?.[0]; if (!f) return;
+      
+      // Detectar si es XLSX o JSON
+      if (f.name.endsWith('.xlsx') || f.type.includes('spreadsheet')) {
+        importDataXLSX(f);
+      } else {
+        importDataJSON(f);
+      }
+    }
+    
+    function importDataJSON(f) {
       const reader = new FileReader();
       reader.onload = () => {
         try {
@@ -772,6 +815,51 @@ export default {
         importFile.value = "";
       };
       reader.readAsText(f);
+    }
+    
+    function importDataXLSX(f) {
+      if (!window.XLSX) {
+        toast("Error: SheetJS no disponible", "error");
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = new Uint8Array(reader.result);
+          const wb = window.XLSX.read(data, { type: 'array' });
+          
+          // Leer hoja de Items
+          if (wb.SheetNames.includes('Items')) {
+            const itemsData = window.XLSX.utils.sheet_to_json(wb.Sheets['Items']);
+            if (Array.isArray(itemsData) && itemsData.length > 0) items = itemsData;
+          }
+          
+          // Leer hoja de Proveedores
+          if (wb.SheetNames.includes('Proveedores')) {
+            const suppliersData = window.XLSX.utils.sheet_to_json(wb.Sheets['Proveedores']);
+            if (Array.isArray(suppliersData) && suppliersData.length > 0) suppliers = suppliersData;
+          }
+          
+          // Leer hoja de Lista de Compra
+          if (wb.SheetNames.includes('ListaCompra')) {
+            const buyListData = window.XLSX.utils.sheet_to_json(wb.Sheets['ListaCompra']);
+            if (Array.isArray(buyListData) && buyListData.length > 0) buyList = buyListData;
+          }
+          
+          save(INV_ITEMS_KEY, items); 
+          save(INV_SUPPLIERS_KEY, suppliers); 
+          save(INV_LIST_KEY, buyList);
+          setTab("items"); // forzar insumos tras importar
+          refreshItems(); refreshSuppliers();
+          toast("Inventario importado desde XLSX ✅", "success");
+        } catch (e) {
+          console.error("Error importando XLSX:", e);
+          toast("Archivo XLSX inválido: " + e.message, "error");
+        }
+        importFile.value = "";
+      };
+      reader.readAsArrayBuffer(f);
     }
   }
 };

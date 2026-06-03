@@ -299,10 +299,15 @@ export default {
                    <div class="flex items-center gap-3 mb-4 text-blue-600">
                       <i class="fas fa-database text-2xl"></i> <h3 class="font-bold text-lg">Copia de Seguridad</h3>
                    </div>
-                   <p class="text-sm text-slate-500 mb-6">Descarga toda la base de datos local en formato JSON.</p>
-                   <button onclick="window.mount.downloadBackup()" class="w-full btn-outline flex justify-center items-center gap-2">
-                       <i class="fas fa-download"></i> Descargar Backup
-                   </button>
+                   <p class="text-sm text-slate-500 mb-6">Descarga toda la base de datos local en formato JSON o XLSX.</p>
+                   <div class="grid grid-cols-2 gap-2">
+                     <button onclick="window.mount.downloadBackup()" class="btn-outline flex justify-center items-center gap-2">
+                         <i class="fas fa-download"></i> JSON
+                     </button>
+                     <button onclick="window.mount.downloadBackupXLSX()" class="btn-outline flex justify-center items-center gap-2 text-emerald-600 hover:bg-emerald-600/10 border-emerald-600/30 hover:border-emerald-600">
+                         <i class="fas fa-file-excel"></i> XLSX
+                     </button>
+                   </div>
                    <div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
                       <label class="block text-sm mb-2 font-medium">Restaurar copia</label>
                       <input type="file" id="restoreFile" class="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 text-slate-500">
@@ -819,6 +824,32 @@ export default {
       a.download = `backup_microbollos_${todayISO()}.json`;
       a.click();
       logAudit("DOWNLOAD_BACKUP");
+    };
+
+    window.mount.downloadBackupXLSX = () => {
+      if (!window.XLSX) { toast("Error: SheetJS no disponible", "error"); return; }
+      try {
+        const wb = window.XLSX.utils.book_new();
+        const fullData = {};
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          fullData[k] = localStorage.getItem(k);
+        }
+        
+        // Crear una hoja con los datos en formato clave-valor
+        const rows = Object.entries(fullData).map(([key, value]) => ({ 
+          Clave: key, 
+          Valor: (value && value.length > 100) ? value.substring(0, 100) + "..." : value 
+        }));
+        const ws = window.XLSX.utils.json_to_sheet(rows);
+        window.XLSX.utils.book_append_sheet(wb, ws, "Backup");
+        window.XLSX.writeFile(wb, `backup_microbollos_${todayISO()}.xlsx`);
+        toast("Backup exportado como XLSX ✅", "success");
+        logAudit("DOWNLOAD_BACKUP_XLSX");
+      } catch (e) {
+        console.error("Error exportando XLSX:", e);
+        toast("Error exportando XLSX: " + e.message, "error");
+      }
     };
 
     const restoreFile = $("#restoreFile");
