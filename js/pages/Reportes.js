@@ -432,7 +432,7 @@ export default {
       const amount = filtered.reduce((s, b) => s + parseMoney(b.total), 0);
       const avg = count ? amount / count : 0;
       const branches = new Set(filtered.map(b => b.sucursal)).size || 0;
-      const doneCount = filtered.filter(b => b.details && b.details.done).length;
+      const doneCount = filtered.filter(b => b.done).length;
       const pendingCount = Math.max(0, count - doneCount);
       kCount.textContent = count;
       kAmount.textContent = money(amount);
@@ -481,7 +481,7 @@ export default {
               <td class="max-w-[260px] truncate">${veh}</td>
               <td>${suc}</td>
               <td class="text-right font-medium">${b.total}</td>
-              <td>${b.details?.done ? `<span class="badge status-active">Hecho</span>` : `<span class="badge ${expired ? "status-expired" : "status-active"}">${expired ? "Vencido" : "Vigente"}</span>`}</td>
+              <td>${b.done ? `<span class="badge status-active">Hecho</span>` : `<span class="badge ${expired ? "status-expired" : "status-active"}">${expired ? "Vencido" : "Vigente"}</span>`}</td>
               <td class="text-right whitespace-nowrap">
                 <button data-act="view" data-key="${b.key}" class="btn" style="height:28px;line-height:26px;padding:0 .45rem;"><i class="fas fa-eye" aria-hidden="true"></i></button>
                 <button data-act="toggle" data-key="${b.key}" class="btn" style="height:28px;line-height:26px;padding:0 .45rem;margin:0 6px;background:rgba(16,185,129,.2);border-color:transparent;" title="Marcar hecho"><i class="fas fa-check" aria-hidden="true"></i></button>
