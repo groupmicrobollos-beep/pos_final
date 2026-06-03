@@ -22,10 +22,13 @@ export const onRequestOptions = async ({ request }) =>
     new Response(null, { headers: cors(request) });
 
 export const onRequestGet = async ({ request, env }) => {
-    // 1) Verificar sesión
+    // 1) Verificar autenticación - aceptar Bearer token O cookie 'sid'
+    const authHeader = request.headers.get("Authorization") || "";
+    const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
     const sid = request.headers.get("Cookie")?.match(/sid=([^;]+)/)?.[1];
-    if (!sid) {
-        console.warn("[users/list] No autorizado: falta cookie 'sid'");
+    
+    if (!bearerToken && !sid) {
+        console.warn("[users/list] No autorizado: falta Bearer token y cookie 'sid'");
         return json({ error: "No autorizado" }, 401, request);
     }
 

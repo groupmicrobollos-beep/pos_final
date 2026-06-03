@@ -484,8 +484,8 @@ export default {
               <button id="close-signature" class="px-2 py-1 rounded hover:bg-white/10 text-main"><i class="fas fa-times" aria-hidden="true"></i></button>
             </div>
             <div class="mb-3 p-2 bg-slate-700/30 rounded border border-white/5 text-xs text-slate-400">Dibuja tu firma con el ratón o toca la pantalla con tu dedo en dispositivos móviles</div>
-            <div class="mt-3 glass rounded-lg p-3 border border-white/10 bg-white" style="position: relative;">
-              <canvas id="signature-canvas" width="540" height="180" class="w-full border border-slate-300 rounded" style="touch-action: none; cursor: crosshair; display: block; background: white;"></canvas>
+            <div class="mt-3 glass rounded-lg p-3 border border-white/10 bg-white" style="position: relative; width: 100%; max-width: 540px;">
+              <canvas id="signature-canvas" width="540" height="180" class="w-full border border-slate-300 rounded" style="touch-action: none; cursor: crosshair; display: block; background: white; max-width: 100%;"></canvas>
             </div>
             <div class="mt-4 flex justify-between gap-2">
               <div class="text-xs text-slate-400">Canvas: <span id="canvas-size" class="font-mono">0x0</span></div>
@@ -691,17 +691,27 @@ export default {
     // Pintar usuarios desde store (cfg_users)
     async function paintUsersIntoSelect() {
       try {
+        console.log('[paintUsersIntoSelect] Loading users...');
         let users = JSON.parse(localStorage.getItem("cfg_users") || "[]");
+        
         if (!users.length) {
+          console.log('[paintUsersIntoSelect] No cached users, fetching from API...');
           users = await store.users.list();
+          if (!Array.isArray(users)) {
+            console.warn('[paintUsersIntoSelect] API returned non-array, using empty array');
+            users = [];
+          }
           try { localStorage.setItem("cfg_users", JSON.stringify(users)); } catch { /* ignore */ }
         }
+        
+        console.log(`[paintUsersIntoSelect] Found ${users.length} active users`);
         selUser.innerHTML = `<option value="">(Asignar usuario)</option>` +
           users.filter(u => u.active !== 0 && u.active !== false).map(u =>
             `<option value="${u.id}">${u.full_name || u.username}</option>`
           ).join("");
-      } catch {
-        selUser.innerHTML = `<option value="">(Asignar usuario)</option>`;
+      } catch (e) {
+        console.error('[paintUsersIntoSelect] Error:', e.message);
+        selUser.innerHTML = `<option value="">(Asignar usuario - error cargando)</option>`;
       }
     }
     paintUsersIntoSelect();
@@ -1397,23 +1407,37 @@ export default {
 
     // === Firma digital
     function resizeSignCanvas() {
-      // Canvas mantiene sus dimensiones HTML (540x180), no las redimensionamos con rect
-      // Esto evita problemas de scaling en móvil
+      // Usar dimensiones fijas: 540x180
       const ratio = window.devicePixelRatio || 1;
-      // Ajustar para DPI pero mantener proporción
-      signCanvas.width = signCanvas.offsetWidth * ratio;
-      signCanvas.height = signCanvas.offsetHeight * ratio;
-      signCtx.setTransform(ratio, 0, 0, ratio, 0, 0); 
+      const htmlWidth = 540;  // Ancho en píxeles del HTML
+      const htmlHeight = 180; // Alto en píxeles del HTML
+      
+      // Actualizar ancho/alto del canvas interno con escala DPI
+      signCanvas.width = htmlWidth * ratio;
+      signCanvas.height = htmlHeight * ratio;
+      
+      // Aplicar la escala para que el dibujo se vea correcto
+      signCtx.setTransform(ratio, 0, 0, ratio, 0, 0);
       setupCanvas(signCtx);
+      
       const sizeEl = root.querySelector('#canvas-size');
       if (sizeEl) sizeEl.textContent = `${signCanvas.width}x${signCanvas.height}`;
     }
     let drawing = false, last = null;
-    const pos = (ev, canvas) => { const r = canvas.getBoundingClientRect(); const x = (ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left; const y = (ev.touches ? ev.touches[0].clientY : ev.clientY) - r.top; return { x, y }; };
+    const pos = (ev, canvas) => { 
+      const r = canvas.getBoundingClientRect(); 
+      const ratio = window.devicePixelRatio || 1;
+      const x = ((ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left) * ratio; 
+      const y = ((ev.touches ? ev.touches[0].clientY : ev.clientY) - r.top) * ratio; 
+      return { x, y }; 
+    };
     function showSign() {
       ModalHelper.open(signModal, () => {
-        resizeSignCanvas();
-        loadSignatureToEdit();
+        // Usar requestAnimationFrame para asegurar que el DOM está renderizado
+        requestAnimationFrame(() => {
+          resizeSignCanvas();
+          loadSignatureToEdit();
+        });
       });
     }
     function hideSign() {

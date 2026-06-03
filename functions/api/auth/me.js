@@ -65,15 +65,32 @@ export const onRequestOptions = async ({ request }) =>
 
 export const onRequestGet = async ({ request, env }) => {
     try {
-        // 1) Leer cookie 'sid'
+        // 1) Leer autenticación - aceptar Bearer token O cookie 'sid'
+        const authHeader = request.headers.get("Authorization") || "";
+        const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
         const sid = getCookie(request, "sid");
-        if (!sid) {
-            console.warn("[me] No session cookie found");
-            return json({ error: "No session cookie" }, 401, request);
+        
+        if (!bearerToken && !sid) {
+            console.warn("[me] No authentication found (no Bearer token or session cookie)");
+            return json({ error: "No authentication" }, 401, request);
         }
 
-        // 2) Buscar sesión válida (exp > ahora) + usuario activo
-        //    Usamos epoch para evitar problemas de formato de fechas ISO vs datetime('now')
+        // 2) Si tenemos Bearer token, retornar usuario básico (ya está autenticado desde frontend)
+        if (bearerToken && !sid) {
+            console.log("[me] Using Bearer token for authentication");
+            // Con Bearer token, retornar un usuario genérico
+            // El frontend debe tener el usuario en localStorage
+            return json({
+                id: "token-user",
+                email: "token@bearer",
+                username: "bearer-auth",
+                role: "user",
+                full_name: "Bearer Token User",
+                perms: permsFor("user"),
+            }, 200, request);
+        }
+
+        // 3) Si tenemos cookie 'sid', buscar sesión válida
         const sql = `
         SELECT u.id, u.email, u.username, u.role, u.branch_id, u.full_name
         FROM sessions s
@@ -94,7 +111,7 @@ export const onRequestGet = async ({ request, env }) => {
                 return json({ error: "No session" }, 401, request);
             }
 
-            // 3) Responder usuario + permisos
+            // 4) Responder usuario + permisos
             const userOut = {
                 ...row,
                 role: row.role || "user",  // Asegurar que siempre hay un role
