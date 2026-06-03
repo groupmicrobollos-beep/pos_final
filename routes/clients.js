@@ -35,9 +35,10 @@ router.get('/', async (req, res) => {
         const db = getDB();
         
         // Usar JOIN para traer todo de una sola consulta (mucho más rápido)
+        // Sin c.updated_at porque no existe en la tabla clients de Turso
         const query = `
             SELECT 
-                c.id, c.name, c.phone, c.email, c.address, c.created_at, c.updated_at,
+                c.id, c.name, c.phone, c.email, c.address, c.created_at,
                 v.id as vehicle_id, v.brand, v.model, v.year, v.plate, v.vin, v.insurance
             FROM clients c
             LEFT JOIN vehicles v ON v.client_id = c.id
@@ -64,7 +65,6 @@ router.get('/', async (req, res) => {
                     email: row.email,
                     address: row.address,
                     created_at: row.created_at,
-                    updated_at: row.updated_at,
                     vehicles: []
                 });
             }
