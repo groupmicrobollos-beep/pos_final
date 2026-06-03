@@ -286,8 +286,17 @@ export default {
       try {
         const response = await store.auth.login(identifier, password);
         console.log('[login] Response:', response);
-        setAuth({ token: response.token, user: response.user });
-        location.hash = "#/dashboard";
+        // Asegurar que se guarde correctamente
+        if (response && response.user) {
+          setAuth({ token: response.token, user: response.user });
+          // Verificar que se guardó
+          const savedUser = localStorage.getItem("mb_user");
+          const savedToken = localStorage.getItem("mb_token");
+          console.log('[login] Sesión guardada:', { hasUser: !!savedUser, hasToken: !!savedToken });
+          location.hash = "#/dashboard";
+        } else {
+          showError(error, "Respuesta de servidor inválida");
+        }
       } catch (err) {
         const msg = (err && err.message) ? err.message : "Error al iniciar sesión";
         showError(error, msg);

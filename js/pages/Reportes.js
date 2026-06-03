@@ -503,7 +503,12 @@ export default {
 
     // ====== Modal detalle ======
     function openDetail(key) {
-      const b = JSON.parse(localStorage.getItem(key) || "null");
+      // Primero intenta buscar en los datos cargados
+      let b = all.find(x => x.key === key);
+      if (!b) {
+        // Si no está en all, intenta localStorage como fallback
+        b = JSON.parse(localStorage.getItem(key) || "null");
+      }
       if (!b) return toast("No se encontró el presupuesto", "error");
       current = b;
       modalBody.innerHTML = renderBudgetDetail(b);

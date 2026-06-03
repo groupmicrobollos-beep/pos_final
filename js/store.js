@@ -232,7 +232,7 @@ export const auth = {
     async init() { 
         console.log('[auth] init() called');
         // 1) Si ya hay usuario en localStorage, usarlo
-        if (state.auth.user) {
+        if (state.auth.user && state.auth.user.id) {
             console.log('[auth] user already in state:', { 
                 id: state.auth.user.id,
                 username: state.auth.user.username,
@@ -241,29 +241,48 @@ export const auth = {
             });
             return state.auth.user;
         }
-        // 2) Si hay token/cookie válida, intentar obtener datos del usuario del servidor
-        try {
-            console.log('[auth] attempting to recover session from server at /api/auth/me...');
-            const user = await api('/auth/me', 'GET');
-            console.log('[auth] /auth/me response type:', typeof user);
-            console.log('[auth] /auth/me response keys:', user ? Object.keys(user) : 'null');
-            if (user && user.role) {
-                console.log('[auth] server returned valid user:', { 
-                    id: user.id,
-                    username: user.username,
-                    role: user.role,
-                    hasPerms: !!user.perms,
-                    perms: user.perms
-                });
-            } else {
-                console.warn('[auth] server returned something but not a valid user object:', user);
+        // 2) Si hay token, intentar obtener datos del usuario del servidor
+        if (state.auth.token) {
+            try {
+                console.log('[auth] attempting to recover session from server at /api/auth/me...');
+                const user = await api('/auth/me', 'GET');
+                console.log('[auth] /auth/me response type:', typeof user);
+                console.log('[auth] /auth/me response keys:', user ? Object.keys(user) : 'null');
+                if (user && user.role) {
+                    console.log('[auth] server returned valid user:', { 
+                        id: user.id,
+                        username: user.username,
+                        role: user.role,
+                        hasPerms: !!user.perms,
+                        perms: user.perms
+                    });
+                    // Guardar la información del usuario en localStorage
+                    try {
+                        localStorage.setItem("mb_user", JSON.stringify(user));
+                    } catch (e) {
+                        console.warn('[auth] Failed to save user to localStorage:', e.message);
+                    }
+                    setAuth({ token: state.auth.token, user });
+                    return user;
+                } else {
+                    console.warn('[auth] server returned something but not a valid user object:', user);
+                    // Token inválido, limpiar
+                    localStorage.removeItem("mb_token");
+                    localStorage.removeItem("mb_user");
+                    return null;
+                }
+            } catch (err) {
+                console.log('[auth] session recovery failed:', err && err.message ? err.message : err);
+                // Intentar una última vez con localStorage
+                if (state.auth.user && state.auth.user.id) {
+                    console.log('[auth] falling back to cached user from localStorage');
+                    return state.auth.user;
+                }
+                return null;
             }
-            setAuth({ token: 'cookie', user });
-            return user;
-        } catch (err) {
-            console.log('[auth] no valid session on server:', err && err.message ? err.message : err);
-            return null;
         }
+        console.log('[auth] no token or user available');
+        return null;
     },
     async login(identifier, password) {
         // Debug: log attempt (avoid logging password in plaintext)
