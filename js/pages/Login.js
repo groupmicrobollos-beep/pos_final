@@ -24,8 +24,8 @@ export default {
                       <path d="M3 20c0-3.866 3.582-7 9-7s9 3.134 9 7v1H3v-1z" fill="#fff"/>
                     </svg>
                   </div>
-                  <h1 id="login-title" class="text-2xl font-extrabold text-white tracking-tight">Microbollos POS</h1>
-                  <p class="text-sm text-white/70 mt-1">Acceso al panel administrativo</p>
+                  <h1 id="login-title" class="text-3xl font-extrabold text-white tracking-tight drop-shadow-lg">Microbollos POS</h1>
+                  <p class="text-sm text-white/90 mt-2 font-medium drop-shadow-md">Acceso al panel administrativo</p>
                 </div>
 
                 <div class="grid gap-4">
@@ -132,14 +132,17 @@ export default {
           /* Forzar estilos del login independientemente del tema global */
           #login-root { color: #fff !important; }
           #login-root input, #login-root button:not(.bg-gradient-to-r), #login-root a, #login-root p, #login-root label { color: inherit !important; }
-          #login-root input { background: rgba(255,255,255,0.06) !important; border: none !important; }
-          #login-root input::placeholder { color: rgba(255,255,255,0.56) !important; opacity: 1 !important; }
-          #login-root .backdrop-blur-sm { background: rgba(3,6,10,0.6) !important; }
-          #login-root .rounded-3xl { border: 1px solid rgba(255,255,255,0.04) !important; }
-          #login-root .login-brand { background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03)) !important; }
+          #login-root input { background: rgba(255,255,255,0.08) !important; border: 1px solid rgba(255,255,255,0.12) !important; }
+          #login-root input::placeholder { color: rgba(255,255,255,0.64) !important; opacity: 1 !important; }
+          #login-root .backdrop-blur-sm { background: rgba(3,6,10,0.75) !important; border: 1px solid rgba(255,255,255,0.08) !important; }
+          #login-root .rounded-3xl { border: 1px solid rgba(255,255,255,0.08) !important; }
+          #login-root .login-brand { background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04)) !important; }
           #login-root .sr-only[role="status"] { color: #ffb4b4 !important; } /* Error red */
           #login-root .text-cyan-300 { color: #67e8f9 !important; }
           #login-root .text-rose-400 { color: #fb7185 !important; }
+          #login-root #login-title { text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+          #login-root p.text-white\/90 { text-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+          #login-root input:focus { background: rgba(255,255,255,0.12) !important; border-color: rgba(34, 211, 238, 0.5) !important; }
 
           /* Mantener inputs y botones con alto specificity frente a variables globales */
           .ui-input, #login-root input, #login-root button { box-shadow: none !important; }
